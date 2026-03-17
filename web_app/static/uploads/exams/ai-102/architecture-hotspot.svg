@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="520" viewBox="0 0 900 520">
+              <rect width="900" height="520" fill="#f8fbff"/>
+              <rect x="60" y="90" width="220" height="120" rx="14" fill="#dcedff" stroke="#8eb8e8"/>
+              <text x="170" y="155" text-anchor="middle" font-family="Arial" font-size="24" fill="#27496d">Document Store</text>
+              <rect x="340" y="90" width="220" height="120" rx="14" fill="#dcedff" stroke="#8eb8e8"/>
+              <text x="450" y="155" text-anchor="middle" font-family="Arial" font-size="24" fill="#27496d">Document Intelligence</text>
+              <rect x="620" y="90" width="220" height="120" rx="14" fill="#dcedff" stroke="#8eb8e8"/>
+              <text x="730" y="155" text-anchor="middle" font-family="Arial" font-size="24" fill="#27496d">Azure AI Search</text>
+              <rect x="340" y="300" width="220" height="120" rx="14" fill="#eef3f8" stroke="#9ea9b8"/>
+              <text x="450" y="365" text-anchor="middle" font-family="Arial" font-size="24" fill="#51606f">Web App</text>
+              <line x1="280" y1="150" x2="340" y2="150" stroke="#8eb8e8" stroke-width="6"/>
+              <line x1="560" y1="150" x2="620" y2="150" stroke="#8eb8e8" stroke-width="6"/>
+              <line x1="450" y1="210" x2="450" y2="300" stroke="#8eb8e8" stroke-width="6"/>
+            </svg>

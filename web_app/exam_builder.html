@@ -1,0 +1,45 @@
+{% set page_id = "exam-builder" %}
+{% extends "base.html" %}
+{% block content %}
+<section class="grid grid--two">
+    <div class="panel">
+        <div id="builder-exam-summary" class="stack-gap"></div>
+    </div>
+    <div class="panel">
+        <form id="exam-builder-form" class="form-stack">
+            <div class="section-heading">
+                <div>
+                    <h2>Exam builder</h2>
+                    <p class="muted">The server assembles a fixed attempt from the selected criteria.</p>
+                </div>
+            </div>
+            <div id="builder-topics-field"></div>
+            <div id="builder-tags-field"></div>
+            <div id="builder-types-field"></div>
+            <label>
+                <span>Difficulty</span>
+                <select id="builder-difficulty">
+                    <option value="">Any difficulty</option>
+                    <option value="foundational">Foundational</option>
+                    <option value="intermediate">Intermediate</option>
+                    <option value="advanced">Advanced</option>
+                </select>
+            </label>
+            <label>
+                <span>Number of questions</span>
+                <input id="builder-count" type="number" min="1" value="10">
+            </label>
+            <label>
+                <span>Time limit in minutes</span>
+                <input id="builder-time-limit" type="number" min="0" value="0">
+            </label>
+            <label class="checkbox-line">
+                <input id="builder-random" type="checkbox" checked>
+                <span>Random order</span>
+            </label>
+            <div id="builder-error" class="error-message"></div>
+            <button class="button button--primary" type="submit">Create formal attempt</button>
+        </form>
+    </div>
+</section>
+{% endblock %}

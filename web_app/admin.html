@@ -1,0 +1,50 @@
+{% set page_id = "admin" %}
+{% extends "base.html" %}
+{% block content %}
+<section class="grid grid--two">
+    <div class="panel">
+        <form id="admin-user-form" class="form-stack">
+            <div class="section-heading">
+                <div>
+                    <h2>Create or update user</h2>
+                    <p class="muted">Manage platform access and role assignments.</p>
+                </div>
+            </div>
+            <input id="admin-user-id" type="hidden">
+            <label><span>Username</span><input id="admin-username" type="text" required></label>
+            <label><span>Email</span><input id="admin-email" type="email"></label>
+            <label><span>Password</span><input id="admin-password" type="password"></label>
+            <label>
+                <span>Role</span>
+                <select id="admin-role">
+                    <option value="user">User</option>
+                    <option value="reviewer">Reviewer</option>
+                    <option value="examiner">Examiner</option>
+                    <option value="administrator">Administrator</option>
+                </select>
+            </label>
+            <label>
+                <span>Status</span>
+                <select id="admin-status">
+                    <option value="active">Active</option>
+                    <option value="disabled">Disabled</option>
+                </select>
+            </label>
+            <div id="admin-error" class="error-message"></div>
+            <div class="button-row">
+                <button class="button button--primary" type="submit">Save user</button>
+                <button id="admin-form-reset" class="button button--secondary" type="button">Reset</button>
+            </div>
+        </form>
+    </div>
+    <div class="panel">
+        <div class="section-heading">
+            <div>
+                <h2>User directory</h2>
+                <p class="muted">Administrative access across the platform.</p>
+            </div>
+        </div>
+        <div id="admin-users-list" class="list-stack"></div>
+    </div>
+</section>
+{% endblock %}

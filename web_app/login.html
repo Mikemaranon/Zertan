@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | Zertan</title>
+    <link rel="stylesheet" href="/static/CSS/app.css">
+    <link rel="stylesheet" href="/static/CSS/login.css">
+</head>
+<body class="auth-body" data-page="login">
+    <main class="auth-layout">
+        <section class="auth-card">
+            <p class="eyebrow">Zertan platform</p>
+            <h1>Certification exam preparation</h1>
+            <p class="muted">
+                Serious study and exam preparation for structured certification banks.
+            </p>
+            <form id="login-form" class="form-stack">
+                <label><span>Username</span><input type="text" id="username" required></label>
+                <label><span>Password</span><input type="password" id="password" required></label>
+                <div id="error-message" class="error-message"></div>
+                <button class="button button--primary" type="submit">Sign in</button>
+            </form>
+        </section>
+        <section class="auth-card auth-card--secondary">
+            <p class="eyebrow">Seeded accounts</p>
+            <ul class="credential-list">
+                <li><strong>administrator</strong>: <code>admin</code> / <code>admin123</code></li>
+                <li><strong>examiner</strong>: <code>examiner</code> / <code>examiner123</code></li>
+                <li><strong>reviewer</strong>: <code>reviewer</code> / <code>reviewer123</code></li>
+                <li><strong>user</strong>: <code>candidate</code> / <code>candidate123</code></li>
+            </ul>
+        </section>
+    </main>
+
+    <script type="module" src="/static/JS/app.js"></script>
+</body>
+</html>
