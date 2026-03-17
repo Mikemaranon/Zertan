@@ -1,254 +1,66 @@
 # Zertan
 
-Zertan is a certification exam preparation platform built on top of the original Flask server template in this repository.
+Zertan is a collaborative workspace for certification exam preparation.
 
-The implementation preserves the template's core composition pattern:
-- `web_server/main.py` remains the entrypoint
-- `web_server/server.py` remains the composition root
-- `web_server/app_routes.py` handles page routing
-- `web_server/api_m` autoloads modular API domains
-- `web_server/data_m` remains the database layer
-- `web_server/user_m` remains the authentication and authorization layer
+Its purpose is straightforward:
+- create exams
+- run exams
+- share exam packages
+- maintain question banks with multiple roles working on the same platform
 
-The product is now a structured study and formal exam workspace with:
-- JWT-backed authentication
-- hierarchical role enforcement
-- study mode
-- exam builder and formal exam mode
-- paginated exam runner with 5 questions per page
-- persistent result storage and KPI reporting
-- editable question banks
-- zip import and export of exam packages
-- support for `single_select`, `multiple_choice`, `hot_spot`, and `drag_drop`
+This repository is built for multi-user use without turning deployment into a project of its own. It is a Python application that runs on a single server, uses Flask for the web layer, and stores its data in SQLite for a simple, lightweight operational setup.
 
-## Stack
+## Why It Stays Simple
 
-- Python
-- Flask
-- SQLite
-- PyJWT
-- HTML
-- CSS
-- Vanilla JavaScript
+Zertan is intentionally small in operational terms.
 
-No SPA framework or alternate backend stack was introduced.
+- Python is not the most minimal runtime possible, but for this workload and architecture it remains lightweight enough to run comfortably on a modest server.
+- SQLite is genuinely lightweight and easy to operate, especially for a single-server deployment where simplicity and maintainability matter more than distributed scale.
+- There is no heavy frontend framework, no separate frontend deployment, and no infrastructure split required to get started.
 
-## Project structure
+If you want a practical multi-user exam platform that is easy to understand and easy to ship, this stack is a good fit.
 
-### Backend
+## Quick Start
 
-- `web_server/main.py`
-  Creates the Flask app and starts the server.
-
-- `web_server/server.py`
-  Wires `DBManager`, `UserManager`, `AppRoutes`, and `ApiManager`.
-
-- `web_server/app_routes.py`
-  Registers the page routes for login, dashboard, catalog, study mode, builder, runner, results, management, profile, and admin.
-
-- `web_server/api_m/domains/`
-  Domain APIs:
-  - `auth_api.py`
-  - `user_api.py`
-  - `exams_api.py`
-  - `questions_api.py`
-  - `attempts_api.py`
-  - `statistics_api.py`
-  - `admin_api.py`
-  - `import_export_api.py`
-
-- `web_server/data_m/`
-  SQLite data layer with table/domain managers:
-  - `t_users.py`
-  - `t_sessions.py`
-  - `t_exams.py`
-  - `t_questions.py`
-  - `t_attempts.py`
-  - `t_statistics.py`
-
-- `web_server/services_m/`
-  Shared application logic for:
-  - question normalization and validation
-  - attempt assembly and scoring
-  - exam package import and export
-
-### Frontend
-
-- `web_app/shared/base.html`
-  Shared shell for authenticated pages.
-
-- `web_app/auth/`
-  Authentication templates.
-
-- `web_app/home/`
-  User workspace pages such as dashboard and catalog.
-
-- `web_app/exam/`
-  Exam flow pages for study, builder, runner, and results.
-
-- `web_app/management/`
-  Management pages for exams, question editing, and admin.
-
-- `web_app/static/JS/`
-  Modular vanilla JS:
-  - `core/`
-  - `components/`
-  - `pages/`
-
-- `web_app/static/CSS/`
-  Minimal serious UI using white, gray, and light blue.
-
-## Schema highlights
-
-The SQLite database lives at:
-
-- `web_server/data_m/utils/zertan.db`
-
-Core tables:
-
-- `users`
-- `sessions`
-- `exams`
-- `tags`
-- `topics`
-- `exam_tags`
-- `questions`
-- `question_options`
-- `question_assets`
-- `question_tags`
-- `question_topics`
-- `exam_attempts`
-- `exam_attempt_questions`
-- `exam_answers`
-- `data_logs`
-- `agent_logs`
-
-Notes:
-- study mode does not write official attempt records
-- exam mode creates fixed attempts on the server
-- attempt question snapshots preserve exam integrity after edits
-- statistics are computed from submitted attempts
-
-## Seeded data
-
-On first boot the app seeds:
-
-- four users
-- two exams
-- sample questions covering all required question types
-
-Seeded credentials:
-
-- `admin` / `admin123`
-- `examiner` / `examiner123`
-- `reviewer` / `reviewer123`
-- `candidate` / `candidate123`
-
-## Main flows
-
-### Study mode
-
-- open an exam from the catalog
-- land in study mode first
-- filter questions by tag, topic, and type in the client
-- answer and check each question individually
-- edit questions from inside the study workspace if the role allows it
-
-### Exam mode
-
-- open the exam builder
-- choose topics, tags, question types, count, and optional time limit
-- let the server assemble a fixed attempt
-- run the exam in pages of 5 questions
-- navigate between pages without losing answers
-- submit once to store official results and KPIs
-
-### Import/export
-
-- import a `.zip` package from exam management
-- export an existing exam as a `.zip`
-- package format uses:
-  - `exam.json`
-  - one JSON file per question
-  - an `assets/` directory
-
-## Run locally
-
-From the repository root:
+All commands below are meant to be run from the repository root.
 
 ```bash
 python3 -m venv .venv
-.venv/bin/python -m pip install -r requirements.txt
-cd web_server
-../.venv/bin/python main.py
+.venv/bin/python -m pip install -r app/requirements.txt
+PYTHONPATH=app/web_server .venv/bin/python app/web_server/main.py
 ```
 
-The app will start on:
+By default, the application starts on `http://127.0.0.1:5050`.
 
-- `http://127.0.0.1:5000`
+Technical documentation lives in [`app/README.md`](/Users/myke/Desktop/codes/Projects/Zertan/app/README.md).
 
-## Important endpoints
+## API Endpoints
 
-Auth:
-- `POST /api/auth/login`
-- `POST /api/auth/logout`
-- `GET /api/auth/me`
-
-Exams:
-- `GET /api/exams`
-- `POST /api/exams`
-- `GET /api/exams/<id>`
-- `PUT /api/exams/<id>`
-- `GET /api/exams/<id>/study`
-- `GET /api/exams/<id>/builder-meta`
-- `POST /api/exams/<id>/builder`
-
-Questions:
-- `GET /api/questions/<id>`
-- `POST /api/exams/<id>/questions`
-- `PUT /api/questions/<id>`
-- `POST /api/questions/<id>/archive`
-- `DELETE /api/questions/<id>`
-- `POST /api/questions/<id>/check`
-
-Attempts and results:
-- `GET /api/attempts/<id>`
-- `POST /api/attempts/<id>/answers`
-- `POST /api/attempts/<id>/submit`
-- `GET /api/attempts/<id>/result`
-
-Statistics:
-- `GET /api/statistics/overview`
-- `GET /api/statistics/me`
-- `GET /api/statistics/exams/<id>`
-- `GET /api/statistics/platform`
-
-Admin and package management:
-- `GET /api/admin/users`
-- `POST /api/admin/users`
-- `PUT /api/admin/users/<id>`
-- `DELETE /api/admin/users/<id>`
-- `POST /api/import-export/exams/import`
-- `GET /api/import-export/exams/<id>/export`
-
-## Verification performed
-
-The following smoke checks were run locally with Flask's test client:
-
-- app boot
-- login
-- exam catalog fetch
-- study mode fetch
-- exam builder attempt creation
-- attempt retrieval
-- attempt submission
-- statistics fetch
-- question checking
-- exam zip export
-- multipart question creation
-
-## Current limitations
-
-- no automated browser test suite is included yet
-- hot spot questions use numbered dropdowns associated with an image instead of coordinate-click regions
-- drag and drop authoring is form-based while runtime interaction is true drag and drop
+| Endpoint | Methods | Description |
+| --- | --- | --- |
+| `/api/auth/login` | `POST` | Sign in and issue the JWT-backed session token. |
+| `/api/auth/logout` | `POST` | End the current session and clear the token cookie. |
+| `/api/auth/me` | `GET` | Return the authenticated user behind the current token. |
+| `/api/users/me` | `GET` | Return the current user profile for the signed-in account. |
+| `/api/users/recent-attempts` | `GET` | Return the latest exam attempts for the current user. |
+| `/api/exams` | `GET`, `POST` | List exams or create a new exam bank. |
+| `/api/exams/<int:exam_id>` | `GET`, `PUT` | Read or update exam metadata. |
+| `/api/exams/<int:exam_id>/study` | `GET` | Load the study-mode payload for an exam and its questions. |
+| `/api/exams/<int:exam_id>/builder-meta` | `GET` | Return the metadata used to assemble an exam attempt. |
+| `/api/exams/<int:exam_id>/builder` | `POST` | Create a fixed exam attempt from builder criteria. |
+| `/api/exams/<int:exam_id>/questions` | `POST` | Create a new question inside an exam. |
+| `/api/questions/<int:question_id>` | `GET`, `PUT`, `DELETE` | Read, update, or delete a question. |
+| `/api/questions/<int:question_id>/archive` | `POST` | Archive a question without removing it from the system. |
+| `/api/questions/<int:question_id>/check` | `POST` | Evaluate a study-mode response and return correction data. |
+| `/api/attempts/<int:attempt_id>` | `GET` | Return the full payload for a saved exam attempt. |
+| `/api/attempts/<int:attempt_id>/answers` | `POST` | Save in-progress answers for an attempt page. |
+| `/api/attempts/<int:attempt_id>/submit` | `POST` | Submit an attempt and generate official scoring data. |
+| `/api/attempts/<int:attempt_id>/result` | `GET` | Return the stored results for a submitted attempt. |
+| `/api/statistics/overview` | `GET` | Return dashboard KPIs and recent performance data. |
+| `/api/statistics/me` | `GET` | Return detailed personal statistics for the current user. |
+| `/api/statistics/exams/<int:exam_id>` | `GET` | Return exam-specific performance statistics. |
+| `/api/statistics/platform` | `GET` | Return platform-wide statistics for examiner-level users and above. |
+| `/api/admin/users` | `GET`, `POST` | List users or create a new user account. |
+| `/api/admin/users/<int:user_id>` | `PUT`, `DELETE` | Update or delete a user account. |
+| `/api/import-export/exams/import` | `POST` | Import a zipped exam package into the platform. |
+| `/api/import-export/exams/<int:exam_id>/export` | `GET` | Export an exam bank as a zipped package. |
