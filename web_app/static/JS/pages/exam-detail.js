@@ -33,13 +33,26 @@ export async function initExamDetailPage(pageContext) {
         <div id="filter-tags-field"></div>
         <div id="filter-topics-field"></div>
         <div id="filter-types-field"></div>
+        <div class="study-filters__active">
+            <div class="selection-field__top">
+                <span class="selection-field__label">Active filters</span>
+                <button id="study-filters-clear" class="button button--secondary button--small" type="button">Clear</button>
+            </div>
+            <div id="study-filters-active" class="selection-field__chips selection-field__chips--shared"></div>
+        </div>
     `;
+    const sharedChipsContainer = document.getElementById("study-filters-active");
+    const clearButton = document.getElementById("study-filters-clear");
 
     const tagFilter = createAddableSelect(document.getElementById("filter-tags-field"), {
         id: "filter-tag",
         label: "Tags",
         options: exam.builder_meta.tags || [],
         placeholder: "All tags",
+        sharedChipsContainer,
+        sharedChipGroup: "tag",
+        sharedChipGroupLabel: "Tag",
+        sharedChipLabel: (value) => value,
         onChange: renderQuestions,
     });
     const topicFilter = createAddableSelect(document.getElementById("filter-topics-field"), {
@@ -47,6 +60,10 @@ export async function initExamDetailPage(pageContext) {
         label: "Topics",
         options: exam.builder_meta.topics || [],
         placeholder: "All topics",
+        sharedChipsContainer,
+        sharedChipGroup: "topic",
+        sharedChipGroupLabel: "Topic",
+        sharedChipLabel: (value) => value,
         onChange: renderQuestions,
     });
     const typeFilter = createAddableSelect(document.getElementById("filter-types-field"), {
@@ -55,13 +72,24 @@ export async function initExamDetailPage(pageContext) {
         options: exam.builder_meta.question_types || [],
         placeholder: "All question types",
         formatLabel: (type) => type.replaceAll("_", " "),
+        sharedChipsContainer,
+        sharedChipGroup: "type",
+        sharedChipGroupLabel: "Type",
+        sharedChipLabel: (type) => type.replaceAll("_", " "),
         onChange: renderQuestions,
+    });
+
+    clearButton.addEventListener("click", () => {
+        tagFilter.setValues([]);
+        topicFilter.setValues([]);
+        typeFilter.setValues([]);
     });
 
     function renderQuestions() {
         const selectedTags = tagFilter.getValues();
         const selectedTopics = topicFilter.getValues();
         const selectedTypes = typeFilter.getValues();
+        clearButton.disabled = !selectedTags.length && !selectedTopics.length && !selectedTypes.length;
 
         const visible = questions.filter((question) => {
             const tagMatch = !selectedTags.length || selectedTags.some((tag) => (question.tags || []).includes(tag));

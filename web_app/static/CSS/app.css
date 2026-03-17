@@ -226,7 +226,7 @@ textarea {
 }
 
 .eyebrow {
-    margin: 0;
+    margin: 0 0 5px;
     color: var(--primary-strong);
     text-transform: uppercase;
     letter-spacing: 0.12em;
@@ -305,6 +305,16 @@ textarea {
     border-radius: var(--radius-small);
     background: var(--surface);
     padding: 20px;
+}
+
+.grid--cards > .card {
+    display: flex;
+    flex-direction: column;
+}
+
+.grid--cards > .card > .button-row:last-child {
+    margin-top: auto;
+    padding-top: 16px;
 }
 
 .card h3 {
@@ -438,6 +448,10 @@ textarea {
     border: 1px solid var(--border);
 }
 
+.feedback-box p {
+    margin-bottom: 0;
+}
+
 .feedback-box.success {
     border-color: rgba(42, 139, 87, 0.4);
     background: rgba(42, 139, 87, 0.08);
@@ -494,6 +508,17 @@ textarea {
     align-items: flex-start;
 }
 
+.study-filters__active {
+    display: grid;
+    gap: 8px;
+    min-width: 100%;
+    padding: 14px 0 16px;
+}
+
+.selection-field__chips--shared {
+    padding-bottom: 4px;
+}
+
 .selection-chip {
     display: inline-flex;
     align-items: center;
@@ -504,6 +529,28 @@ textarea {
     background: var(--surface-soft);
     color: var(--text);
     cursor: pointer;
+}
+
+.selection-chip__group {
+    font-weight: 700;
+}
+
+.selection-chip__value {
+    margin-left: 8px;
+    padding-left: 8px;
+    border-left: 1px solid rgba(81, 96, 111, 0.22);
+}
+
+.selection-chip[data-group="tag"] .selection-chip__group {
+    color: #2f7fd8;
+}
+
+.selection-chip[data-group="topic"] .selection-chip__group {
+    color: #d97a20;
+}
+
+.selection-chip[data-group="type"] .selection-chip__group {
+    color: #2f9b57;
 }
 
 .selection-chip:hover {
