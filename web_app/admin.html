@@ -44,7 +44,15 @@
                 <p class="muted">Administrative access across the platform.</p>
             </div>
         </div>
-        <div id="admin-users-list" class="list-stack"></div>
+        <div class="admin-directory-tools">
+            <label class="admin-directory-search">
+                <span>Search users</span>
+                <input id="admin-user-search" type="search" placeholder="Search by username, email, role, or status">
+            </label>
+        </div>
+        <div id="admin-users-scroll" class="admin-users-scroll">
+            <div id="admin-users-list" class="list-stack"></div>
+        </div>
     </div>
 </section>
 {% endblock %}

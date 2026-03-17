@@ -369,6 +369,19 @@ textarea {
     text-decoration: underline;
 }
 
+.admin-directory-tools {
+    margin-bottom: 16px;
+}
+
+.admin-directory-search {
+    max-width: 100%;
+}
+
+.admin-users-scroll {
+    overflow-y: auto;
+    padding-right: 6px;
+}
+
 .kpi-card {
     padding: 18px;
     border-radius: var(--radius-small);

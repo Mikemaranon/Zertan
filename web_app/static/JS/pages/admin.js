@@ -1,24 +1,37 @@
-import { request } from "../core/api.js";
+import { escapeHtml, request } from "../core/api.js";
 
 export async function initAdminPage() {
     const list = document.getElementById("admin-users-list");
+    const scrollContainer = document.getElementById("admin-users-scroll");
+    const searchInput = document.getElementById("admin-user-search");
     const form = document.getElementById("admin-user-form");
     const errorNode = document.getElementById("admin-error");
+    let users = [];
 
-    async function loadUsers() {
-        const data = await request("/api/admin/users");
-        list.innerHTML = data.users
+    function renderUsers() {
+        const query = searchInput.value.trim().toLowerCase();
+        const filteredUsers = users.filter((user) => {
+            if (!query) {
+                return true;
+            }
+            return [user.username, user.email || "", user.role, user.status].some((value) =>
+                String(value).toLowerCase().includes(query)
+            );
+        });
+
+        list.innerHTML = filteredUsers.length
+            ? filteredUsers
             .map(
                 (user) => `
             <div class="card" data-user-id="${user.id}">
                 <div class="section-heading">
                     <div>
-                        <h3>${user.username}</h3>
-                        <p class="muted">${user.email || "No email"}</p>
+                        <h3>${escapeHtml(user.username)}</h3>
+                        <p class="muted">${escapeHtml(user.email || "No email")}</p>
                     </div>
-                    <span class="badge">${user.role}</span>
+                    <span class="badge">${escapeHtml(user.role)}</span>
                 </div>
-                <p class="muted">Status: ${user.status}</p>
+                <p class="muted">Status: ${escapeHtml(user.status)}</p>
                 <div class="button-row">
                     <button class="button button--secondary button--small js-edit-user" type="button">Edit</button>
                     <button class="button button--secondary button--small js-delete-user" type="button">Delete</button>
@@ -26,12 +39,13 @@ export async function initAdminPage() {
             </div>
         `
             )
-            .join("");
+            .join("")
+            : `<div class="empty-state">No users match the current search.</div>`;
 
         list.querySelectorAll(".js-edit-user").forEach((button) => {
             button.addEventListener("click", (event) => {
                 const card = event.currentTarget.closest("[data-user-id]");
-                const user = data.users.find((item) => String(item.id) === card.dataset.userId);
+                const user = users.find((item) => String(item.id) === card.dataset.userId);
                 fillUserForm(user);
             });
         });
@@ -43,6 +57,52 @@ export async function initAdminPage() {
                 await loadUsers();
             });
         });
+
+        updateDirectoryHeight();
+    }
+
+    function updateDirectoryHeight() {
+        const cards = [...list.querySelectorAll(".card")];
+        if (!cards.length) {
+            scrollContainer.style.maxHeight = "";
+            return;
+        }
+        const styles = window.getComputedStyle(list);
+        const gap = Number.parseFloat(styles.rowGap || styles.gap || "0") || 0;
+        const panel = scrollContainer.closest(".panel");
+        const panelStyles = panel ? window.getComputedStyle(panel) : null;
+        const panelBottomPadding = Number.parseFloat(panelStyles?.paddingBottom || "0") || 0;
+        const totalHeight =
+            cards.reduce((total, card) => total + card.offsetHeight, 0) + gap * Math.max(cards.length - 1, 0);
+        const fourCardHeight =
+            cards.slice(0, 4).reduce((total, card) => total + card.offsetHeight, 0) + gap * Math.max(Math.min(cards.length, 4) - 1, 0);
+        const viewportSafetyOffset = 12;
+        const availableViewportHeight = Math.max(
+            220,
+            window.innerHeight - scrollContainer.getBoundingClientRect().top - panelBottomPadding - viewportSafetyOffset
+        );
+        const desiredHeight = cards.length > 4 ? Math.min(fourCardHeight, availableViewportHeight) : Math.min(totalHeight, availableViewportHeight);
+        const constrainedHeight = totalHeight > desiredHeight ? Math.ceil(desiredHeight) : null;
+        scrollContainer.style.maxHeight = constrainedHeight ? `${constrainedHeight}px` : "";
+
+        if (!constrainedHeight) {
+            return;
+        }
+
+        window.requestAnimationFrame(() => {
+            const pageOverflow = document.documentElement.scrollHeight - window.innerHeight;
+            if (pageOverflow <= 0) {
+                return;
+            }
+            const correctedHeight = Math.max(220, constrainedHeight - pageOverflow - 4);
+            scrollContainer.style.maxHeight = `${correctedHeight}px`;
+        });
+    }
+
+    async function loadUsers() {
+        const data = await request("/api/admin/users");
+        users = data.users;
+        renderUsers();
     }
 
     form.addEventListener("submit", async (event) => {
@@ -69,6 +129,8 @@ export async function initAdminPage() {
     });
 
     document.getElementById("admin-form-reset").addEventListener("click", resetForm);
+    searchInput.addEventListener("input", renderUsers);
+    window.addEventListener("resize", updateDirectoryHeight);
     await loadUsers();
 }
 
