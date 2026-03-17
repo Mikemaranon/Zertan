@@ -51,6 +51,18 @@
             <label><span>Package</span><input id="import-package" type="file" accept=".zip" required></label>
             <div id="import-error" class="error-message"></div>
             <button class="button button--secondary" type="submit">Import exam package</button>
+            <div class="package-guide">
+                <strong>Expected package structure</strong>
+                <pre><code>exam-package/
+  exam.json
+  questions/
+    q_0001.json
+    q_0002.json
+  assets/
+    images/
+    hotspot/
+    dragdrop/</code></pre>
+            </div>
         </form>
     </div>
 </section>

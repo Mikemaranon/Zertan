@@ -48,6 +48,8 @@ export async function initManagementPage() {
                 const examId = event.currentTarget.closest("[data-exam-id]").dataset.examId;
                 const payload = await request(`/api/exams/${examId}`);
                 fillForm(payload.exam);
+                examForm.scrollIntoView({ behavior: "smooth", block: "start" });
+                document.getElementById("exam-code").focus({ preventScroll: true });
             });
         });
 

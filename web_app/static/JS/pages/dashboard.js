@@ -25,20 +25,17 @@ export async function initDashboardPage() {
         ? overviewData.recent_attempts
               .map(
                   (attempt) => `
-            <a class="card" href="${attempt.status === "submitted" ? `/attempts/${attempt.id}/results` : `/attempts/${attempt.id}/run`}">
-                <div class="section-heading">
-                    <div>
-                        <h3>${attempt.exam_code}</h3>
-                        <p class="muted">${attempt.exam_title}</p>
-                    </div>
-                    <span class="badge">${attempt.status}</span>
-                </div>
-                <p class="muted">Score: ${attempt.score_percent ? formatPercent(attempt.score_percent) : "in progress"}</p>
+            <a class="card dashboard-attempt-card" href="${attempt.status === "submitted" ? `/attempts/${attempt.id}/results` : `/attempts/${attempt.id}/run`}">
+                <span class="badge dashboard-attempt-card__badge">${attempt.status}</span>
+                <h3>${attempt.exam_code}</h3>
+                <p class="muted">${attempt.exam_title}</p>
+                <p>Score: ${attempt.score_percent ? formatPercent(attempt.score_percent) : "in progress"}</p>
             </a>
         `
               )
               .join("")
         : `<div class="empty-state">No formal attempts yet.</div>`;
+    syncRecentAttemptsHeight(attemptsContainer);
 
     typeContainer.innerHTML = personalData.by_question_type.length
         ? personalData.by_question_type
@@ -68,6 +65,20 @@ export async function initDashboardPage() {
               )
               .join("")
         : `<div class="empty-state">No exam statistics available yet.</div>`;
+}
+
+function syncRecentAttemptsHeight(container) {
+    container.classList.add("dashboard-attempts-scroll");
+    const cards = [...container.querySelectorAll(".card")];
+    if (cards.length <= 4) {
+        container.style.maxHeight = "";
+        return;
+    }
+    const styles = window.getComputedStyle(container);
+    const gap = Number.parseFloat(styles.rowGap || styles.gap || "0") || 0;
+    const maxHeight =
+        cards.slice(0, 4).reduce((total, card) => total + card.offsetHeight, 0) + gap * 3;
+    container.style.maxHeight = `${Math.ceil(maxHeight)}px`;
 }
 
 function createKpi(label, value) {

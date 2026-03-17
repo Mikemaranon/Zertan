@@ -207,7 +207,7 @@ class AttemptsTable:
             (correct_count, incorrect_count, omitted_count, score_percent, attempt_id),
         )
 
-    def list_recent_for_user(self, user_id, limit=10):
+    def list_recent_for_user(self, user_id, limit=4):
         _, rows = self.db.execute(
             """
             SELECT

@@ -315,7 +315,7 @@ textarea {
 }
 
 .card h3 {
-    margin: 0;
+    margin: 0 0 5px;
 }
 
 .meta-row,
@@ -343,7 +343,7 @@ textarea {
     margin-bottom: 5px;
 }
 
-.section-heading .muted {
+.panel > .section-heading .muted {
     margin-bottom: 15px;
 }
 
@@ -380,6 +380,40 @@ textarea {
 .admin-users-scroll {
     overflow-y: auto;
     padding-right: 6px;
+}
+
+.dashboard-attempts-scroll {
+    overflow-y: auto;
+    padding-right: 6px;
+}
+
+.dashboard-attempt-card {
+    position: relative;
+}
+
+.dashboard-attempt-card__badge {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+}
+
+.package-guide {
+    padding: 16px 18px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-small);
+    background: var(--surface-soft);
+}
+
+.package-guide strong {
+    display: block;
+    margin-bottom: 12px;
+}
+
+.package-guide pre {
+    margin: 0;
+    overflow-x: auto;
+    font: 0.92rem/1.6 "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    color: var(--muted);
 }
 
 .kpi-card {
@@ -682,6 +716,10 @@ textarea {
     resize: vertical;
 }
 
+#exam-description {
+    resize: none;
+}
+
 .checkbox-line {
     display: flex;
     align-items: center;
@@ -695,6 +733,10 @@ textarea {
 .error-message {
     min-height: 20px;
     color: var(--danger);
+}
+
+#import-error:empty {
+    display: none;
 }
 
 .empty-state {

@@ -29,7 +29,7 @@ class StatisticsAPI(BaseAPI):
         stats = {
             "kpis": self.db.statistics.user_overview(user["id"]),
             "by_exam": self.db.statistics.user_success_by_exam(user["id"]),
-            "recent_attempts": self.db.attempts.list_recent_for_user(user["id"], limit=5),
+            "recent_attempts": self.db.attempts.list_recent_for_user(user["id"], limit=4),
         }
         return self.ok(stats)
 
