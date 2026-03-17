@@ -71,10 +71,7 @@ function renderChoiceQuestion(question, mode) {
         const label = document.createElement("label");
         label.className = "question-option";
         label.innerHTML = `
-            <span class="meta-row">
-                <input type="${isSingle ? "radio" : "checkbox"}" name="${name}" value="${escapeHtml(option.key)}" ${mode === "results" ? "disabled" : ""}>
-                <strong>${escapeHtml(option.key)}.</strong>
-            </span>
+            <input type="${isSingle ? "radio" : "checkbox"}" name="${name}" value="${escapeHtml(option.key)}" ${mode === "results" ? "disabled" : ""}>
             <span>${escapeHtml(option.text)}</span>
         `;
         wrapper.appendChild(label);
@@ -83,6 +80,54 @@ function renderChoiceQuestion(question, mode) {
 }
 
 function renderHotspotQuestion(question, mode) {
+    const dropdowns = (question.config?.dropdowns || []).slice().sort((left, right) => left.order - right.order);
+    if (!dropdowns.length) {
+        return renderLegacyHotspotQuestion(question, mode);
+    }
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "stack-gap";
+    const asset = question.assets?.[0];
+    if (asset?.file_path) {
+        const frame = document.createElement("div");
+        frame.className = "hotspot-frame";
+        frame.innerHTML = `<img src="${assetPathToUrl(asset.file_path)}" alt="${escapeHtml(asset?.meta?.alt || question.title || "Hot spot image")}">`;
+        wrapper.appendChild(frame);
+    }
+
+    const hint = document.createElement("p");
+    hint.className = "muted";
+    hint.textContent =
+        mode === "results"
+            ? "Submitted dropdown selections for each numbered marker are shown below."
+            : "Choose one option for each numbered marker shown in the image.";
+    wrapper.appendChild(hint);
+
+    const fields = document.createElement("div");
+    fields.className = "hotspot-dropdowns";
+    dropdowns.forEach((dropdown) => {
+        const field = document.createElement("label");
+        field.className = "selection-field";
+        field.innerHTML = `
+            <span class="selection-field__top">
+                <strong>${escapeHtml(String(dropdown.order))}.</strong>
+                <span>${escapeHtml(dropdown.label || `Dropdown ${dropdown.order}`)}</span>
+            </span>
+            <select data-hotspot-dropdown-id="${escapeHtml(dropdown.id)}" ${mode === "results" ? "disabled" : ""}>
+                <option value="">Select an option</option>
+                ${(dropdown.options || [])
+                    .map((option) => `<option value="${escapeHtml(option)}">${escapeHtml(option)}</option>`)
+                    .join("")}
+            </select>
+        `;
+        fields.appendChild(field);
+    });
+    wrapper.appendChild(fields);
+
+    return wrapper;
+}
+
+function renderLegacyHotspotQuestion(question, mode) {
     const wrapper = document.createElement("div");
     wrapper.className = "stack-gap";
     const asset = question.assets?.[0];
@@ -228,6 +273,14 @@ export function collectResponse(card) {
         return { selected };
     }
     if (type === "hot_spot") {
+        const dropdowns = Array.from(card.querySelectorAll("[data-hotspot-dropdown-id]"));
+        if (dropdowns.length) {
+            const selections = {};
+            dropdowns.forEach((select) => {
+                selections[select.dataset.hotspotDropdownId] = select.value || "";
+            });
+            return { selections };
+        }
         const frame = card.querySelector(".hotspot-frame");
         return {
             x: frame?.dataset.x ? Number(frame.dataset.x) : null,
@@ -261,11 +314,19 @@ export function applyResponse(card, response) {
         }
     }
     if (type === "hot_spot") {
-        const frame = card.querySelector(".hotspot-frame");
-        if (frame && response.x !== null && response.y !== null) {
-            frame.dataset.x = response.x;
-            frame.dataset.y = response.y;
-            drawHotspotMarker(frame, response.x, response.y);
+        const dropdowns = Array.from(card.querySelectorAll("[data-hotspot-dropdown-id]"));
+        if (dropdowns.length) {
+            const selections = response.selections || {};
+            dropdowns.forEach((select) => {
+                select.value = selections[select.dataset.hotspotDropdownId] || "";
+            });
+        } else {
+            const frame = card.querySelector(".hotspot-frame");
+            if (frame && response.x !== null && response.y !== null) {
+                frame.dataset.x = response.x;
+                frame.dataset.y = response.y;
+                drawHotspotMarker(frame, response.x, response.y);
+            }
         }
     }
     if (type === "drag_drop") {
@@ -279,7 +340,7 @@ export function applyResponse(card, response) {
 }
 
 export function lockQuestionCard(card) {
-    card.querySelectorAll("input, button").forEach((node) => {
+    card.querySelectorAll("input, button, select").forEach((node) => {
         if (!node.classList.contains("js-check-question")) {
             node.disabled = true;
         }
@@ -302,12 +363,20 @@ export function showFeedback(card, { success, title, body }) {
 
 export function formatCorrectAnswer(question, correctAnswer) {
     if (question.type === "single_select") {
-        return `Correct option: ${correctAnswer}`;
+        const option = (question.options || []).find((candidate) => candidate.key === correctAnswer);
+        return `Correct option: ${option?.text || correctAnswer}`;
     }
     if (question.type === "multiple_choice") {
-        return `Correct options: ${(correctAnswer || []).join(", ")}`;
+        const labels = (correctAnswer || []).map((key) => {
+            const option = (question.options || []).find((candidate) => candidate.key === key);
+            return option?.text || key;
+        });
+        return `Correct options: ${labels.join(", ")}`;
     }
     if (question.type === "hot_spot") {
+        if (Array.isArray(correctAnswer) && correctAnswer.length && correctAnswer[0]?.correct_option) {
+            return `Correct selections: ${correctAnswer.map((item) => `${item.order}. ${item.correct_option}`).join(" | ")}`;
+        }
         return "Correct answer: a point inside the configured valid region.";
     }
     if (question.type === "drag_drop") {

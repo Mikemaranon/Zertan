@@ -75,7 +75,7 @@ export async function initQuestionEditorPage(pageContext) {
 
 function bindEditorButtons() {
     document.getElementById("add-option-button").addEventListener("click", () => addOptionRow());
-    document.getElementById("add-region-button").addEventListener("click", () => addRegionRow());
+    document.getElementById("add-hotspot-dropdown-button").addEventListener("click", () => addHotspotDropdownRow());
     document.getElementById("add-item-button").addEventListener("click", () => addItemRow());
     document.getElementById("add-destination-button").addEventListener("click", () => addDestinationRow());
 }
@@ -85,6 +85,13 @@ function updateVisibleSections() {
     document.getElementById("choice-section").classList.toggle("is-visible", ["single_select", "multiple_choice"].includes(type));
     document.getElementById("hotspot-section").classList.toggle("is-visible", type === "hot_spot");
     document.getElementById("dragdrop-section").classList.toggle("is-visible", type === "drag_drop");
+    if (["single_select", "multiple_choice"].includes(type) && !document.querySelectorAll(".option-row").length) {
+        addOptionRow();
+        addOptionRow();
+    }
+    if (type === "hot_spot" && !document.querySelectorAll(".hotspot-dropdown-row").length) {
+        addHotspotDropdownRow();
+    }
 }
 
 function fillQuestionForm(question) {
@@ -102,8 +109,8 @@ function fillQuestionForm(question) {
     document.getElementById("options-list").innerHTML = "";
     (question.options || []).forEach((option) => addOptionRow(option));
 
-    document.getElementById("regions-list").innerHTML = "";
-    (question.config?.regions || []).forEach((region) => addRegionRow(region));
+    document.getElementById("hotspot-dropdowns-list").innerHTML = "";
+    (question.config?.dropdowns || []).forEach((dropdown) => addHotspotDropdownRow(dropdown));
 
     document.getElementById("items-list").innerHTML = "";
     (question.config?.items || []).forEach((item) => addItemRow(item));
@@ -115,6 +122,9 @@ function fillQuestionForm(question) {
     if (!question.options?.length) {
         addOptionRow();
         addOptionRow();
+    }
+    if (question.type === "hot_spot" && !(question.config?.dropdowns || []).length) {
+        addHotspotDropdownRow();
     }
     updateVisibleSections();
 }
@@ -146,12 +156,12 @@ function buildPayloadFromForm() {
     if (type === "hot_spot") {
         payload.options = [];
         payload.config = {
-            regions: Array.from(document.querySelectorAll(".region-row")).map((row, index) => ({
-                id: row.querySelector(".region-id").value.trim() || `region-${index + 1}`,
-                x: Number(row.querySelector(".region-x").value),
-                y: Number(row.querySelector(".region-y").value),
-                width: Number(row.querySelector(".region-width").value),
-                height: Number(row.querySelector(".region-height").value),
+            dropdowns: Array.from(document.querySelectorAll(".hotspot-dropdown-row")).map((row, index) => ({
+                id: row.querySelector(".hotspot-dropdown-id").value.trim() || `dropdown-${index + 1}`,
+                order: Number(row.querySelector(".hotspot-dropdown-order").value || index + 1),
+                label: row.querySelector(".hotspot-dropdown-label").value.trim(),
+                options: splitLineValues(row.querySelector(".hotspot-dropdown-options").value),
+                correct_option: row.querySelector(".hotspot-dropdown-correct").value.trim(),
             })),
         };
     }
@@ -193,19 +203,21 @@ function addOptionRow(option = {}) {
     document.getElementById("options-list").appendChild(row);
 }
 
-function addRegionRow(region = {}) {
+function addHotspotDropdownRow(dropdown = {}) {
     const row = document.createElement("div");
-    row.className = "row-box region-row inline-grid";
+    row.className = "row-box hotspot-dropdown-row";
     row.innerHTML = `
-        <label><span>Region id</span><input class="region-id" type="text" value="${region.id || ""}"></label>
-        <label><span>X</span><input class="region-x" type="number" step="0.1" value="${region.x ?? 0}"></label>
-        <label><span>Y</span><input class="region-y" type="number" step="0.1" value="${region.y ?? 0}"></label>
-        <label><span>Width</span><input class="region-width" type="number" step="0.1" value="${region.width ?? 10}"></label>
-        <label><span>Height</span><input class="region-height" type="number" step="0.1" value="${region.height ?? 10}"></label>
+        <div class="inline-grid">
+            <label><span>Dropdown id</span><input class="hotspot-dropdown-id" type="text" value="${dropdown.id || ""}" placeholder="dropdown-1"></label>
+            <label><span>Order number</span><input class="hotspot-dropdown-order" type="number" min="1" value="${dropdown.order ?? ""}"></label>
+            <label><span>Label</span><input class="hotspot-dropdown-label" type="text" value="${dropdown.label || ""}" placeholder="Dropdown 1"></label>
+        </div>
+        <label><span>Options</span><textarea class="hotspot-dropdown-options" rows="4" placeholder="One option per line">${(dropdown.options || []).join("\n")}</textarea></label>
+        <label><span>Correct option</span><input class="hotspot-dropdown-correct" type="text" value="${dropdown.correct_option || ""}" placeholder="Must match one option exactly"></label>
         <button class="button button--secondary button--small js-remove-row" type="button">Remove</button>
     `;
     attachRemoveHandler(row);
-    document.getElementById("regions-list").appendChild(row);
+    document.getElementById("hotspot-dropdowns-list").appendChild(row);
 }
 
 function addItemRow(item = {}) {
@@ -239,4 +251,11 @@ function attachRemoveHandler(row) {
 
 function findItemIdByDestination(mappings, destinationId) {
     return Object.keys(mappings).find((itemId) => mappings[itemId] === destinationId) || "";
+}
+
+function splitLineValues(value) {
+    return value
+        .split(/\n|,/)
+        .map((item) => item.trim())
+        .filter(Boolean);
 }

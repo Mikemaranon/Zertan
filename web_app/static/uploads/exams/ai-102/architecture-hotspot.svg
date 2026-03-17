@@ -6,6 +6,10 @@
               <text x="450" y="155" text-anchor="middle" font-family="Arial" font-size="24" fill="#27496d">Document Intelligence</text>
               <rect x="620" y="90" width="220" height="120" rx="14" fill="#dcedff" stroke="#8eb8e8"/>
               <text x="730" y="155" text-anchor="middle" font-family="Arial" font-size="24" fill="#27496d">Azure AI Search</text>
+              <circle cx="530" cy="110" r="20" fill="#27496d"/>
+              <text x="530" y="117" text-anchor="middle" font-family="Arial" font-size="20" fill="#ffffff">1</text>
+              <circle cx="810" cy="110" r="20" fill="#27496d"/>
+              <text x="810" y="117" text-anchor="middle" font-family="Arial" font-size="20" fill="#ffffff">2</text>
               <rect x="340" y="300" width="220" height="120" rx="14" fill="#eef3f8" stroke="#9ea9b8"/>
               <text x="450" y="365" text-anchor="middle" font-family="Arial" font-size="24" fill="#51606f">Web App</text>
               <line x1="280" y1="150" x2="340" y2="150" stroke="#8eb8e8" stroke-width="6"/>

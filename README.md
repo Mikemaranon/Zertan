@@ -252,5 +252,5 @@ The following smoke checks were run locally with Flask's test client:
 ## Current limitations
 
 - no automated browser test suite is included yet
-- question editor image placement for hot spot regions is coordinate-form based rather than visual drawing
+- hot spot questions use numbered dropdowns associated with an image instead of coordinate-click regions
 - drag and drop authoring is form-based while runtime interaction is true drag and drop

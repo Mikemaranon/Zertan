@@ -53,21 +53,39 @@ def normalize_question_payload(raw_payload):
 
     if payload["type"] == "hot_spot":
         payload["options"] = []
-        regions = payload["config"].get("regions") or []
-        clean_regions = []
-        for region in regions:
-            clean_regions.append(
+        dropdowns = payload["config"].get("dropdowns") or []
+        clean_dropdowns = []
+        used_orders = set()
+        for index, dropdown in enumerate(dropdowns, start=1):
+            order = int(dropdown.get("order") or index)
+            if order < 1:
+                raise ValueError("Hot spot dropdown order must be greater than zero.")
+            if order in used_orders:
+                raise ValueError("Hot spot dropdown order values must be unique.")
+            used_orders.add(order)
+
+            options = _normalize_string_list(dropdown.get("options", []))
+            if len(options) < 2:
+                raise ValueError("Each hot spot dropdown requires at least two options.")
+
+            correct_option = (dropdown.get("correct_option") or "").strip()
+            if correct_option not in options:
+                raise ValueError("Each hot spot dropdown must define a correct option from its option list.")
+
+            clean_dropdowns.append(
                 {
-                    "id": region.get("id") or f"region-{len(clean_regions) + 1}",
-                    "x": float(region["x"]),
-                    "y": float(region["y"]),
-                    "width": float(region["width"]),
-                    "height": float(region["height"]),
+                    "id": (dropdown.get("id") or f"dropdown-{order}").strip(),
+                    "order": order,
+                    "label": (dropdown.get("label") or f"Dropdown {order}").strip(),
+                    "options": options,
+                    "correct_option": correct_option,
                 }
             )
-        if not clean_regions:
-            raise ValueError("Hot spot questions require at least one valid region.")
-        payload["config"] = {"regions": clean_regions}
+        if not clean_dropdowns:
+            raise ValueError("Hot spot questions require at least one dropdown definition.")
+        if not payload["assets"]:
+            raise ValueError("Hot spot questions require an image asset.")
+        payload["config"] = {"dropdowns": sorted(clean_dropdowns, key=lambda item: item["order"])}
 
     if payload["type"] == "drag_drop":
         payload["options"] = []
@@ -109,9 +127,7 @@ def build_public_question(question, include_solution=False):
             for option in question.get("options", [])
         ]
     elif question["type"] == "hot_spot":
-        public_question["config"] = {}
-        if include_solution:
-            public_question["config"]["regions"] = question.get("config", {}).get("regions", [])
+        public_question["config"] = _build_public_hotspot_config(question, include_solution)
     elif question["type"] == "drag_drop":
         public_question["config"] = {
             "items": question.get("config", {}).get("items", []),
@@ -146,9 +162,14 @@ def evaluate_question_response(question, response):
         correct = sorted(option["key"] for option in question["options"] if option.get("is_correct"))
         is_correct = selected == correct
     elif question_type == "hot_spot":
-        x = float(response.get("x"))
-        y = float(response.get("y"))
-        is_correct = any(_point_in_region(x, y, region) for region in question.get("config", {}).get("regions", []))
+        dropdowns = question.get("config", {}).get("dropdowns") or []
+        if dropdowns:
+            submitted = response.get("selections", {})
+            is_correct = all(submitted.get(dropdown["id"]) == dropdown["correct_option"] for dropdown in dropdowns)
+        else:
+            x = float(response.get("x"))
+            y = float(response.get("y"))
+            is_correct = any(_point_in_region(x, y, region) for region in question.get("config", {}).get("regions", []))
     elif question_type == "drag_drop":
         submitted = response.get("mappings", {})
         correct = question.get("config", {}).get("mappings", {})
@@ -167,7 +188,7 @@ def evaluate_question_response(question, response):
 
 def _normalize_string_list(values):
     if isinstance(values, str):
-        values = [item.strip() for item in values.split(",")]
+        values = [item.strip() for item in values.replace("\n", ",").split(",")]
     return [value.strip() for value in values if str(value).strip()]
 
 
@@ -186,6 +207,9 @@ def _is_omitted(question_type, response):
     if question_type == "multiple_choice":
         return not response.get("selected")
     if question_type == "hot_spot":
+        selections = response.get("selections")
+        if selections is not None:
+            return not any(str(value).strip() for value in selections.values())
         return response.get("x") is None or response.get("y") is None
     if question_type == "drag_drop":
         return not response.get("mappings")
@@ -198,7 +222,39 @@ def _correct_answer_summary(question):
     if question["type"] == "multiple_choice":
         return sorted(option["key"] for option in question["options"] if option.get("is_correct"))
     if question["type"] == "hot_spot":
+        dropdowns = question.get("config", {}).get("dropdowns") or []
+        if dropdowns:
+            return [
+                {
+                    "id": dropdown["id"],
+                    "order": dropdown["order"],
+                    "label": dropdown.get("label") or f"Dropdown {dropdown['order']}",
+                    "correct_option": dropdown["correct_option"],
+                }
+                for dropdown in dropdowns
+            ]
         return question.get("config", {}).get("regions", [])
     if question["type"] == "drag_drop":
         return question.get("config", {}).get("mappings", {})
     return None
+
+
+def _build_public_hotspot_config(question, include_solution):
+    config = question.get("config", {})
+    dropdowns = config.get("dropdowns") or []
+    if dropdowns:
+        public_dropdowns = []
+        for dropdown in dropdowns:
+            item = {
+                "id": dropdown["id"],
+                "order": dropdown["order"],
+                "label": dropdown.get("label") or f"Dropdown {dropdown['order']}",
+                "options": dropdown.get("options", []),
+            }
+            if include_solution:
+                item["correct_option"] = dropdown["correct_option"]
+            public_dropdowns.append(item)
+        return {"dropdowns": public_dropdowns}
+    if include_solution:
+        return {"regions": config.get("regions", [])}
+    return {}

@@ -375,6 +375,18 @@ textarea {
     padding: 14px 16px;
 }
 
+.question-option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.question-option input {
+    flex: 0 0 auto;
+    width: auto;
+    margin: 0;
+}
+
 .drag-item {
     cursor: grab;
 }
@@ -412,6 +424,11 @@ textarea {
     border: 2px solid white;
     transform: translate(-50%, -50%);
     pointer-events: none;
+}
+
+.hotspot-dropdowns {
+    display: grid;
+    gap: 12px;
 }
 
 .feedback-box {

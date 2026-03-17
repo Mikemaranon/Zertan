@@ -64,7 +64,21 @@ class AttemptService:
                     {"key": option["key"], "text": option["text"]} for option in question.get("options", [])
                 ]
             if question["type"] == "hot_spot":
-                question["config"] = {}
+                dropdowns = question.get("config", {}).get("dropdowns") or []
+                if dropdowns:
+                    question["config"] = {
+                        "dropdowns": [
+                            {
+                                "id": dropdown["id"],
+                                "order": dropdown["order"],
+                                "label": dropdown.get("label") or f"Dropdown {dropdown['order']}",
+                                "options": dropdown.get("options", []),
+                            }
+                            for dropdown in dropdowns
+                        ]
+                    }
+                else:
+                    question["config"] = {}
             if question["type"] == "drag_drop":
                 question["config"] = {
                     "items": question.get("config", {}).get("items", []),

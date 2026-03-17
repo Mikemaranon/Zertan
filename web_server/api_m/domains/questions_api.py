@@ -128,10 +128,10 @@ class QuestionsAPI(BaseAPI):
         uploaded_asset = request.files.get("asset_file")
         if uploaded_asset and uploaded_asset.filename:
             relative_path = self._save_asset_file(exam_id, uploaded_asset)
-            asset_meta = {"alt": payload.get("asset_alt") or uploaded_asset.filename}
+            asset_meta = {"alt": request.form.get("asset_alt") or payload.get("asset_alt") or uploaded_asset.filename}
             existing_assets = [
                 {
-                    "asset_type": payload.get("asset_type", "image"),
+                    "asset_type": request.form.get("asset_type") or payload.get("asset_type", "image"),
                     "file_path": relative_path,
                     "meta": asset_meta,
                 }

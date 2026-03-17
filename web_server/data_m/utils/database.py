@@ -318,6 +318,10 @@ class Database:
               <text x="450" y="155" text-anchor="middle" font-family="Arial" font-size="24" fill="#27496d">Document Intelligence</text>
               <rect x="620" y="90" width="220" height="120" rx="14" fill="#dcedff" stroke="#8eb8e8"/>
               <text x="730" y="155" text-anchor="middle" font-family="Arial" font-size="24" fill="#27496d">Azure AI Search</text>
+              <circle cx="530" cy="110" r="20" fill="#27496d"/>
+              <text x="530" y="117" text-anchor="middle" font-family="Arial" font-size="20" fill="#ffffff">1</text>
+              <circle cx="810" cy="110" r="20" fill="#27496d"/>
+              <text x="810" y="117" text-anchor="middle" font-family="Arial" font-size="20" fill="#ffffff">2</text>
               <rect x="340" y="300" width="220" height="120" rx="14" fill="#eef3f8" stroke="#9ea9b8"/>
               <text x="450" y="365" text-anchor="middle" font-family="Arial" font-size="24" fill="#51606f">Web App</text>
               <line x1="280" y1="150" x2="340" y2="150" stroke="#8eb8e8" stroke-width="6"/>
@@ -441,15 +445,36 @@ class Database:
                 },
                 {
                     "type": "hot_spot",
-                    "title": "Service location",
-                    "statement": "Select the region representing the service that extracts structure from files before indexing.",
-                    "explanation": "Document Intelligence sits between the document store and search to extract structure from documents.",
+                    "title": "Service identification",
+                    "statement": "For each numbered marker in the image, choose the correct Azure service from the matching dropdown.",
+                    "explanation": "Marker 1 points to Document Intelligence and marker 2 points to Azure AI Search in the ingestion flow.",
                     "difficulty": "advanced",
                     "tags": ["architecture", "hotspot"],
-                    "topics": ["document-intelligence"],
+                    "topics": ["service-identification"],
                     "config": {
-                        "regions": [
-                            {"id": "doc-intel", "x": 37.8, "y": 17.3, "width": 24.4, "height": 23.2}
+                        "dropdowns": [
+                            {
+                                "id": "dropdown-1",
+                                "order": 1,
+                                "label": "Marker 1",
+                                "options": [
+                                    "Azure AI Search",
+                                    "Azure AI Document Intelligence",
+                                    "Azure AI Language",
+                                ],
+                                "correct_option": "Azure AI Document Intelligence",
+                            },
+                            {
+                                "id": "dropdown-2",
+                                "order": 2,
+                                "label": "Marker 2",
+                                "options": [
+                                    "Azure AI Search",
+                                    "Azure AI Content Safety",
+                                    "Azure AI Vision",
+                                ],
+                                "correct_option": "Azure AI Search",
+                            },
                         ]
                     },
                     "assets": [
