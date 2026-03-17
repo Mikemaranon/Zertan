@@ -39,7 +39,7 @@ class AppRoutes:
         user = self.user_manager.check_user(request)
         if user:
             return redirect(url_for("dashboard"))
-        return render_template("login.html", page_title="Login")
+        return render_template("auth/login.html", page_title="Login")
 
     def get_logout(self):
         token = self.user_manager.get_token_from_cookie(request) or self.user_manager.get_request_token(request)
@@ -52,32 +52,32 @@ class AppRoutes:
         return response
 
     def get_dashboard(self):
-        return self._render_auth_page("dashboard.html", "Dashboard")
+        return self._render_auth_page("home/dashboard.html", "Dashboard")
 
     def get_catalog(self):
-        return self._render_auth_page("catalog.html", "Exam Catalog")
+        return self._render_auth_page("home/catalog.html", "Exam Catalog")
 
     def get_exam_detail(self, exam_id):
-        return self._render_auth_page("exam_detail.html", "Study Mode", exam_id=exam_id)
+        return self._render_auth_page("exam/detail.html", "Study Mode", exam_id=exam_id)
 
     def get_exam_builder(self, exam_id):
-        return self._render_auth_page("exam_builder.html", "Exam Builder", exam_id=exam_id)
+        return self._render_auth_page("exam/builder.html", "Exam Builder", exam_id=exam_id)
 
     def get_exam_runner(self, attempt_id):
-        return self._render_auth_page("exam_runner.html", "Exam Runner", attempt_id=attempt_id)
+        return self._render_auth_page("exam/runner.html", "Exam Runner", attempt_id=attempt_id)
 
     def get_attempt_results(self, attempt_id):
-        return self._render_auth_page("results.html", "Attempt Results", attempt_id=attempt_id)
+        return self._render_auth_page("exam/results.html", "Attempt Results", attempt_id=attempt_id)
 
     def get_profile(self):
         return redirect(url_for("dashboard"))
 
     def get_exam_management(self):
-        return self._render_auth_page("exam_management.html", "Exam Management", min_role="examiner")
+        return self._render_auth_page("management/exams.html", "Exam Management", min_role="examiner")
 
     def get_question_create(self, exam_id):
         return self._render_auth_page(
-            "question_editor.html",
+            "management/question_editor.html",
             "Create Question",
             min_role="reviewer",
             exam_id=exam_id,
@@ -85,14 +85,14 @@ class AppRoutes:
 
     def get_question_edit(self, question_id):
         return self._render_auth_page(
-            "question_editor.html",
+            "management/question_editor.html",
             "Edit Question",
             min_role="reviewer",
             question_id=question_id,
         )
 
     def get_admin(self):
-        return self._render_auth_page("admin.html", "Admin Panel", min_role="administrator")
+        return self._render_auth_page("management/admin.html", "Admin Panel", min_role="administrator")
 
     def _render_auth_page(self, template_name, page_title, min_role=None, **page_context):
         user = self.user_manager.check_user(request)
@@ -100,7 +100,7 @@ class AppRoutes:
             return redirect(url_for("login"))
         if min_role and not self.user_manager.user_has_role(user, min_role):
             return render_template(
-                "forbidden.html",
+                "shared/forbidden.html",
                 page_title="Forbidden",
                 current_user=user,
             ), 403

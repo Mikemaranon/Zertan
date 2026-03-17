@@ -74,22 +74,20 @@ No SPA framework or alternate backend stack was introduced.
 
 ### Frontend
 
-- `web_app/base.html`
+- `web_app/shared/base.html`
   Shared shell for authenticated pages.
 
-- `web_app/*.html`
-  Server-rendered pages for:
-  - login
-  - dashboard
-  - catalog
-  - exam detail / study mode
-  - exam builder
-  - exam runner
-  - results
-  - profile
-  - exam management
-  - question editor
-  - admin
+- `web_app/auth/`
+  Authentication templates.
+
+- `web_app/home/`
+  User workspace pages such as dashboard and catalog.
+
+- `web_app/exam/`
+  Exam flow pages for study, builder, runner, and results.
+
+- `web_app/management/`
+  Management pages for exams, question editing, and admin.
 
 - `web_app/static/JS/`
   Modular vanilla JS:
