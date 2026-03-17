@@ -8,7 +8,7 @@ from werkzeug.security import generate_password_hash
 from .db_connector import DBConnector
 
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 
 class Database:
@@ -105,6 +105,7 @@ class Database:
                 title TEXT NOT NULL,
                 provider TEXT NOT NULL,
                 description TEXT DEFAULT '',
+                official_url TEXT DEFAULT '',
                 difficulty TEXT DEFAULT 'intermediate',
                 status TEXT NOT NULL DEFAULT 'draft',
                 created_by INTEGER,
@@ -254,14 +255,27 @@ class Database:
             """
         )
 
+        self._ensure_column("exams", "official_url", "TEXT DEFAULT ''")
+
         _, row = self.execute(
             "SELECT version FROM schema_meta ORDER BY version DESC LIMIT 1",
             fetchone=True,
         )
+        current_version = row["version"] if row else 0
         if not row:
             self.execute("INSERT INTO schema_meta (version) VALUES (?)", (SCHEMA_VERSION,))
+        elif current_version < SCHEMA_VERSION:
+            self.execute("UPDATE schema_meta SET version = ?", (SCHEMA_VERSION,))
 
         self._seed_defaults()
+        if current_version < 2:
+            self._seed_exam_links()
+
+    def _ensure_column(self, table, column_name, definition):
+        _, rows = self.execute(f"PRAGMA table_info({table})", fetchall=True)
+        existing_columns = {row["name"] for row in rows}
+        if column_name not in existing_columns:
+            self.execute(f"ALTER TABLE {table} ADD COLUMN {column_name} {definition}")
 
     def _seed_defaults(self):
         _, count_row = self.execute("SELECT COUNT(*) AS total FROM users", fetchone=True)
@@ -343,6 +357,7 @@ class Database:
                 "title": "Designing and Implementing an Azure AI Solution",
                 "provider": "Microsoft",
                 "description": "Structured preparation for Azure AI services, RAG patterns, search, and responsible AI.",
+                "official_url": "https://learn.microsoft.com/en-us/credentials/certifications/azure-ai-engineer/",
                 "difficulty": "advanced",
                 "status": "published",
                 "tags": ["azure-ai", "microsoft", "production"],
@@ -352,6 +367,7 @@ class Database:
                 "title": "Microsoft Azure Fundamentals",
                 "provider": "Microsoft",
                 "description": "Foundational Azure study bank focused on cloud concepts, governance, and core services.",
+                "official_url": "https://learn.microsoft.com/en-us/credentials/certifications/azure-fundamentals/",
                 "difficulty": "foundational",
                 "status": "published",
                 "tags": ["azure", "fundamentals"],
@@ -361,14 +377,15 @@ class Database:
         for exam in exams:
             self.execute(
                 """
-                INSERT INTO exams (code, title, provider, description, difficulty, status, created_by)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO exams (code, title, provider, description, official_url, difficulty, status, created_by)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     exam["code"],
                     exam["title"],
                     exam["provider"],
                     exam["description"],
+                    exam["official_url"],
                     exam["difficulty"],
                     exam["status"],
                     admin_id,
@@ -558,7 +575,6 @@ class Database:
                 },
             ],
         )
-
         self._seed_questions(
             az_exam_id,
             [
@@ -654,6 +670,21 @@ class Database:
                 },
             ],
         )
+
+    def _seed_exam_links(self):
+        seeded_links = {
+            "AI-102": "https://learn.microsoft.com/en-us/credentials/certifications/azure-ai-engineer/",
+            "AZ-900": "https://learn.microsoft.com/en-us/credentials/certifications/azure-fundamentals/",
+        }
+        for code, official_url in seeded_links.items():
+            self.execute(
+                """
+                UPDATE exams
+                SET official_url = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE code = ? AND COALESCE(official_url, '') = ''
+                """,
+                (official_url, code),
+            )
 
     def _seed_questions(self, exam_id, questions):
         position = 1

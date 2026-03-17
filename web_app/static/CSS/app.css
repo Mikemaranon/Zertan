@@ -301,24 +301,21 @@ textarea {
 }
 
 .card {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
     border: 1px solid var(--border);
     border-radius: var(--radius-small);
     background: var(--surface);
     padding: 20px;
 }
 
-.grid--cards > .card {
-    display: flex;
-    flex-direction: column;
-}
-
 .grid--cards > .card > .button-row:last-child {
     margin-top: auto;
-    padding-top: 16px;
 }
 
 .card h3 {
-    margin-top: 0;
+    margin: 0;
 }
 
 .meta-row,
@@ -336,6 +333,40 @@ textarea {
     background: var(--surface-soft);
     color: var(--muted);
     font-size: 0.88rem;
+}
+
+.section-heading p {
+    margin: 0;
+}
+
+.section-heading .eyebrow {
+    margin-bottom: 5px;
+}
+
+.section-heading .muted {
+    margin-bottom: 15px;
+}
+
+.stack-gap > .section-heading .muted {
+    margin-bottom: 0;
+}
+
+.card > p {
+    margin: 0;
+}
+
+.exam-reference {
+    display: flex;
+    align-items: center;
+}
+
+.meta-link {
+    color: var(--primary-strong);
+    font-weight: 600;
+}
+
+.meta-link:hover {
+    text-decoration: underline;
 }
 
 .kpi-card {

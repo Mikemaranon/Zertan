@@ -1,6 +1,7 @@
 # db_methods/t_exams.py
 
 import json
+from urllib.parse import urlparse
 
 
 class ExamsTable:
@@ -16,6 +17,7 @@ class ExamsTable:
                 e.title,
                 e.provider,
                 e.description,
+                e.official_url,
                 e.difficulty,
                 e.status,
                 e.created_at,
@@ -36,6 +38,7 @@ class ExamsTable:
                 "title": row["title"],
                 "provider": row["provider"],
                 "description": row["description"],
+                "official_url": row["official_url"],
                 "difficulty": row["difficulty"],
                 "status": row["status"],
                 "created_at": row["created_at"],
@@ -55,6 +58,7 @@ class ExamsTable:
                 e.title,
                 e.provider,
                 e.description,
+                e.official_url,
                 e.difficulty,
                 e.status,
                 e.created_at,
@@ -77,6 +81,7 @@ class ExamsTable:
             "title": row["title"],
             "provider": row["provider"],
             "description": row["description"],
+            "official_url": row["official_url"],
             "difficulty": row["difficulty"],
             "status": row["status"],
             "created_at": row["created_at"],
@@ -87,48 +92,52 @@ class ExamsTable:
         }
 
     def create(self, payload, created_by):
+        normalized = self._normalize_payload(payload)
         self.db.execute(
             """
-            INSERT INTO exams (code, title, provider, description, difficulty, status, created_by)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO exams (code, title, provider, description, official_url, difficulty, status, created_by)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
-                payload["code"],
-                payload["title"],
-                payload["provider"],
-                payload.get("description", ""),
-                payload.get("difficulty", "intermediate"),
-                payload.get("status", "draft"),
+                normalized["code"],
+                normalized["title"],
+                normalized["provider"],
+                normalized["description"],
+                normalized["official_url"],
+                normalized["difficulty"],
+                normalized["status"],
                 created_by,
             ),
         )
         _, row = self.db.execute(
             "SELECT id FROM exams WHERE code = ?",
-            (payload["code"],),
+            (normalized["code"],),
             fetchone=True,
         )
         exam_id = row["id"]
-        self.set_tags(exam_id, payload.get("tags", []))
+        self.set_tags(exam_id, normalized.get("tags", []))
         return exam_id
 
     def update(self, exam_id, payload):
+        normalized = self._normalize_payload(payload)
         self.db.execute(
             """
             UPDATE exams
-            SET code = ?, title = ?, provider = ?, description = ?, difficulty = ?, status = ?, updated_at = CURRENT_TIMESTAMP
+            SET code = ?, title = ?, provider = ?, description = ?, official_url = ?, difficulty = ?, status = ?, updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
             """,
             (
-                payload["code"],
-                payload["title"],
-                payload["provider"],
-                payload.get("description", ""),
-                payload.get("difficulty", "intermediate"),
-                payload.get("status", "draft"),
+                normalized["code"],
+                normalized["title"],
+                normalized["provider"],
+                normalized["description"],
+                normalized["official_url"],
+                normalized["difficulty"],
+                normalized["status"],
                 exam_id,
             ),
         )
-        self.set_tags(exam_id, payload.get("tags", []))
+        self.set_tags(exam_id, normalized.get("tags", []))
 
     def delete(self, exam_id):
         self.db.execute("DELETE FROM exams WHERE id = ?", (exam_id,))
@@ -212,3 +221,21 @@ class ExamsTable:
             fetchone=True,
         )
         return created["id"]
+
+    def _normalize_payload(self, payload):
+        official_url = str(payload.get("official_url", "") or "").strip()
+        if official_url:
+            parsed = urlparse(official_url)
+            if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+                raise ValueError("Official exam URL must be a valid http or https address.")
+
+        return {
+            "code": str(payload["code"]).strip(),
+            "title": str(payload["title"]).strip(),
+            "provider": str(payload["provider"]).strip(),
+            "description": str(payload.get("description", "") or "").strip(),
+            "official_url": official_url,
+            "difficulty": str(payload.get("difficulty", "intermediate") or "intermediate").strip(),
+            "status": str(payload.get("status", "draft") or "draft").strip(),
+            "tags": [tag.strip() for tag in payload.get("tags", []) if str(tag).strip()],
+        }

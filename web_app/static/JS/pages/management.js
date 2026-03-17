@@ -1,4 +1,4 @@
-import { request, splitCommaValues } from "../core/api.js";
+import { escapeHtml, request, splitCommaValues } from "../core/api.js";
 
 export async function initManagementPage() {
     const examList = document.getElementById("management-exam-list");
@@ -11,17 +11,26 @@ export async function initManagementPage() {
         const data = await request("/api/exams");
         examList.innerHTML = data.exams
             .map(
-                (exam) => `
+                (exam) => {
+                    const officialLink = exam.official_url
+                        ? `
+                <div class="exam-reference">
+                    <a class="meta-link" href="${escapeHtml(exam.official_url)}" target="_blank" rel="noopener noreferrer">Official exam page</a>
+                </div>
+            `
+                        : "";
+                    return `
             <div class="card" data-exam-id="${exam.id}">
                 <div class="section-heading">
                     <div>
-                        <h3>${exam.code} · ${exam.title}</h3>
-                        <p class="muted">${exam.provider}</p>
+                        <h3>${escapeHtml(exam.code)} · ${escapeHtml(exam.title)}</h3>
+                        <p class="muted">${escapeHtml(exam.provider)}</p>
                     </div>
-                    <span class="badge">${exam.status}</span>
+                    <span class="badge">${escapeHtml(exam.status)}</span>
                 </div>
-                <p class="muted">${exam.description || ""}</p>
-                <div class="badge-row">${(exam.tags || []).map((tag) => `<span class="badge">${tag}</span>`).join("")}</div>
+                <p class="muted">${escapeHtml(exam.description || "")}</p>
+                ${officialLink}
+                <div class="badge-row">${(exam.tags || []).map((tag) => `<span class="badge">${escapeHtml(tag)}</span>`).join("")}</div>
                 <div class="button-row">
                     <button class="button button--secondary button--small js-edit-exam" type="button">Edit metadata</button>
                     <a class="button button--secondary button--small" href="/exams/${exam.id}/questions/new">Create question</a>
@@ -29,7 +38,8 @@ export async function initManagementPage() {
                     <button class="button button--primary button--small js-export-exam" type="button">Export package</button>
                 </div>
             </div>
-        `
+        `;
+                }
             )
             .join("");
 
@@ -58,6 +68,7 @@ export async function initManagementPage() {
             title: document.getElementById("exam-title").value.trim(),
             provider: document.getElementById("exam-provider").value.trim(),
             description: document.getElementById("exam-description").value.trim(),
+            official_url: document.getElementById("exam-official-url").value.trim(),
             difficulty: document.getElementById("exam-difficulty").value,
             status: document.getElementById("exam-status").value,
             tags: splitCommaValues(document.getElementById("exam-tags").value),
@@ -107,6 +118,7 @@ function fillForm(exam) {
     document.getElementById("exam-title").value = exam.title;
     document.getElementById("exam-provider").value = exam.provider;
     document.getElementById("exam-description").value = exam.description || "";
+    document.getElementById("exam-official-url").value = exam.official_url || "";
     document.getElementById("exam-difficulty").value = exam.difficulty || "intermediate";
     document.getElementById("exam-status").value = exam.status || "draft";
     document.getElementById("exam-tags").value = (exam.tags || []).join(", ");

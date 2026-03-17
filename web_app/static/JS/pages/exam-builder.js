@@ -1,4 +1,4 @@
-import { request } from "../core/api.js";
+import { escapeHtml, request } from "../core/api.js";
 import { createAddableSelect } from "../components/addable-select.js";
 
 export async function initExamBuilderPage(pageContext) {
@@ -8,13 +8,21 @@ export async function initExamBuilderPage(pageContext) {
 
     const data = await request(`/api/exams/${pageContext.exam_id}/builder-meta`);
     const { exam, builder_meta: meta } = data;
+    const officialLink = exam.official_url
+        ? `
+        <div class="exam-reference">
+            <a class="meta-link" href="${escapeHtml(exam.official_url)}" target="_blank" rel="noopener noreferrer">Official exam page</a>
+        </div>
+    `
+        : "";
 
     summary.innerHTML = `
-        <p class="eyebrow">${exam.provider}</p>
-        <h2>${exam.code} · ${exam.title}</h2>
-        <p class="muted">${exam.description || ""}</p>
+        <p class="eyebrow">${escapeHtml(exam.provider)}</p>
+        <h2>${escapeHtml(exam.code)} · ${escapeHtml(exam.title)}</h2>
+        <p class="muted">${escapeHtml(exam.description || "")}</p>
+        ${officialLink}
         <div class="badge-row">
-            <span class="badge">${exam.difficulty}</span>
+            <span class="badge">${escapeHtml(exam.difficulty)}</span>
             <span class="badge">${exam.question_count} questions in bank</span>
         </div>
     `;

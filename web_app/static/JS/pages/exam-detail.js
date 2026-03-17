@@ -16,12 +16,20 @@ export async function initExamDetailPage(pageContext) {
 
     const exam = data.exam;
     const questions = data.questions;
+    const officialLink = exam.official_url
+        ? `
+            <div class="exam-reference">
+                <a class="meta-link" href="${escapeHtml(exam.official_url)}" target="_blank" rel="noopener noreferrer">Official exam page</a>
+            </div>
+        `
+        : "";
 
     header.innerHTML = `
         <div>
             <p class="eyebrow">${escapeHtml(exam.provider)}</p>
             <h2>${escapeHtml(exam.code)} · ${escapeHtml(exam.title)}</h2>
             <p class="muted">${escapeHtml(exam.description || "")}</p>
+            ${officialLink}
         </div>
         <div class="button-row">
             <a class="button button--primary" href="/exams/${exam.id}/builder">Start exam mode</a>

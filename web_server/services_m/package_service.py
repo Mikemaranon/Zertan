@@ -47,6 +47,7 @@ class PackageService:
             "title": exam["title"],
             "provider": exam["provider"],
             "description": exam["description"],
+            "official_url": exam.get("official_url", ""),
             "difficulty": exam["difficulty"],
             "status": exam["status"],
             "tags": exam["tags"],

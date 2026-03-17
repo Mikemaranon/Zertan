@@ -46,7 +46,10 @@ class ExamsAPI(BaseAPI):
         required = ["code", "title", "provider"]
         if any(not str(payload.get(field, "")).strip() for field in required):
             return self.error("Code, title, and provider are required.", 400)
-        exam_id = self.db.exams.create(payload, user["id"])
+        try:
+            exam_id = self.db.exams.create(payload, user["id"])
+        except ValueError as exc:
+            return self.error(str(exc), 400)
         return self.ok({"exam": self.db.exams.get(exam_id)}, 201)
 
     def get_exam(self, exam_id):
@@ -72,7 +75,10 @@ class ExamsAPI(BaseAPI):
         required = ["code", "title", "provider"]
         if any(not str(payload.get(field, "")).strip() for field in required):
             return self.error("Code, title, and provider are required.", 400)
-        self.db.exams.update(exam_id, payload)
+        try:
+            self.db.exams.update(exam_id, payload)
+        except ValueError as exc:
+            return self.error(str(exc), 400)
         return self.ok({"exam": self.db.exams.get(exam_id)})
 
     def get_study_mode(self, exam_id):
