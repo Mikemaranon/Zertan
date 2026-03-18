@@ -7,6 +7,7 @@ from flask import current_app, jsonify, make_response, request
 from werkzeug.utils import secure_filename
 
 from api_m.domains.base_api import BaseAPI
+from storage_paths import build_media_path
 
 
 class AuthAPI(BaseAPI):
@@ -43,8 +44,9 @@ class AuthAPI(BaseAPI):
             "token",
             token,
             httponly=True,
-            samesite="Lax",
-            max_age=8 * 60 * 60,
+            samesite=current_app.config.get("COOKIE_SAMESITE", "Lax"),
+            secure=bool(current_app.config.get("COOKIE_SECURE", False)),
+            max_age=int(current_app.config.get("JWT_LIFETIME_HOURS", 8)) * 60 * 60,
         )
         return response
 
@@ -52,7 +54,11 @@ class AuthAPI(BaseAPI):
         token = self.user_manager.get_token_from_cookie(request)
         self.user_manager.logout(token)
         response = make_response(jsonify({"status": "ok"}))
-        response.delete_cookie("token")
+        response.delete_cookie(
+            "token",
+            secure=bool(current_app.config.get("COOKIE_SECURE", False)),
+            samesite=current_app.config.get("COOKIE_SAMESITE", "Lax"),
+        )
         return response
 
     def me(self):
@@ -96,11 +102,14 @@ class AuthAPI(BaseAPI):
         if not (uploaded_file.mimetype or "").startswith("image/"):
             return self.error("The uploaded file must be an image.", 400)
 
-        project_root = Path(current_app.root_path).resolve().parents[0]
-        target_dir = project_root / "web_server" / "data_m" / "assets" / "profiles" / str(user["id"])
+        media_root = Path(current_app.config["MEDIA_ROOT"]).resolve()
+        target_dir = media_root / "profiles" / str(user["id"])
         target_dir.mkdir(parents=True, exist_ok=True)
         target_path = target_dir / f"{uuid4().hex}{extension}"
         uploaded_file.save(target_path)
 
-        updated = self.user_manager.update_avatar(user["id"], str(target_path.relative_to(project_root)))
+        updated = self.user_manager.update_avatar(
+            user["id"],
+            build_media_path("profiles", user["id"], target_path.name),
+        )
         return self.ok({"user": self.user_manager.public_user(updated)})

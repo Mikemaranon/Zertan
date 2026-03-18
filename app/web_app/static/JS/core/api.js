@@ -56,10 +56,10 @@ export function assetPathToUrl(path) {
     if (path.startsWith("/")) {
         return path;
     }
-    if (path.startsWith("web_server/data_m/assets/")) {
-        return `/media/${path.replace(/^web_server\/data_m\/assets\//, "")}`;
+    if (path.startsWith("web_app/")) {
+        return `/${path.replace(/^web_app\//, "")}`;
     }
-    return `/${path.replace(/^web_app\//, "")}`;
+    return `/media/${path.replace(/^web_server\/data_m\/assets\//, "").replace(/^\/+/, "")}`;
 }
 
 export function splitCommaValues(value) {

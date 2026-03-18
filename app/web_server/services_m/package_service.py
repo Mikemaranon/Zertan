@@ -8,6 +8,8 @@ from pathlib import Path
 from posixpath import normpath
 from uuid import uuid4
 
+from storage_paths import build_media_path, resolve_stored_path
+
 from .question_logic import normalize_question_payload
 
 
@@ -17,10 +19,10 @@ class PackageService:
     ALLOWED_ASSET_EXTENSIONS = {".png", ".jpg", ".svg"}
     IGNORED_ARCHIVE_NAMES = {"__MACOSX", ".DS_Store", "Thumbs.db"}
 
-    def __init__(self, db_manager, project_root):
+    def __init__(self, db_manager, project_root, media_root=None):
         self.db = db_manager
         self.project_root = Path(project_root)
-        self.upload_root = self.project_root / "web_server" / "data_m" / "assets"
+        self.upload_root = Path(media_root) if media_root else self.project_root / "web_server" / "data_m" / "assets"
 
     def export_exam(self, exam_id):
         exam = self.db.exams.get(exam_id)
@@ -40,8 +42,12 @@ class PackageService:
         for index, question in enumerate(questions, start=1):
             serialized = dict(question)
             for asset in serialized.get("assets", []):
-                source_path = self.project_root / asset["file_path"]
-                if source_path.exists():
+                source_path = resolve_stored_path(
+                    asset["file_path"],
+                    media_root=self.upload_root,
+                    app_root=self.project_root,
+                )
+                if source_path and source_path.exists():
                     relative_name = exported_assets.get(asset["file_path"])
                     if not relative_name:
                         relative_name = self._build_export_asset_name(Path(asset["file_path"]).name, used_asset_names)
@@ -329,6 +335,6 @@ class PackageService:
             asset_path = str(asset.get("file_path") or "").strip()
             stored_path = stored_asset_paths.get(asset_path)
             if stored_path is not None:
-                normalized_asset["file_path"] = str(stored_path.relative_to(self.project_root))
+                normalized_asset["file_path"] = build_media_path(stored_path.relative_to(self.upload_root))
             assets.append(normalized_asset)
         return assets

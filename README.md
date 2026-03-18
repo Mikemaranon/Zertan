@@ -35,12 +35,93 @@ All commands below are meant to be run from the repository root.
 ```bash
 python3 -m venv .venv
 .venv/bin/python -m pip install -r app/requirements.txt
-PYTHONPATH=app/web_server .venv/bin/python app/web_server/main.py
+PYTHONPATH=app/web_server ZERTAN_DEBUG=1 .venv/bin/python app/web_server/main.py
 ```
 
 By default, the application starts on `http://127.0.0.1:5050`.
 
-Technical documentation lives in [`app/README.md`](/Users/myke/Desktop/codes/Projects/Zertan/app/README.md).
+Technical documentation lives in [`app/README.md`](app/README.md).
+
+On first boot, the app seeds one administrator account:
+
+- `admin` / `admin123`
+
+The default catalog contains a single mock exam:
+
+- `ZT-100`
+
+## Docker Deployment
+
+The repository now includes a production-oriented container setup:
+
+- [`deploy/docker/Dockerfile`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/docker/Dockerfile)
+- [`deploy/docker/compose.yml`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/docker/compose.yml)
+- [`deploy/docker/.env.example`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/docker/.env.example)
+
+Quick start with Docker Compose:
+
+```bash
+cd deploy/docker
+cp .env.example .env
+docker compose -f compose.yml up --build -d
+```
+
+Default URL:
+
+- `http://127.0.0.1:5050`
+
+Runtime data is stored in the named volume `zertan_data` and mounted at `/data` inside the container. That volume contains:
+
+- the SQLite database
+- uploaded assets
+- imported exam package assets
+
+To deploy a published image instead of building locally, set `ZERTAN_IMAGE` in `.env`, for example:
+
+```bash
+ZERTAN_IMAGE=ghcr.io/<owner>/<repo>:1.0.0
+```
+
+Then run:
+
+```bash
+cd deploy/docker
+docker compose -f compose.yml pull
+docker compose -f compose.yml up -d
+```
+
+## Release Flow
+
+The repository also includes a GitHub Actions workflow at [`.github/workflows/release-image.yml`](.github/workflows/release-image.yml).
+
+Recommended release process:
+
+1. Commit the release-ready state.
+2. Create and push a semver tag such as `v1.0.0`.
+3. Create the GitHub Release from that tag.
+4. Let GitHub Actions publish the container image to GHCR.
+
+The workflow publishes tags such as:
+
+- `ghcr.io/<owner>/<repo>:1.0.0`
+- `ghcr.io/<owner>/<repo>:1.0`
+- `ghcr.io/<owner>/<repo>:latest`
+
+For public consumption, make sure the GitHub Container Registry package is visible to the audience you want to serve.
+
+## Runtime Configuration
+
+The deployment-oriented environment variables are:
+
+- `SECRET_KEY`
+- `HOST_PORT`
+- `ZERTAN_IMAGE`
+- `ZERTAN_COOKIE_SECURE`
+- `ZERTAN_COOKIE_SAMESITE`
+- `ZERTAN_JWT_HOURS`
+- `GUNICORN_WORKERS`
+- `GUNICORN_THREADS`
+- `GUNICORN_TIMEOUT`
 
 ## API Endpoints
 

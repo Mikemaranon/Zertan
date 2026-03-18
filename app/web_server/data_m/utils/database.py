@@ -1,9 +1,18 @@
 # database.py
 
 import json
+from contextlib import contextmanager
 from pathlib import Path
 
+try:
+    import fcntl
+except ImportError:  # pragma: no cover - Windows fallback
+    fcntl = None
+
 from werkzeug.security import generate_password_hash
+
+from runtime_config import get_runtime_config
+from storage_paths import build_media_path
 
 from .db_connector import DBConnector
 
@@ -14,9 +23,28 @@ SCHEMA_VERSION = 7
 class Database:
     def __init__(self):
         self.connector = DBConnector()
-        self.project_root = Path(__file__).resolve().parents[3]
-        self.upload_root = self.project_root / "web_server" / "data_m" / "assets"
-        self._init_db()
+        self.runtime_config = get_runtime_config()
+        self.project_root = self.runtime_config["app_root"]
+        self.upload_root = self.runtime_config["media_root"]
+        self.init_lock_path = self._build_init_lock_path(self.runtime_config["db_path"])
+        with self._db_init_lock():
+            self._init_db()
+
+    def _build_init_lock_path(self, db_path):
+        db_path = Path(db_path)
+        return db_path.with_name(f"{db_path.name}.init.lock")
+
+    @contextmanager
+    def _db_init_lock(self):
+        self.init_lock_path.parent.mkdir(parents=True, exist_ok=True)
+        with self.init_lock_path.open("w", encoding="utf-8") as lock_file:
+            if fcntl is not None:
+                fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+            try:
+                yield
+            finally:
+                if fcntl is not None:
+                    fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
 
     def execute(self, query, params=(), *, fetchone=False, fetchall=False):
         conn = self.connector.connect()
@@ -547,33 +575,6 @@ class Database:
                         "administrator",
                         "active",
                     ),
-                    (
-                        "examiner",
-                        "examiner@zertan.local",
-                        "examiner",
-                        "Examiner",
-                        generate_password_hash("examiner123"),
-                        "examiner",
-                        "active",
-                    ),
-                    (
-                        "reviewer",
-                        "reviewer@zertan.local",
-                        "reviewer",
-                        "Reviewer",
-                        generate_password_hash("reviewer123"),
-                        "reviewer",
-                        "active",
-                    ),
-                    (
-                        "candidate",
-                        "candidate@zertan.local",
-                        "candidate",
-                        "Candidate",
-                        generate_password_hash("candidate123"),
-                        "user",
-                        "active",
-                    ),
                 ],
             )
 
@@ -581,153 +582,94 @@ class Database:
         if exams_row["total"] > 0:
             return
 
-        ai_asset = self._ensure_svg_asset(
-            "exams/ai-102/architecture-hotspot.svg",
-            """
-            <svg xmlns="http://www.w3.org/2000/svg" width="900" height="520" viewBox="0 0 900 520">
-              <rect width="900" height="520" fill="#f8fbff"/>
-              <rect x="60" y="90" width="220" height="120" rx="14" fill="#dcedff" stroke="#8eb8e8"/>
-              <text x="170" y="155" text-anchor="middle" font-family="Arial" font-size="24" fill="#27496d">Document Store</text>
-              <rect x="340" y="90" width="220" height="120" rx="14" fill="#dcedff" stroke="#8eb8e8"/>
-              <text x="450" y="155" text-anchor="middle" font-family="Arial" font-size="24" fill="#27496d">Document Intelligence</text>
-              <rect x="620" y="90" width="220" height="120" rx="14" fill="#dcedff" stroke="#8eb8e8"/>
-              <text x="730" y="155" text-anchor="middle" font-family="Arial" font-size="24" fill="#27496d">Azure AI Search</text>
-              <circle cx="530" cy="110" r="20" fill="#27496d"/>
-              <text x="530" y="117" text-anchor="middle" font-family="Arial" font-size="20" fill="#ffffff">1</text>
-              <circle cx="810" cy="110" r="20" fill="#27496d"/>
-              <text x="810" y="117" text-anchor="middle" font-family="Arial" font-size="20" fill="#ffffff">2</text>
-              <rect x="340" y="300" width="220" height="120" rx="14" fill="#eef3f8" stroke="#9ea9b8"/>
-              <text x="450" y="365" text-anchor="middle" font-family="Arial" font-size="24" fill="#51606f">Web App</text>
-              <line x1="280" y1="150" x2="340" y2="150" stroke="#8eb8e8" stroke-width="6"/>
-              <line x1="560" y1="150" x2="620" y2="150" stroke="#8eb8e8" stroke-width="6"/>
-              <line x1="450" y1="210" x2="450" y2="300" stroke="#8eb8e8" stroke-width="6"/>
-            </svg>
-            """.strip(),
-        )
-
         admin_id = self.execute(
             "SELECT id FROM users WHERE username = ?",
             ("admin",),
             fetchone=True,
         )[1]["id"]
 
-        exams = [
-            {
-                "code": "AI-102",
-                "title": "Designing and Implementing an Azure AI Solution",
-                "provider": "Microsoft",
-                "description": "Structured preparation for Azure AI services, RAG patterns, search, and responsible AI.",
-                "official_url": "https://learn.microsoft.com/en-us/credentials/certifications/azure-ai-engineer/",
-                "difficulty": "advanced",
-                "status": "published",
-                "tags": ["azure-ai", "microsoft", "production"],
-            },
-            {
-                "code": "AZ-900",
-                "title": "Microsoft Azure Fundamentals",
-                "provider": "Microsoft",
-                "description": "Foundational Azure study bank focused on cloud concepts, governance, and core services.",
-                "official_url": "https://learn.microsoft.com/en-us/credentials/certifications/azure-fundamentals/",
-                "difficulty": "foundational",
-                "status": "published",
-                "tags": ["azure", "fundamentals"],
-            },
-        ]
+        mock_exam = {
+            "code": "ZT-100",
+            "title": "Zertan Platform Mock Exam",
+            "provider": "Zertan",
+            "description": "Mock certification bank covering the supported interactive question types and exam behaviors of the platform.",
+            "official_url": "https://zertan.local/exams/zt-100",
+            "difficulty": "intermediate",
+            "status": "published",
+            "tags": ["mock", "platform", "zt-100"],
+        }
 
-        for exam in exams:
+        self.execute(
+            """
+            INSERT INTO exams (code, title, provider, description, official_url, difficulty, status, created_by)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                mock_exam["code"],
+                mock_exam["title"],
+                mock_exam["provider"],
+                mock_exam["description"],
+                mock_exam["official_url"],
+                mock_exam["difficulty"],
+                mock_exam["status"],
+                admin_id,
+            ),
+        )
+
+        exam_id = self.execute(
+            "SELECT id FROM exams WHERE code = ?",
+            (mock_exam["code"],),
+            fetchone=True,
+        )[1]["id"]
+
+        for tag in mock_exam["tags"]:
+            tag_id = self._get_or_create("tags", tag)
             self.execute(
-                """
-                INSERT INTO exams (code, title, provider, description, official_url, difficulty, status, created_by)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    exam["code"],
-                    exam["title"],
-                    exam["provider"],
-                    exam["description"],
-                    exam["official_url"],
-                    exam["difficulty"],
-                    exam["status"],
-                    admin_id,
-                ),
+                "INSERT OR IGNORE INTO exam_tags (exam_id, tag_id) VALUES (?, ?)",
+                (exam_id, tag_id),
             )
-            exam_id = self.execute(
-                "SELECT id FROM exams WHERE code = ?",
-                (exam["code"],),
-                fetchone=True,
-            )[1]["id"]
-            for tag in exam["tags"]:
-                tag_id = self._get_or_create("tags", tag)
-                self.execute(
-                    "INSERT OR IGNORE INTO exam_tags (exam_id, tag_id) VALUES (?, ?)",
-                    (exam_id, tag_id),
-                )
-
-        ai_exam_id = self.execute(
-            "SELECT id FROM exams WHERE code = 'AI-102'",
-            fetchone=True,
-        )[1]["id"]
-        az_exam_id = self.execute(
-            "SELECT id FROM exams WHERE code = 'AZ-900'",
-            fetchone=True,
-        )[1]["id"]
 
         self._seed_questions(
-            ai_exam_id,
+            exam_id,
             [
                 {
                     "type": "single_select",
-                    "title": "Indexer scheduling",
-                    "statement": "Which Azure AI Search component is responsible for regularly pulling content from a supported data source into an index?",
-                    "explanation": "Indexers orchestrate scheduled ingestion from supported data sources into Azure AI Search indexes.",
-                    "difficulty": "intermediate",
-                    "tags": ["azure-ai", "search"],
-                    "topics": ["indexing"],
+                    "title": "Official scoring source",
+                    "statement": "Which mode stores official attempt statistics for KPI reporting?",
+                    "explanation": "Study mode is intentionally non-official. Exam mode creates a fixed attempt and persists the evaluative statistics.",
+                    "difficulty": "foundational",
+                    "tags": ["modes", "scoring"],
+                    "topics": ["exam-mode"],
                     "options": [
-                        ("A", "Skillset", 0),
-                        ("B", "Indexer", 1),
-                        ("C", "Synonym map", 0),
-                        ("D", "Scoring profile", 0),
+                        ("A", "Study mode", 0),
+                        ("B", "Exam mode", 1),
+                        ("C", "Question editor preview", 0),
+                        ("D", "Import/export flow", 0),
                     ],
                 },
                 {
                     "type": "multiple_choice",
-                    "title": "RAG design",
-                    "statement": "You are designing a retrieval-augmented generation workflow. Which actions improve answer relevance and grounding?",
-                    "explanation": "Chunking, metadata filtering, and embeddings help retrieval quality. Longer prompts alone do not create grounded retrieval.",
-                    "difficulty": "advanced",
-                    "tags": ["rag", "azure-ai"],
-                    "topics": ["retrieval"],
-                    "options": [
-                        ("A", "Chunk documents into semantically coherent segments", 1),
-                        ("B", "Attach topic metadata for filtering", 1),
-                        ("C", "Disable embeddings to reduce vector size", 0),
-                        ("D", "Use embeddings for semantic retrieval", 1),
-                    ],
-                },
-                {
-                    "type": "single_select",
-                    "title": "Responsible AI",
-                    "statement": "Which practice best supports responsible AI review before releasing a conversational assistant?",
-                    "explanation": "A documented evaluation and red-team process is core to responsible release management.",
+                    "title": "Study mode behavior",
+                    "statement": "Which behaviors belong to study mode?",
+                    "explanation": "Study mode is flexible: immediate correction is allowed, filters are available, and question content may be maintained by authorized roles.",
                     "difficulty": "intermediate",
-                    "tags": ["governance", "azure-ai"],
-                    "topics": ["responsible-ai"],
+                    "tags": ["study-mode", "workflow"],
+                    "topics": ["study-mode"],
                     "options": [
-                        ("A", "Skip manual review if model confidence is high", 0),
-                        ("B", "Red-team and document safety mitigations", 1),
-                        ("C", "Increase token limits for all requests", 0),
-                        ("D", "Expose chain-of-thought to end users", 0),
+                        ("A", "Immediate per-question correction", 1),
+                        ("B", "Filtering by topic or tag", 1),
+                        ("C", "Frozen official attempt scoring", 0),
+                        ("D", "Question editing by authorized roles", 1),
                     ],
                 },
                 {
                     "type": "hot_spot",
-                    "title": "Service identification",
-                    "statement": "For each numbered marker in the image, choose the correct Azure service from the matching dropdown.",
-                    "explanation": "Marker 1 points to Document Intelligence and marker 2 points to Azure AI Search in the ingestion flow.",
-                    "difficulty": "advanced",
-                    "tags": ["architecture", "hotspot"],
-                    "topics": ["service-identification"],
+                    "title": "Mode identification",
+                    "statement": "For each numbered marker in the diagram, choose the correct workspace mode.",
+                    "explanation": "Marker 1 identifies Study mode and marker 2 identifies Exam mode in the simplified workflow.",
+                    "difficulty": "intermediate",
+                    "tags": ["hotspot", "workflow"],
+                    "topics": ["mode-identification"],
                     "config": {
                         "dropdowns": [
                             {
@@ -735,207 +677,92 @@ class Database:
                                 "order": 1,
                                 "label": "Marker 1",
                                 "options": [
-                                    "Azure AI Search",
-                                    "Azure AI Document Intelligence",
-                                    "Azure AI Language",
+                                    "Study mode",
+                                    "Exam mode",
+                                    "Admin panel",
                                 ],
-                                "correct_option": "Azure AI Document Intelligence",
+                                "correct_option": "Study mode",
                             },
                             {
                                 "id": "dropdown-2",
                                 "order": 2,
                                 "label": "Marker 2",
                                 "options": [
-                                    "Azure AI Search",
-                                    "Azure AI Content Safety",
-                                    "Azure AI Vision",
+                                    "Study mode",
+                                    "Exam mode",
+                                    "Import package",
                                 ],
-                                "correct_option": "Azure AI Search",
+                                "correct_option": "Exam mode",
                             },
                         ]
                     },
                     "assets": [
                         {
                             "asset_type": "image",
-                            "file_path": ai_asset,
-                            "meta": {"alt": "Azure AI architecture diagram"},
+                            "file_path": "web_app/static/assets/zt-100-hotspot.svg",
+                            "meta": {"alt": "ZT-100 workflow diagram"},
                         }
                     ],
                 },
                 {
                     "type": "drag_drop",
-                    "title": "Map each service",
-                    "statement": "Drag each item to the matching responsibility.",
-                    "explanation": "Each Azure AI service maps to a distinct workload concern.",
-                    "difficulty": "advanced",
-                    "tags": ["architecture", "dragdrop"],
-                    "topics": ["service-selection"],
+                    "title": "Role to responsibility",
+                    "statement": "Match each role to the responsibility that best fits it. Each role can be used only once.",
+                    "explanation": "This is a unique drag and drop question: every destination has a distinct correct role.",
+                    "difficulty": "intermediate",
+                    "tags": ["dragdrop", "roles"],
+                    "topics": ["role-model"],
                     "config": {
                         "mode": "U",
                         "items": [
-                            {"id": "item-search", "label": "Azure AI Search"},
-                            {"id": "item-language", "label": "Azure AI Language"},
-                            {"id": "item-content", "label": "Azure AI Content Safety"},
+                            {"id": "item-admin", "label": "Administrator"},
+                            {"id": "item-reviewer", "label": "Reviewer"},
+                            {"id": "item-user", "label": "User"},
                         ],
                         "destinations": [
-                            {"id": "dest-retrieval", "label": "Retrieval across indexed enterprise content"},
-                            {"id": "dest-linguistic", "label": "Key phrase extraction and sentiment analysis"},
-                            {"id": "dest-guardrails", "label": "Moderation and policy enforcement"},
+                            {"id": "dest-users", "label": "Manage users and assign roles"},
+                            {"id": "dest-content", "label": "Maintain question content"},
+                            {"id": "dest-attempts", "label": "Run exams and view personal results"},
                         ],
                         "mappings": {
-                            "dest-retrieval": "item-search",
-                            "dest-linguistic": "item-language",
-                            "dest-guardrails": "item-content",
+                            "dest-users": "item-admin",
+                            "dest-content": "item-reviewer",
+                            "dest-attempts": "item-user",
                         },
                     },
                 },
                 {
-                    "type": "multiple_choice",
-                    "title": "Vector search",
-                    "statement": "Which statements about vector search in Azure AI Search are correct?",
-                    "explanation": "Vector search depends on embeddings and can be combined with filters and keyword scoring.",
-                    "difficulty": "advanced",
-                    "tags": ["search", "vector"],
-                    "topics": ["vector-search"],
-                    "options": [
-                        ("A", "Embeddings convert content into numeric vectors", 1),
-                        ("B", "Vector search cannot be combined with filters", 0),
-                        ("C", "Hybrid search can combine vector and keyword signals", 1),
-                        ("D", "Vector fields are only useful for images", 0),
-                    ],
-                },
-                {
-                    "type": "single_select",
-                    "title": "Language service",
-                    "statement": "Which Azure AI service would you use for named entity recognition in text?",
-                    "explanation": "Named entity recognition is part of Azure AI Language.",
-                    "difficulty": "foundational",
-                    "tags": ["language", "azure-ai"],
-                    "topics": ["nlp"],
-                    "options": [
-                        ("A", "Azure AI Language", 1),
-                        ("B", "Azure AI Search", 0),
-                        ("C", "Azure AI Vision", 0),
-                        ("D", "Azure OpenAI data plane", 0),
-                    ],
-                },
-                {
-                    "type": "single_select",
-                    "title": "Latency mitigation",
-                    "statement": "What is the most practical first step when an exam scenario requires lower retrieval latency for repeated prompts?",
-                    "explanation": "Caching stable retrieval responses or embeddings often delivers immediate latency benefits without architectural upheaval.",
+                    "type": "drag_drop",
+                    "title": "Mode to capability",
+                    "statement": "Drag the correct mode onto each capability. A mode may be reused when appropriate.",
+                    "explanation": "This is a reusable drag and drop question: Study mode correctly maps to more than one destination.",
                     "difficulty": "intermediate",
-                    "tags": ["operations", "performance"],
-                    "topics": ["optimization"],
-                    "options": [
-                        ("A", "Cache stable retrieval artifacts", 1),
-                        ("B", "Always increase model size", 0),
-                        ("C", "Disable authentication checks", 0),
-                        ("D", "Store all prompts in a single blob", 0),
-                    ],
-                },
-            ],
-        )
-        self._seed_questions(
-            az_exam_id,
-            [
-                {
-                    "type": "single_select",
-                    "title": "Cloud model",
-                    "statement": "Which cloud model provides exclusive use of computing resources for a single organization?",
-                    "explanation": "Private cloud resources are dedicated to one organization.",
-                    "difficulty": "foundational",
-                    "tags": ["cloud"],
-                    "topics": ["cloud-concepts"],
-                    "options": [
-                        ("A", "Private cloud", 1),
-                        ("B", "Public cloud", 0),
-                        ("C", "Hybrid cloud", 0),
-                        ("D", "Community cloud", 0),
-                    ],
-                },
-                {
-                    "type": "multiple_choice",
-                    "title": "Benefits of cloud",
-                    "statement": "Which are common benefits of cloud computing?",
-                    "explanation": "Elasticity, high availability patterns, and global reach are standard cloud benefits.",
-                    "difficulty": "foundational",
-                    "tags": ["cloud"],
-                    "topics": ["cloud-benefits"],
-                    "options": [
-                        ("A", "Elastic scaling", 1),
-                        ("B", "Global distribution", 1),
-                        ("C", "Guaranteed zero cost", 0),
-                        ("D", "High availability options", 1),
-                    ],
-                },
-                {
-                    "type": "single_select",
-                    "title": "CAPEX vs OPEX",
-                    "statement": "Moving from buying physical servers to pay-as-you-go Azure services primarily shifts spending toward which model?",
-                    "explanation": "Consumption services are generally treated as operational expenditure.",
-                    "difficulty": "foundational",
-                    "tags": ["finance"],
-                    "topics": ["pricing"],
-                    "options": [
-                        ("A", "Capital expenditure", 0),
-                        ("B", "Operational expenditure", 1),
-                        ("C", "Deferred revenue", 0),
-                        ("D", "Inventory cost", 0),
-                    ],
-                },
-                {
-                    "type": "single_select",
-                    "title": "Shared responsibility",
-                    "statement": "In a SaaS service, which party is primarily responsible for managing the application runtime?",
-                    "explanation": "In SaaS the provider manages the application runtime and infrastructure.",
-                    "difficulty": "foundational",
-                    "tags": ["governance"],
-                    "topics": ["shared-responsibility"],
-                    "options": [
-                        ("A", "Customer", 0),
-                        ("B", "Provider", 1),
-                        ("C", "Independent auditor", 0),
-                        ("D", "Network carrier", 0),
-                    ],
-                },
-                {
-                    "type": "multiple_choice",
-                    "title": "Governance tools",
-                    "statement": "Which Azure services help enforce governance and compliance?",
-                    "explanation": "Azure Policy and RBAC help enforce governance controls.",
-                    "difficulty": "foundational",
-                    "tags": ["governance"],
-                    "topics": ["governance"],
-                    "options": [
-                        ("A", "Azure Policy", 1),
-                        ("B", "Role-based access control", 1),
-                        ("C", "Azure Queue Storage", 0),
-                        ("D", "Azure Virtual Desktop", 0),
-                    ],
-                },
-                {
-                    "type": "single_select",
-                    "title": "Regions",
-                    "statement": "What is an Azure region?",
-                    "explanation": "A region is a geographic area containing one or more datacenters connected by a low-latency network.",
-                    "difficulty": "foundational",
-                    "tags": ["infrastructure"],
-                    "topics": ["regions"],
-                    "options": [
-                        ("A", "A pricing tier", 0),
-                        ("B", "A geographic area with datacenters", 1),
-                        ("C", "A type of subscription", 0),
-                        ("D", "A support plan", 0),
-                    ],
+                    "tags": ["dragdrop", "modes"],
+                    "topics": ["mode-capabilities"],
+                    "config": {
+                        "mode": "R",
+                        "items": [
+                            {"id": "item-study", "label": "Study mode"},
+                            {"id": "item-exam", "label": "Exam mode"},
+                        ],
+                        "destinations": [
+                            {"id": "dest-correction", "label": "Immediate answer correction"},
+                            {"id": "dest-kpi", "label": "Official KPI storage"},
+                            {"id": "dest-filters", "label": "Flexible filtering while reviewing content"},
+                        ],
+                        "mappings": {
+                            "dest-correction": "item-study",
+                            "dest-kpi": "item-exam",
+                            "dest-filters": "item-study",
+                        },
+                    },
                 },
             ],
         )
 
     def _seed_exam_links(self):
         seeded_links = {
-            "AI-102": "https://learn.microsoft.com/en-us/credentials/certifications/azure-ai-engineer/",
-            "AZ-900": "https://learn.microsoft.com/en-us/credentials/certifications/azure-fundamentals/",
+            "ZT-100": "https://zertan.local/exams/zt-100",
         }
         for code, official_url in seeded_links.items():
             self.execute(
@@ -1048,7 +875,7 @@ class Database:
         target.parent.mkdir(parents=True, exist_ok=True)
         if not target.exists():
             target.write_text(content, encoding="utf-8")
-        return str(target.relative_to(self.project_root))
+        return build_media_path(relative_path)
 
     def _migrate_static_uploads_to_data_assets(self):
         old_root = self.project_root / "web_app" / "static" / "uploads"
@@ -1065,14 +892,28 @@ class Database:
         self.execute(
             """
             UPDATE question_assets
-            SET file_path = REPLACE(file_path, 'web_app/static/uploads/', 'web_server/data_m/assets/')
+            SET file_path = REPLACE(file_path, 'web_app/static/uploads/', '')
             WHERE file_path LIKE 'web_app/static/uploads/%'
             """
         )
         self.execute(
             """
             UPDATE users
-            SET avatar_path = REPLACE(avatar_path, 'web_app/static/uploads/', 'web_server/data_m/assets/')
+            SET avatar_path = REPLACE(avatar_path, 'web_app/static/uploads/', '')
             WHERE avatar_path LIKE 'web_app/static/uploads/%'
+            """
+        )
+        self.execute(
+            """
+            UPDATE question_assets
+            SET file_path = REPLACE(file_path, 'web_server/data_m/assets/', '')
+            WHERE file_path LIKE 'web_server/data_m/assets/%'
+            """
+        )
+        self.execute(
+            """
+            UPDATE users
+            SET avatar_path = REPLACE(avatar_path, 'web_server/data_m/assets/', '')
+            WHERE avatar_path LIKE 'web_server/data_m/assets/%'
             """
         )

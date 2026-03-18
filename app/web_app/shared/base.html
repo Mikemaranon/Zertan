@@ -23,10 +23,10 @@
 <body data-page="{{ page_id }}">
     {% set avatar_url = "" %}
     {% if current_user.avatar_path %}
-        {% if current_user.avatar_path.startswith("web_server/data_m/assets/") %}
-            {% set avatar_url = "/media/" ~ current_user.avatar_path.replace("web_server/data_m/assets/", "") %}
-        {% else %}
+        {% if current_user.avatar_path.startswith("web_app/") %}
             {% set avatar_url = "/" ~ current_user.avatar_path.replace("web_app/", "") %}
+        {% else %}
+            {% set avatar_url = "/media/" ~ current_user.avatar_path.replace("web_server/data_m/assets/", "") %}
         {% endif %}
     {% endif %}
     <div class="app-shell">

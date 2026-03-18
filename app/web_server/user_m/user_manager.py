@@ -7,6 +7,7 @@ import jwt
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from data_m import DBManager
+from runtime_config import get_runtime_config
 
 
 class UserManager:
@@ -32,6 +33,7 @@ class UserManager:
 
         self.db = db_manager or DBManager()
         self.secret_key = secret_key
+        self.jwt_lifetime_hours = get_runtime_config()["jwt_lifetime_hours"]
         self.initialized = True
 
     def normalize_role(self, role):
@@ -163,7 +165,7 @@ class UserManager:
         return self.public_user(user)
 
     def generate_token(self, user):
-        expiration_time = datetime.datetime.utcnow() + datetime.timedelta(hours=8)
+        expiration_time = datetime.datetime.utcnow() + datetime.timedelta(hours=self.jwt_lifetime_hours)
         payload = {
             "user_id": user["id"],
             "login_name": user["login_name"],

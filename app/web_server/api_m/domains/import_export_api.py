@@ -32,8 +32,9 @@ class ImportExportAPI(BaseAPI):
         if not uploaded_file or not uploaded_file.filename or not uploaded_file.filename.lower().endswith(".zip"):
             return self.error("Upload a .zip exam package.", 400)
         try:
-            project_root = Path(current_app.root_path).resolve().parents[0]
-            exam_id = PackageService(self.db, project_root).import_exam(uploaded_file, user["id"])
+            app_root = Path(current_app.config["APP_ROOT"]).resolve()
+            media_root = Path(current_app.config["MEDIA_ROOT"]).resolve()
+            exam_id = PackageService(self.db, app_root, media_root=media_root).import_exam(uploaded_file, user["id"])
         except ValueError as exc:
             return self.error(str(exc), 400)
         return self.ok({"exam": self.db.exams.get(exam_id)}, 201)
@@ -45,8 +46,9 @@ class ImportExportAPI(BaseAPI):
         exam = self.db.exams.get(exam_id)
         if not exam:
             return self.error("Exam not found.", 404)
-        project_root = Path(current_app.root_path).resolve().parents[0]
-        zip_path, temp_dir = PackageService(self.db, project_root).export_exam(exam_id)
+        app_root = Path(current_app.config["APP_ROOT"]).resolve()
+        media_root = Path(current_app.config["MEDIA_ROOT"]).resolve()
+        zip_path, temp_dir = PackageService(self.db, app_root, media_root=media_root).export_exam(exam_id)
 
         @after_this_request
         def cleanup(response):

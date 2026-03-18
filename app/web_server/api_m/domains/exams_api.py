@@ -7,6 +7,7 @@ from flask import current_app, request
 
 from api_m.domains.base_api import BaseAPI
 from services_m import AttemptService, build_public_question
+from storage_paths import resolve_stored_path
 
 
 class ExamsAPI(BaseAPI):
@@ -146,8 +147,8 @@ class ExamsAPI(BaseAPI):
         return self.ok({"attempt_id": attempt_id}, 201)
 
     def _delete_exam_assets(self, exam, questions):
-        project_root = Path(current_app.root_path).resolve().parents[0]
-        media_root = project_root / "web_server" / "data_m" / "assets"
+        app_root = Path(current_app.config["APP_ROOT"]).resolve()
+        media_root = Path(current_app.config["MEDIA_ROOT"]).resolve()
         asset_paths = set()
 
         for question in questions:
@@ -155,8 +156,8 @@ class ExamsAPI(BaseAPI):
                 file_path = asset.get("file_path")
                 if not file_path:
                     continue
-                absolute_path = (project_root / file_path).resolve()
-                if absolute_path.is_file() and self._path_is_within_root(absolute_path, media_root):
+                absolute_path = resolve_stored_path(file_path, media_root=media_root, app_root=app_root)
+                if absolute_path and absolute_path.is_file() and self._path_is_within_root(absolute_path, media_root):
                     asset_paths.add(absolute_path)
 
         for asset_path in asset_paths:

@@ -82,6 +82,46 @@ Default local URL:
 Why `PYTHONPATH=app/web_server` is needed:
 - `main.py` imports sibling backend modules directly, so launching from the root requires adding `app/web_server` to Python's module search path.
 
+For development, use:
+
+```bash
+PYTHONPATH=app/web_server ZERTAN_DEBUG=1 .venv/bin/python app/web_server/main.py
+```
+
+For container or production-style runs, the image uses Gunicorn with:
+
+- `app/web_server/wsgi.py`
+- `gunicorn --chdir app/web_server ... wsgi:app`
+
+Container deployment assets live under:
+
+- `deploy/docker/Dockerfile`
+- `deploy/docker/compose.yml`
+- `deploy/docker/.env.example`
+
+## Runtime Configuration
+
+The backend now supports environment-driven storage and runtime configuration.
+
+Important variables:
+
+- `SECRET_KEY`
+- `PORT`
+- `HOST`
+- `ZERTAN_DEBUG`
+- `ZERTAN_DATA_DIR`
+- `ZERTAN_DB_PATH`
+- `ZERTAN_MEDIA_ROOT`
+- `ZERTAN_COOKIE_SECURE`
+- `ZERTAN_COOKIE_SAMESITE`
+- `ZERTAN_JWT_HOURS`
+
+Default behavior:
+
+- local development keeps using `app/web_server/data_m/utils/zertan.db`
+- local development keeps using `app/web_server/data_m/assets`
+- Docker stores both under `/data`
+
 ## HTML Structure
 
 The server-rendered templates are organized by purpose:
@@ -119,6 +159,8 @@ Primary SQLite file:
 
 - `app/web_server/data_m/utils/zertan.db`
 
+When `ZERTAN_DB_PATH` is set, the SQLite file moves to that location instead.
+
 Main tables include:
 
 - `users`
@@ -146,21 +188,19 @@ Operational behavior:
 - import and export use `zip` packages with `exam.json`, one JSON file per question, and related assets
 - runtime media for questions and avatars is stored in `app/web_server/data_m/assets`
 - `app/web_app/static/assets` is reserved for branded static UI assets such as the Zertan logo
+- when `ZERTAN_MEDIA_ROOT` is set, uploaded files and imported assets move to that directory
 
 ## Seed Data
 
 On first boot, the app seeds:
 
-- four users
-- two exams
+- one administrator user
+- one mock exam named `ZT-100`
 - sample questions covering all supported question types
 
 Seeded credentials:
 
 - `admin` / `admin123`
-- `examiner` / `examiner123`
-- `reviewer` / `reviewer123`
-- `candidate` / `candidate123`
 
 ## Server Routes
 

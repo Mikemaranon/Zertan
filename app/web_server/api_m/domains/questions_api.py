@@ -9,6 +9,7 @@ from werkzeug.utils import secure_filename
 
 from api_m.domains.base_api import BaseAPI
 from services_m import build_public_question, evaluate_question_response, normalize_question_payload
+from storage_paths import build_media_path
 
 
 class QuestionsAPI(BaseAPI):
@@ -176,15 +177,15 @@ class QuestionsAPI(BaseAPI):
         return normalize_question_payload(payload)
 
     def _save_asset_file(self, exam_id, file_storage):
-        project_root = Path(current_app.root_path).resolve().parents[0]
+        media_root = Path(current_app.config["MEDIA_ROOT"]).resolve()
         safe_name = secure_filename(file_storage.filename)
         extension = Path(safe_name).suffix.lower()
-        target_dir = project_root / "web_server" / "data_m" / "assets" / "questions" / str(exam_id)
+        target_dir = media_root / "questions" / str(exam_id)
         target_dir.mkdir(parents=True, exist_ok=True)
         target_name = f"{uuid4().hex}{extension}"
         target_path = target_dir / target_name
         file_storage.save(target_path)
-        return str(target_path.relative_to(project_root))
+        return build_media_path("questions", exam_id, target_name)
 
     def _validate_hotspot_asset_file(self, file_storage):
         safe_name = secure_filename(file_storage.filename or "")

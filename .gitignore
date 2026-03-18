@@ -1,3 +1,8 @@
 __pycache__
 .venv
 AGENTS.md
+.env
+deploy/docker/.env
+app/web_server/data_m/assets/
+app/web_server/data_m/utils/*.db
+app/web_server/data_m/utils/*.init.lock

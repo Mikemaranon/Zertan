@@ -1,0 +1,48 @@
+import os
+from pathlib import Path
+
+
+APP_ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_DATA_ROOT = APP_ROOT / "web_server" / "data_m"
+DEFAULT_DB_PATH = DEFAULT_DATA_ROOT / "utils" / "zertan.db"
+DEFAULT_MEDIA_ROOT = DEFAULT_DATA_ROOT / "assets"
+
+
+def _env_bool(name, default=False):
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _resolve_path(value, default_path, *, base_path=APP_ROOT):
+    raw_path = Path(value).expanduser() if value else Path(default_path)
+    if not raw_path.is_absolute():
+        raw_path = base_path / raw_path
+    return raw_path.resolve()
+
+
+def get_runtime_config():
+    data_root = _resolve_path(os.environ.get("ZERTAN_DATA_DIR"), DEFAULT_DATA_ROOT)
+    db_path = _resolve_path(os.environ.get("ZERTAN_DB_PATH"), data_root / "utils" / "zertan.db")
+    media_root = _resolve_path(os.environ.get("ZERTAN_MEDIA_ROOT"), data_root / "assets")
+
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+    media_root.mkdir(parents=True, exist_ok=True)
+
+    return {
+        "app_root": APP_ROOT,
+        "data_root": data_root,
+        "db_path": db_path,
+        "media_root": media_root,
+        "secret_key": os.environ.get(
+            "SECRET_KEY",
+            "zertan-development-secret-key-2026-32b",
+        ),
+        "host": os.environ.get("HOST", "0.0.0.0"),
+        "port": int(os.environ.get("PORT", 5050)),
+        "debug": _env_bool("ZERTAN_DEBUG", False),
+        "cookie_secure": _env_bool("ZERTAN_COOKIE_SECURE", False),
+        "cookie_samesite": os.environ.get("ZERTAN_COOKIE_SAMESITE", "Lax"),
+        "jwt_lifetime_hours": int(os.environ.get("ZERTAN_JWT_HOURS", 8)),
+    }

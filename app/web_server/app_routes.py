@@ -56,7 +56,11 @@ class AppRoutes:
         token = self.user_manager.get_token_from_cookie(request)
         self.user_manager.logout(token)
         response = make_response(redirect(url_for("login")))
-        response.delete_cookie("token")
+        response.delete_cookie(
+            "token",
+            secure=bool(current_app.config.get("COOKIE_SECURE", False)),
+            samesite=current_app.config.get("COOKIE_SAMESITE", "Lax"),
+        )
         response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
         response.headers["Pragma"] = "no-cache"
         response.headers["Expires"] = "0"

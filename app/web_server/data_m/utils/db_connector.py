@@ -1,15 +1,13 @@
 # db_connector.py
 
 import sqlite3
-from pathlib import Path
 
-
-DB_FILENAME = "zertan.db"
+from runtime_config import get_runtime_config
 
 
 class DBConnector:
     def __init__(self):
-        self.db_path = Path(__file__).resolve().parent / DB_FILENAME
+        self.db_path = get_runtime_config()["db_path"]
 
     def connect(self):
         connection = sqlite3.connect(self.db_path)
