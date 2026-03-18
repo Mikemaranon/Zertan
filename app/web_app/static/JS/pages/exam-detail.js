@@ -43,65 +43,108 @@ export async function initExamDetailPage(pageContext) {
         <div class="study-filters__active">
             <div class="selection-field__top">
                 <span class="selection-field__label">Active filters</span>
-                <button id="study-filters-clear" class="button button--secondary button--small" type="button">Clear</button>
             </div>
-            <div id="study-filters-active" class="selection-field__chips selection-field__chips--shared"></div>
+            <div class="selection-field__mode-grid">
+                <div class="selection-field__mode-panel">
+                    <div class="selection-field__top">
+                        <span class="selection-field__mode-title">Include</span>
+                        <button id="study-filters-clear-include" class="button button--secondary button--small" type="button">Clear</button>
+                    </div>
+                    <div id="study-filters-include" class="selection-field__chips selection-field__chips--shared"></div>
+                </div>
+                <div class="selection-field__mode-panel">
+                    <div class="selection-field__top">
+                        <span class="selection-field__mode-title">Exclude</span>
+                        <button id="study-filters-clear-exclude" class="button button--secondary button--small" type="button">Clear</button>
+                    </div>
+                    <div id="study-filters-exclude" class="selection-field__chips selection-field__chips--shared"></div>
+                </div>
+            </div>
         </div>
     `;
-    const sharedChipsContainer = document.getElementById("study-filters-active");
-    const clearButton = document.getElementById("study-filters-clear");
+    const sharedChipsContainers = {
+        includeContainer: document.getElementById("study-filters-include"),
+        excludeContainer: document.getElementById("study-filters-exclude"),
+        includeEmptyLabel: "No included filters",
+        excludeEmptyLabel: "No excluded filters",
+    };
+    const clearIncludeButton = document.getElementById("study-filters-clear-include");
+    const clearExcludeButton = document.getElementById("study-filters-clear-exclude");
+    let tagFilter;
+    let topicFilter;
+    let typeFilter;
+    const syncClearButtons = () => {
+        const tags = tagFilter.getValues();
+        const topics = topicFilter.getValues();
+        const types = typeFilter.getValues();
+        clearIncludeButton.disabled = !tags.include.length && !topics.include.length && !types.include.length;
+        clearExcludeButton.disabled = !tags.exclude.length && !topics.exclude.length && !types.exclude.length;
+    };
 
-    const tagFilter = createAddableSelect(document.getElementById("filter-tags-field"), {
+    tagFilter = createAddableSelect(document.getElementById("filter-tags-field"), {
         id: "filter-tag",
         label: "Tags",
         options: exam.builder_meta.tags || [],
         placeholder: "All tags",
-        sharedChipsContainer,
+        sharedChipsContainers,
         sharedChipGroup: "tag",
         sharedChipGroupLabel: "Tag",
         sharedChipLabel: (value) => value,
         onChange: renderQuestions,
     });
-    const topicFilter = createAddableSelect(document.getElementById("filter-topics-field"), {
+    topicFilter = createAddableSelect(document.getElementById("filter-topics-field"), {
         id: "filter-topic",
         label: "Topics",
         options: exam.builder_meta.topics || [],
         placeholder: "All topics",
-        sharedChipsContainer,
+        sharedChipsContainers,
         sharedChipGroup: "topic",
         sharedChipGroupLabel: "Topic",
         sharedChipLabel: (value) => value,
         onChange: renderQuestions,
     });
-    const typeFilter = createAddableSelect(document.getElementById("filter-types-field"), {
+    typeFilter = createAddableSelect(document.getElementById("filter-types-field"), {
         id: "filter-type",
         label: "Question type",
         options: exam.builder_meta.question_types || [],
         placeholder: "All question types",
         formatLabel: (type) => type.replaceAll("_", " "),
-        sharedChipsContainer,
+        sharedChipsContainers,
         sharedChipGroup: "type",
         sharedChipGroupLabel: "Type",
         sharedChipLabel: (type) => type.replaceAll("_", " "),
         onChange: renderQuestions,
     });
 
-    clearButton.addEventListener("click", () => {
-        tagFilter.setValues([]);
-        topicFilter.setValues([]);
-        typeFilter.setValues([]);
+    clearIncludeButton.addEventListener("click", () => {
+        tagFilter.setModeValues("include", []);
+        topicFilter.setModeValues("include", []);
+        typeFilter.setModeValues("include", []);
+    });
+    clearExcludeButton.addEventListener("click", () => {
+        tagFilter.setModeValues("exclude", []);
+        topicFilter.setModeValues("exclude", []);
+        typeFilter.setModeValues("exclude", []);
     });
 
     function renderQuestions() {
         const selectedTags = tagFilter.getValues();
         const selectedTopics = topicFilter.getValues();
         const selectedTypes = typeFilter.getValues();
-        clearButton.disabled = !selectedTags.length && !selectedTopics.length && !selectedTypes.length;
+        syncClearButtons();
 
         const visible = questions.filter((question) => {
-            const tagMatch = !selectedTags.length || selectedTags.some((tag) => (question.tags || []).includes(tag));
-            const topicMatch = !selectedTopics.length || selectedTopics.some((topic) => (question.topics || []).includes(topic));
-            const typeMatch = !selectedTypes.length || selectedTypes.includes(question.type);
+            const questionTags = question.tags || [];
+            const questionTopics = question.topics || [];
+            const tagMatch =
+                (!selectedTags.include.length || selectedTags.include.some((tag) => questionTags.includes(tag))) &&
+                !selectedTags.exclude.some((tag) => questionTags.includes(tag));
+            const topicMatch =
+                (!selectedTopics.include.length || selectedTopics.include.some((topic) => questionTopics.includes(topic))) &&
+                !selectedTopics.exclude.some((topic) => questionTopics.includes(topic));
+            const typeMatch =
+                (!selectedTypes.include.length || selectedTypes.include.includes(question.type)) &&
+                !selectedTypes.exclude.includes(question.type);
             return tagMatch && topicMatch && typeMatch;
         });
 

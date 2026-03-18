@@ -917,7 +917,33 @@ textarea {
     gap: 12px;
 }
 
+.selection-field__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
 .selection-field__label {
+    font-weight: 600;
+    color: var(--text);
+}
+
+.selection-field__mode-grid {
+    display: grid;
+    gap: 14px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.selection-field__mode-panel {
+    display: grid;
+    gap: 10px;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-small);
+    background: rgba(237, 243, 249, 0.58);
+}
+
+.selection-field__mode-title {
     font-weight: 600;
     color: var(--text);
 }
@@ -934,7 +960,77 @@ textarea {
     display: grid;
     gap: 8px;
     min-width: 100%;
-    padding: 14px 0 16px;
+    padding: 14px 0 0;
+}
+
+.study-filters__active .selection-field__mode-grid {
+    align-items: stretch;
+}
+
+.study-filters__active .selection-field__mode-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+}
+
+.study-filters__active .selection-field__chips {
+    flex: none;
+    max-height: 120px;
+    overflow-y: auto;
+    padding-right: 4px;
+    align-content: flex-start;
+}
+
+.builder-summary-panel {
+    display: flex;
+    min-height: 0;
+    height: 100%;
+    overflow: hidden;
+}
+
+.builder-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.builder-filters-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 14px 0 0;
+    overflow: hidden;
+}
+
+.builder-filters-summary .selection-field__mode-grid {
+    flex: 1 1 auto;
+    min-height: 0;
+    align-items: stretch;
+    overflow: hidden;
+}
+
+.builder-filters-summary .selection-field__mode-panel {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.builder-filters-summary .selection-field__chips {
+    flex: 1 1 auto;
+    min-height: 36px;
+    max-height: none;
+    overflow-y: auto;
+    padding-right: 4px;
+    align-content: flex-start;
 }
 
 .selection-field__chips--shared {
@@ -1592,6 +1688,10 @@ body.modal-open {
     .metric-strip__topline {
         flex-direction: column;
         align-items: flex-start;
+    }
+
+    .selection-field__mode-grid {
+        grid-template-columns: 1fr;
     }
 
     .feature-toggle {

@@ -22,32 +22,68 @@ class QuestionsTable:
 
     def list_filtered_ids(self, exam_id, filters):
         query = """
-            SELECT DISTINCT q.id
+            SELECT q.id
             FROM questions q
-            LEFT JOIN question_tags qt ON qt.question_id = q.id
-            LEFT JOIN tags t ON t.id = qt.tag_id
-            LEFT JOIN question_topics qtp ON qtp.question_id = q.id
-            LEFT JOIN topics tp ON tp.id = qtp.topic_id
             WHERE q.exam_id = ? AND q.status = 'active'
         """
         params = [exam_id]
-        question_types = filters.get("question_types") or []
-        tags = filters.get("tags") or []
-        topics = filters.get("topics") or []
+        question_types = self._normalize_filter_group(filters.get("question_types"))
+        tags = self._normalize_filter_group(filters.get("tags"))
+        topics = self._normalize_filter_group(filters.get("topics"))
         difficulty = filters.get("difficulty")
 
-        if question_types:
-            placeholders = ",".join(["?"] * len(question_types))
+        if question_types["include"]:
+            placeholders = ",".join(["?"] * len(question_types["include"]))
             query += f" AND q.type IN ({placeholders})"
-            params.extend(question_types)
-        if tags:
-            placeholders = ",".join(["?"] * len(tags))
-            query += f" AND t.name IN ({placeholders})"
-            params.extend(tags)
-        if topics:
-            placeholders = ",".join(["?"] * len(topics))
-            query += f" AND tp.name IN ({placeholders})"
-            params.extend(topics)
+            params.extend(question_types["include"])
+        if question_types["exclude"]:
+            placeholders = ",".join(["?"] * len(question_types["exclude"]))
+            query += f" AND q.type NOT IN ({placeholders})"
+            params.extend(question_types["exclude"])
+        if tags["include"]:
+            placeholders = ",".join(["?"] * len(tags["include"]))
+            query += f"""
+                AND EXISTS (
+                    SELECT 1
+                    FROM question_tags qt
+                    JOIN tags t ON t.id = qt.tag_id
+                    WHERE qt.question_id = q.id AND t.name IN ({placeholders})
+                )
+            """
+            params.extend(tags["include"])
+        if tags["exclude"]:
+            placeholders = ",".join(["?"] * len(tags["exclude"]))
+            query += f"""
+                AND NOT EXISTS (
+                    SELECT 1
+                    FROM question_tags qt
+                    JOIN tags t ON t.id = qt.tag_id
+                    WHERE qt.question_id = q.id AND t.name IN ({placeholders})
+                )
+            """
+            params.extend(tags["exclude"])
+        if topics["include"]:
+            placeholders = ",".join(["?"] * len(topics["include"]))
+            query += f"""
+                AND EXISTS (
+                    SELECT 1
+                    FROM question_topics qt
+                    JOIN topics tp ON tp.id = qt.topic_id
+                    WHERE qt.question_id = q.id AND tp.name IN ({placeholders})
+                )
+            """
+            params.extend(topics["include"])
+        if topics["exclude"]:
+            placeholders = ",".join(["?"] * len(topics["exclude"]))
+            query += f"""
+                AND NOT EXISTS (
+                    SELECT 1
+                    FROM question_topics qt
+                    JOIN topics tp ON tp.id = qt.topic_id
+                    WHERE qt.question_id = q.id AND tp.name IN ({placeholders})
+                )
+            """
+            params.extend(topics["exclude"])
         if difficulty:
             query += " AND q.difficulty = ?"
             params.append(difficulty)
@@ -55,6 +91,20 @@ class QuestionsTable:
         query += " ORDER BY q.position, q.id"
         _, rows = self.db.execute(query, params, fetchall=True)
         return [row["id"] for row in rows]
+
+    def _normalize_filter_group(self, value):
+        if isinstance(value, list):
+            include = value
+            exclude = []
+        else:
+            include = (value or {}).get("include") or []
+            exclude = (value or {}).get("exclude") or []
+        include = [item for item in include if str(item).strip()]
+        exclude = [item for item in exclude if str(item).strip() and item not in include]
+        return {
+            "include": include,
+            "exclude": exclude,
+        }
 
     def get(self, question_id, include_answers=True):
         _, row = self.db.execute(

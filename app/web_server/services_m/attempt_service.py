@@ -11,9 +11,9 @@ class AttemptService:
 
     def create_attempt(self, exam_id, user_id, criteria):
         filters = {
-            "tags": criteria.get("tags", []),
-            "topics": criteria.get("topics", []),
-            "question_types": criteria.get("question_types", []),
+            "tags": criteria.get("tags", {"include": [], "exclude": []}),
+            "topics": criteria.get("topics", {"include": [], "exclude": []}),
+            "question_types": criteria.get("question_types", {"include": [], "exclude": []}),
             "difficulty": criteria.get("difficulty"),
         }
         question_ids = self.db.questions.list_filtered_ids(exam_id, filters)

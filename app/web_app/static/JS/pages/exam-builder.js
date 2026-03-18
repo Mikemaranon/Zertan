@@ -2,6 +2,9 @@ import { escapeHtml, request } from "../core/api.js";
 import { createAddableSelect } from "../components/addable-select.js";
 
 export async function initExamBuilderPage(pageContext) {
+    const layout = document.querySelector(".exam-builder-layout");
+    const summaryPanel = document.querySelector(".builder-summary-panel");
+    const configPanel = document.querySelector(".builder-config-panel");
     const summary = document.getElementById("builder-exam-summary");
     const form = document.getElementById("exam-builder-form");
     const errorNode = document.getElementById("builder-error");
@@ -25,65 +28,95 @@ export async function initExamBuilderPage(pageContext) {
             <span class="badge">${escapeHtml(exam.difficulty)}</span>
             <span class="badge">${exam.question_count} questions in bank</span>
         </div>
-        <div class="study-filters__active">
+        <div class="study-filters__active builder-filters-summary">
             <div class="selection-field__top">
                 <span class="selection-field__label">Selected filters</span>
-                <button id="builder-filters-clear" class="button button--secondary button--small" type="button">Clear</button>
             </div>
-            <div id="builder-filters-active" class="selection-field__chips selection-field__chips--shared"></div>
+            <div class="selection-field__mode-grid">
+                <div class="selection-field__mode-panel">
+                    <div class="selection-field__top">
+                        <span class="selection-field__mode-title">Include</span>
+                        <button id="builder-filters-include-clear" class="button button--secondary button--small" type="button">Clear</button>
+                    </div>
+                    <div id="builder-filters-include" class="selection-field__chips selection-field__chips--shared"></div>
+                </div>
+                <div class="selection-field__mode-panel">
+                    <div class="selection-field__top">
+                        <span class="selection-field__mode-title">Exclude</span>
+                        <button id="builder-filters-exclude-clear" class="button button--secondary button--small" type="button">Clear</button>
+                    </div>
+                    <div id="builder-filters-exclude" class="selection-field__chips selection-field__chips--shared"></div>
+                </div>
+            </div>
         </div>
     `;
-    const sharedChipsContainer = document.getElementById("builder-filters-active");
-    const clearButton = document.getElementById("builder-filters-clear");
-    const syncClearButton = () => {
-        clearButton.disabled =
-            !topicsField.getValues().length &&
-            !tagsField.getValues().length &&
-            !typesField.getValues().length;
+    const sharedChipsContainers = {
+        includeContainer: document.getElementById("builder-filters-include"),
+        excludeContainer: document.getElementById("builder-filters-exclude"),
+        includeEmptyLabel: "No included filters",
+        excludeEmptyLabel: "No excluded filters",
+    };
+    const clearIncludeButton = document.getElementById("builder-filters-include-clear");
+    const clearExcludeButton = document.getElementById("builder-filters-exclude-clear");
+    let topicsField;
+    let tagsField;
+    let typesField;
+    const syncClearButtons = () => {
+        const topics = topicsField.getValues();
+        const tags = tagsField.getValues();
+        const types = typesField.getValues();
+        clearIncludeButton.disabled = !topics.include.length && !tags.include.length && !types.include.length;
+        clearExcludeButton.disabled = !topics.exclude.length && !tags.exclude.length && !types.exclude.length;
     };
 
-    const topicsField = createAddableSelect(document.getElementById("builder-topics-field"), {
+    topicsField = createAddableSelect(document.getElementById("builder-topics-field"), {
         id: "builder-topics",
         label: "Topics",
         options: meta.topics || [],
         placeholder: "Select a topic",
-        sharedChipsContainer,
+        sharedChipsContainers,
         sharedChipGroup: "topic",
         sharedChipGroupLabel: "Topic",
         sharedChipLabel: (value) => value,
-        onChange: syncClearButton,
+        onChange: syncClearButtons,
     });
-    const tagsField = createAddableSelect(document.getElementById("builder-tags-field"), {
+    tagsField = createAddableSelect(document.getElementById("builder-tags-field"), {
         id: "builder-tags",
         label: "Tags",
         options: meta.tags || [],
         placeholder: "Select a tag",
-        sharedChipsContainer,
+        sharedChipsContainers,
         sharedChipGroup: "tag",
         sharedChipGroupLabel: "Tag",
         sharedChipLabel: (value) => value,
-        onChange: syncClearButton,
+        onChange: syncClearButtons,
     });
-    const typesField = createAddableSelect(document.getElementById("builder-types-field"), {
+    typesField = createAddableSelect(document.getElementById("builder-types-field"), {
         id: "builder-types",
         label: "Question types",
         options: meta.question_types || [],
         placeholder: "Select a question type",
         formatLabel: (value) => value.replaceAll("_", " "),
-        sharedChipsContainer,
+        sharedChipsContainers,
         sharedChipGroup: "type",
         sharedChipGroupLabel: "Type",
         sharedChipLabel: (value) => value.replaceAll("_", " "),
-        onChange: syncClearButton,
+        onChange: syncClearButtons,
     });
 
-    clearButton.addEventListener("click", () => {
-        topicsField.setValues([]);
-        tagsField.setValues([]);
-        typesField.setValues([]);
+    clearIncludeButton.addEventListener("click", () => {
+        topicsField.setModeValues("include", []);
+        tagsField.setModeValues("include", []);
+        typesField.setModeValues("include", []);
+    });
+    clearExcludeButton.addEventListener("click", () => {
+        topicsField.setModeValues("exclude", []);
+        tagsField.setModeValues("exclude", []);
+        typesField.setModeValues("exclude", []);
     });
 
-    syncClearButton();
+    syncClearButtons();
+    bindSummaryPanelHeight(layout, summaryPanel, configPanel);
 
     form.addEventListener("submit", async (event) => {
         event.preventDefault();
@@ -107,4 +140,30 @@ export async function initExamBuilderPage(pageContext) {
             errorNode.textContent = error.message;
         }
     });
+}
+
+function bindSummaryPanelHeight(layout, summaryPanel, configPanel) {
+    if (!layout || !summaryPanel || !configPanel) {
+        return;
+    }
+
+    const syncHeight = () => {
+        const columns = window.getComputedStyle(layout).gridTemplateColumns || "";
+        const isSingleColumn = !columns.includes(" ");
+        if (isSingleColumn) {
+            summaryPanel.style.height = "";
+            summaryPanel.style.maxHeight = "";
+            return;
+        }
+
+        const targetHeight = Math.ceil(configPanel.getBoundingClientRect().height);
+        summaryPanel.style.height = `${targetHeight}px`;
+        summaryPanel.style.maxHeight = `${targetHeight}px`;
+    };
+
+    const observer = typeof ResizeObserver === "function" ? new ResizeObserver(syncHeight) : null;
+    observer?.observe(configPanel);
+    observer?.observe(layout);
+    window.addEventListener("resize", syncHeight);
+    window.requestAnimationFrame(syncHeight);
 }
