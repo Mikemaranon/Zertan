@@ -1,18 +1,8 @@
 # Zertan
 
-<table>
-  <tr>
-    <td>
-      <img src="app/web_app/static/assets/Zertan.png" alt="Zertan" width="132">
-    </td>
-    <td>&#9474;</td>
-    <td>
-      <strong>Certification</strong><br>
-      <strong>Preparation</strong><br>
-      <strong>Workspace</strong>
-    </td>
-  </tr>
-</table>
+<p align="center">
+  <img src="app/web_app/static/assets/Zertan.png" alt="Zertan" width="240">
+</p>
 
 Zertan is a collaborative workspace for certification exam preparation.
 
