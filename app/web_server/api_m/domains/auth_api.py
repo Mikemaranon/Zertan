@@ -95,7 +95,7 @@ class AuthAPI(BaseAPI):
             return self.error("The uploaded file must be an image.", 400)
 
         project_root = Path(current_app.root_path).resolve().parents[0]
-        target_dir = project_root / "web_app" / "static" / "uploads" / "profiles" / str(user["id"])
+        target_dir = project_root / "web_server" / "data_m" / "assets" / "profiles" / str(user["id"])
         target_dir.mkdir(parents=True, exist_ok=True)
         target_path = target_dir / f"{uuid4().hex}{extension}"
         uploaded_file.save(target_path)

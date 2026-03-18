@@ -102,13 +102,13 @@ export function bindProfileModal() {
     }
 
     function showEditPanel() {
-        editPanel.hidden = false;
+        editPanel.dataset.mode = "editing";
         editToggle.hidden = true;
         nameInput.focus();
     }
 
     function hideEditPanel() {
-        editPanel.hidden = true;
+        editPanel.dataset.mode = "placeholder";
         editToggle.hidden = false;
         currentPasswordInput.value = "";
         newPasswordInput.value = "";

@@ -7,12 +7,27 @@
     <link rel="stylesheet" href="/static/CSS/app.css">
 </head>
 <body data-page="{{ page_id }}">
+    {% set avatar_url = "" %}
+    {% if current_user.avatar_path %}
+        {% if current_user.avatar_path.startswith("web_server/data_m/assets/") %}
+            {% set avatar_url = "/media/" ~ current_user.avatar_path.replace("web_server/data_m/assets/", "") %}
+        {% else %}
+            {% set avatar_url = "/" ~ current_user.avatar_path.replace("web_app/", "") %}
+        {% endif %}
+    {% endif %}
     <div class="app-shell">
         <aside class="sidebar">
             <div class="sidebar-topbar">
                 <div class="brand-block">
-                    <a class="brand" href="/dashboard">Zertan</a>
-                    <p class="brand-copy">Certification preparation workspace</p>
+                    <a class="brand" href="/dashboard" aria-label="Zertan dashboard">
+                        <img class="brand__logo" src="/static/assets/Zertan.png" alt="Zertan">
+                        <span class="brand__divider" aria-hidden="true"></span>
+                        <span class="brand-copy" aria-label="Certification preparation workspace">
+                            <span>Certification</span>
+                            <span>Preparation</span>
+                            <span>Workspace</span>
+                        </span>
+                    </a>
                 </div>
                 <button
                     id="sidebar-toggle"
@@ -28,7 +43,7 @@
                 </button>
                 <button class="user-chip user-chip--header" type="button" data-open-profile-modal aria-label="Open profile">
                     {% if current_user.avatar_path %}
-                    <img class="user-chip__avatar user-chip__avatar--image" src="/{{ current_user.avatar_path|replace('web_app/', '') }}" alt="{{ current_user.display_name }}">
+                    <img class="user-chip__avatar user-chip__avatar--image" src="{{ avatar_url }}" alt="{{ current_user.display_name }}">
                     {% else %}
                     <span class="user-chip__avatar">{{ current_user.display_name[:1]|upper }}</span>
                     {% endif %}
@@ -49,7 +64,7 @@
                 <div class="sidebar-footer">
                     <button class="user-chip user-chip--footer" type="button" data-open-profile-modal>
                         {% if current_user.avatar_path %}
-                        <img class="user-chip__avatar user-chip__avatar--image" src="/{{ current_user.avatar_path|replace('web_app/', '') }}" alt="{{ current_user.display_name }}">
+                        <img class="user-chip__avatar user-chip__avatar--image" src="{{ avatar_url }}" alt="{{ current_user.display_name }}">
                         {% else %}
                         <span class="user-chip__avatar">{{ current_user.display_name[:1]|upper }}</span>
                         {% endif %}
@@ -106,7 +121,18 @@
                     <div id="profile-avatar-error" class="error-message"></div>
                     <button id="profile-edit-toggle" class="button button--secondary" type="button">Modify credentials</button>
                 </div>
-                <div id="profile-edit-panel" class="profile-edit-panel" hidden>
+                <div id="profile-edit-panel" class="profile-edit-panel" data-mode="placeholder">
+                    <div id="profile-brand-placeholder" class="profile-brand-placeholder">
+                        <div class="profile-brand-placeholder__content">
+                            <img class="profile-brand-placeholder__logo" src="/static/assets/Zertan.png" alt="Zertan">
+                            <span class="profile-brand-placeholder__divider" aria-hidden="true"></span>
+                            <span class="profile-brand-placeholder__copy" aria-label="Certification preparation workspace">
+                                <span>Certification</span>
+                                <span>Preparation</span>
+                                <span>Workspace</span>
+                            </span>
+                        </div>
+                    </div>
                     <form id="profile-credentials-form" class="form-stack">
                         <div class="section-heading">
                             <div>

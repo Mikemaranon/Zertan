@@ -8,14 +8,14 @@ from werkzeug.security import generate_password_hash
 from .db_connector import DBConnector
 
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 
 class Database:
     def __init__(self):
         self.connector = DBConnector()
         self.project_root = Path(__file__).resolve().parents[3]
-        self.upload_root = self.project_root / "web_app" / "static" / "uploads"
+        self.upload_root = self.project_root / "web_server" / "data_m" / "assets"
         self._init_db()
 
     def execute(self, query, params=(), *, fetchone=False, fetchall=False):
@@ -278,6 +278,8 @@ class Database:
         self._ensure_users_indexes()
         if current_version < 2:
             self._seed_exam_links()
+        if current_version < 4:
+            self._migrate_static_uploads_to_data_assets()
 
     def _ensure_column(self, table, column_name, definition):
         _, rows = self.execute(f"PRAGMA table_info({table})", fetchall=True)
@@ -877,3 +879,30 @@ class Database:
         if not target.exists():
             target.write_text(content, encoding="utf-8")
         return str(target.relative_to(self.project_root))
+
+    def _migrate_static_uploads_to_data_assets(self):
+        old_root = self.project_root / "web_app" / "static" / "uploads"
+        if old_root.exists():
+            for source_path in old_root.rglob("*"):
+                if not source_path.is_file():
+                    continue
+                relative_path = source_path.relative_to(old_root)
+                target_path = self.upload_root / relative_path
+                target_path.parent.mkdir(parents=True, exist_ok=True)
+                if not target_path.exists():
+                    source_path.replace(target_path)
+
+        self.execute(
+            """
+            UPDATE question_assets
+            SET file_path = REPLACE(file_path, 'web_app/static/uploads/', 'web_server/data_m/assets/')
+            WHERE file_path LIKE 'web_app/static/uploads/%'
+            """
+        )
+        self.execute(
+            """
+            UPDATE users
+            SET avatar_path = REPLACE(avatar_path, 'web_app/static/uploads/', 'web_server/data_m/assets/')
+            WHERE avatar_path LIKE 'web_app/static/uploads/%'
+            """
+        )

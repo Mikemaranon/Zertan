@@ -15,13 +15,15 @@ class Server:
     def __init__(self, app: Flask, run_server=True):
         self.app = app
         self.project_root = Path(__file__).resolve().parents[1]
+        self.media_root = self.project_root / "web_server" / "data_m" / "assets"
         self.secret_key = os.environ.get(
             "SECRET_KEY",
             "zertan-development-secret-key-2026-32b",
         )
         self.app.secret_key = self.secret_key
         self.app.config["JSON_SORT_KEYS"] = False
-        self.app.config["UPLOAD_FOLDER"] = str(self.project_root / "web_app" / "static" / "uploads")
+        self.app.config["MEDIA_ROOT"] = str(self.media_root)
+        self.app.config["UPLOAD_FOLDER"] = str(self.media_root)
 
         self.DBManager = self.ini_DBManager()
         self.user_manager = self.ini_user_manager()

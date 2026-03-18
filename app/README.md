@@ -143,6 +143,8 @@ Operational behavior:
 - exam mode creates fixed attempts on the server
 - submitted attempts feed stored statistics and KPIs
 - import and export use `zip` packages with `exam.json`, one JSON file per question, and related assets
+- runtime media for questions and avatars is stored in `app/web_server/data_m/assets`
+- `app/web_app/static/assets` is reserved for branded static UI assets such as the Zertan logo
 
 ## Seed Data
 

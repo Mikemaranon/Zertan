@@ -75,6 +75,9 @@ export function assetPathToUrl(path) {
     if (path.startsWith("/")) {
         return path;
     }
+    if (path.startsWith("web_server/data_m/assets/")) {
+        return `/media/${path.replace(/^web_server\/data_m\/assets\//, "")}`;
+    }
     return `/${path.replace(/^web_app\//, "")}`;
 }
 

@@ -1,6 +1,9 @@
 # api_m/domains/exams_api.py
 
-from flask import request
+import shutil
+from pathlib import Path
+
+from flask import current_app, request
 
 from api_m.domains.base_api import BaseAPI
 from services_m import AttemptService, build_public_question
@@ -12,6 +15,7 @@ class ExamsAPI(BaseAPI):
         self.app.add_url_rule("/api/exams", endpoint="api_exams_create", view_func=self.create_exam, methods=["POST"])
         self.app.add_url_rule("/api/exams/<int:exam_id>", endpoint="api_exams_get", view_func=self.get_exam, methods=["GET"])
         self.app.add_url_rule("/api/exams/<int:exam_id>", endpoint="api_exams_update", view_func=self.update_exam, methods=["PUT"])
+        self.app.add_url_rule("/api/exams/<int:exam_id>", endpoint="api_exams_delete", view_func=self.delete_exam, methods=["DELETE"])
         self.app.add_url_rule(
             "/api/exams/<int:exam_id>/study",
             endpoint="api_exams_study",
@@ -81,6 +85,19 @@ class ExamsAPI(BaseAPI):
             return self.error(str(exc), 400)
         return self.ok({"exam": self.db.exams.get(exam_id)})
 
+    def delete_exam(self, exam_id):
+        user, error = self.auth_user(request, min_role="examiner")
+        if error:
+            return error
+        exam = self.db.exams.get(exam_id)
+        if not exam:
+            return self.error("Exam not found.", 404)
+
+        questions = self.db.questions.list_for_exam(exam_id, include_answers=True, include_archived=True)
+        self.db.exams.delete(exam_id)
+        self._delete_exam_assets(exam, questions)
+        return self.ok({"status": "deleted"})
+
     def get_study_mode(self, exam_id):
         user, error = self.auth_user(request)
         if error:
@@ -119,3 +136,39 @@ class ExamsAPI(BaseAPI):
         except ValueError as exc:
             return self.error(str(exc), 400)
         return self.ok({"attempt_id": attempt_id}, 201)
+
+    def _delete_exam_assets(self, exam, questions):
+        project_root = Path(current_app.root_path).resolve().parents[0]
+        media_root = project_root / "web_server" / "data_m" / "assets"
+        asset_paths = set()
+
+        for question in questions:
+            for asset in question.get("assets", []):
+                file_path = asset.get("file_path")
+                if not file_path:
+                    continue
+                absolute_path = (project_root / file_path).resolve()
+                if absolute_path.is_file() and self._path_is_within_root(absolute_path, media_root):
+                    asset_paths.add(absolute_path)
+
+        for asset_path in asset_paths:
+            try:
+                asset_path.unlink(missing_ok=True)
+            except OSError:
+                continue
+
+        cleanup_dirs = [
+            media_root / "questions" / str(exam["id"]),
+            media_root / "imports" / exam["code"].lower(),
+            media_root / "exams" / exam["code"].lower(),
+        ]
+        for directory in cleanup_dirs:
+            if directory.exists():
+                shutil.rmtree(directory, ignore_errors=True)
+
+    def _path_is_within_root(self, candidate_path, root_path):
+        try:
+            candidate_path.relative_to(root_path.resolve())
+            return True
+        except ValueError:
+            return False

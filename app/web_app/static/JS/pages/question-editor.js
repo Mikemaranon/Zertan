@@ -92,6 +92,7 @@ function updateVisibleSections() {
     if (type === "hot_spot" && !document.querySelectorAll(".hotspot-dropdown-row").length) {
         addHotspotDropdownRow();
     }
+    normalizeSingleSelectCorrectOption();
 }
 
 function fillQuestionForm(question) {
@@ -204,8 +205,10 @@ function addOptionRow(option = {}) {
         <label class="checkbox-line"><input class="option-correct" type="checkbox" ${option.is_correct ? "checked" : ""}><span>Correct</span></label>
         <button class="button button--secondary button--small js-remove-row" type="button">Remove</button>
     `;
+    row.querySelector(".option-correct").addEventListener("change", (event) => handleOptionCorrectChange(event.currentTarget));
     attachRemoveHandler(row);
     document.getElementById("options-list").appendChild(row);
+    normalizeSingleSelectCorrectOption();
 }
 
 function addHotspotDropdownRow(dropdown = {}) {
@@ -259,7 +262,40 @@ function addDestinationRow(destination = {}, matchedItemId = "") {
 }
 
 function attachRemoveHandler(row) {
-    row.querySelector(".js-remove-row").addEventListener("click", () => row.remove());
+    row.querySelector(".js-remove-row").addEventListener("click", () => {
+        row.remove();
+        normalizeSingleSelectCorrectOption();
+    });
+}
+
+function handleOptionCorrectChange(checkbox) {
+    const type = document.getElementById("question-type").value;
+    if (type !== "single_select" || !checkbox.checked) {
+        return;
+    }
+
+    document.querySelectorAll(".option-correct").forEach((input) => {
+        if (input !== checkbox) {
+            input.checked = false;
+        }
+    });
+}
+
+function normalizeSingleSelectCorrectOption() {
+    if (document.getElementById("question-type").value !== "single_select") {
+        return;
+    }
+
+    let checkedFound = false;
+    document.querySelectorAll(".option-correct").forEach((input) => {
+        if (input.checked && !checkedFound) {
+            checkedFound = true;
+            return;
+        }
+        if (input.checked) {
+            input.checked = false;
+        }
+    });
 }
 
 function findItemIdByDestination(mappings, destinationId) {

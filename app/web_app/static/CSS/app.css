@@ -68,33 +68,63 @@ textarea {
     display: block;
 }
 
+.brand-block {
+    min-width: 0;
+}
+
 .sidebar-menu {
     flex: 1;
     min-height: 0;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
     gap: 24px;
     margin-top: 24px;
     overflow-y: auto;
 }
 
 .brand {
-    display: inline-block;
-    font-size: 1.8rem;
-    font-weight: 700;
-    letter-spacing: 0.03em;
+    display: inline-flex;
+    align-items: center;
+    gap: 16px;
+    max-width: 100%;
+}
+
+.brand__logo {
+    display: block;
+    width: 72px;
+    height: auto;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+.brand__divider {
+    width: 1px;
+    align-self: stretch;
+    background: rgba(102, 118, 138, 0.28);
+    flex-shrink: 0;
 }
 
 .brand-copy {
-    margin: 12px 0 0;
+    margin: 0;
+    display: grid;
+    gap: 2px;
     color: var(--muted);
-    line-height: 1.6;
+    line-height: 1.15;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-size: 0.64rem;
+    font-weight: 700;
+}
+
+.brand-copy span {
+    display: block;
 }
 
 .sidebar-nav {
     display: grid;
     gap: 8px;
+    margin-block: auto;
+    transform: translateY(24px);
 }
 
 .sidebar-nav a {
@@ -113,6 +143,7 @@ textarea {
 .sidebar-footer {
     display: grid;
     gap: 16px;
+    margin-top: auto;
 }
 
 .user-chip {
@@ -312,6 +343,16 @@ textarea {
     background: var(--surface-soft);
     color: var(--text);
     border-color: var(--border);
+}
+
+.button--danger {
+    background: rgba(199, 90, 90, 0.08);
+    color: var(--danger);
+    border-color: rgba(199, 90, 90, 0.24);
+}
+
+.button--danger:hover {
+    background: rgba(199, 90, 90, 0.14);
 }
 
 .button--small {
@@ -1018,8 +1059,55 @@ body.modal-open {
     border-left: 1px solid rgba(211, 220, 231, 0.9);
 }
 
-.profile-edit-panel[hidden] {
+.profile-edit-panel[data-mode="placeholder"] #profile-credentials-form {
     display: none;
+}
+
+.profile-edit-panel[data-mode="editing"] .profile-brand-placeholder {
+    display: none;
+}
+
+.profile-brand-placeholder {
+    display: grid;
+    place-items: center;
+    min-height: 100%;
+}
+
+.profile-brand-placeholder__content {
+    display: inline-flex;
+    align-items: center;
+    gap: 22px;
+    max-width: 100%;
+}
+
+.profile-brand-placeholder__logo {
+    display: block;
+    width: 128px;
+    height: auto;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+.profile-brand-placeholder__divider {
+    width: 1px;
+    align-self: stretch;
+    background: rgba(102, 118, 138, 0.24);
+    flex-shrink: 0;
+}
+
+.profile-brand-placeholder__copy {
+    display: grid;
+    gap: 6px;
+    color: var(--muted);
+    line-height: 1.1;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.profile-brand-placeholder__copy span {
+    display: block;
 }
 
 @media (max-width: 1024px) {
@@ -1042,11 +1130,17 @@ body.modal-open {
     }
 
     .brand {
-        font-size: 1.35rem;
+        gap: 10px;
+    }
+
+    .brand__logo {
+        width: 48px;
     }
 
     .brand-copy {
-        display: none;
+        gap: 1px;
+        font-size: 0.5rem;
+        letter-spacing: 0.12em;
     }
 
     .sidebar-toggle {
@@ -1105,6 +1199,15 @@ body.modal-open {
         transition: opacity 0.18s ease, transform 0.18s ease;
     }
 
+    .sidebar-nav {
+        margin-block: 0;
+        transform: none;
+    }
+
+    .sidebar-footer {
+        margin-top: 0;
+    }
+
     body.sidebar-open .sidebar-menu {
         opacity: 1;
         visibility: visible;
@@ -1133,6 +1236,10 @@ body.modal-open {
         border-left: 0;
         border-top: 1px solid rgba(211, 220, 231, 0.9);
     }
+
+    .profile-edit-panel[data-mode="placeholder"] {
+        display: none;
+    }
 }
 
 @media (max-width: 860px) {
@@ -1142,6 +1249,19 @@ body.modal-open {
 }
 
 @media (max-width: 720px) {
+    .brand {
+        gap: 8px;
+    }
+
+    .brand__logo {
+        width: 40px;
+    }
+
+    .brand-copy {
+        font-size: 0.44rem;
+        letter-spacing: 0.1em;
+    }
+
     .content-shell {
         padding: 24px 16px 48px;
         padding-top: calc(var(--mobile-header-height) + 20px);
@@ -1175,5 +1295,18 @@ body.modal-open {
     .profile-summary__header {
         flex-direction: column;
         align-items: flex-start;
+    }
+
+    .profile-brand-placeholder__content {
+        gap: 16px;
+    }
+
+    .profile-brand-placeholder__logo {
+        width: 96px;
+    }
+
+    .profile-brand-placeholder__copy {
+        font-size: 0.72rem;
+        letter-spacing: 0.14em;
     }
 }

@@ -1,6 +1,8 @@
 # web_server/app_routes.py
 
-from flask import make_response, redirect, render_template, request, url_for
+from pathlib import Path
+
+from flask import abort, current_app, make_response, redirect, render_template, request, send_from_directory, url_for
 
 from data_m import DBManager
 from user_m import UserManager
@@ -28,6 +30,7 @@ class AppRoutes:
         self.app.add_url_rule("/exams/<int:exam_id>/questions/new", "question_create", self.get_question_create, methods=["GET"])
         self.app.add_url_rule("/questions/<int:question_id>/edit", "question_edit", self.get_question_edit, methods=["GET"])
         self.app.add_url_rule("/admin", "admin", self.get_admin, methods=["GET"])
+        self.app.add_url_rule("/media/<path:asset_path>", "media_asset", self.get_media_asset, methods=["GET"])
 
     def get_home(self):
         user = self.user_manager.check_user(request)
@@ -93,6 +96,16 @@ class AppRoutes:
 
     def get_admin(self):
         return self._render_auth_page("management/admin.html", "Admin Panel", min_role="administrator")
+
+    def get_media_asset(self, asset_path):
+        user = self.user_manager.check_user(request)
+        if not user:
+            return abort(401)
+
+        media_root = Path(current_app.config["MEDIA_ROOT"]).resolve()
+        response = send_from_directory(media_root, asset_path)
+        response.headers["Cache-Control"] = "private, max-age=3600"
+        return response
 
     def _render_auth_page(self, template_name, page_title, min_role=None, **page_context):
         user = self.user_manager.check_user(request)

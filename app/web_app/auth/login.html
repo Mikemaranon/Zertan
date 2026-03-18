@@ -18,13 +18,39 @@
             <form id="login-form" class="form-stack">
                 <label><span>Login name</span><input type="text" id="login-name" required></label>
                 <label><span>Password</span><input type="password" id="password" required></label>
-                <div id="error-message" class="error-message"></div>
+                <div id="error-message" class="error-message" hidden></div>
                 <button class="button button--primary" type="submit">Sign in</button>
             </form>
         </section>
         <section class="auth-card auth-card--secondary">
-            <p class="eyebrow">Seeded accounts</p>
-            <ul class="credential-list">
+            <div class="auth-brand">
+                <a class="brand auth-brand__signature" href="/login" aria-label="Zertan login">
+                    <img class="brand__logo" src="/static/assets/Zertan.png" alt="Zertan">
+                    <span class="brand__divider" aria-hidden="true"></span>
+                    <span class="brand-copy" aria-label="Certification preparation workspace">
+                        <span>Certification</span>
+                        <span>Preparation</span>
+                        <span>Workspace</span>
+                    </span>
+                </a>
+            </div>
+            <div class="section-heading section-heading--compact">
+                <div>
+                    <p class="eyebrow">Seeded accounts</p>
+                    <p class="muted">Use the bundled roles only when reviewing the local platform.</p>
+                </div>
+                <button
+                    id="seeded-accounts-toggle"
+                    class="seeded-accounts-toggle"
+                    type="button"
+                    aria-expanded="false"
+                    aria-controls="seeded-accounts-list"
+                    aria-label="Show seeded accounts"
+                >
+                    <span class="seeded-accounts-toggle__icon" aria-hidden="true">^</span>
+                </button>
+            </div>
+            <ul id="seeded-accounts-list" class="credential-list" hidden>
                 <li><strong>administrator</strong>: <code>admin</code> / <code>admin123</code></li>
                 <li><strong>examiner</strong>: <code>examiner</code> / <code>examiner123</code></li>
                 <li><strong>reviewer</strong>: <code>reviewer</code> / <code>reviewer123</code></li>

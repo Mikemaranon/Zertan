@@ -13,7 +13,7 @@ class PackageService:
     def __init__(self, db_manager, project_root):
         self.db = db_manager
         self.project_root = Path(project_root)
-        self.upload_root = self.project_root / "web_app" / "static" / "uploads"
+        self.upload_root = self.project_root / "web_server" / "data_m" / "assets"
 
     def export_exam(self, exam_id):
         exam = self.db.exams.get(exam_id)

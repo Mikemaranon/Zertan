@@ -143,7 +143,7 @@ class QuestionsAPI(BaseAPI):
         project_root = Path(current_app.root_path).resolve().parents[0]
         safe_name = secure_filename(file_storage.filename)
         extension = Path(safe_name).suffix
-        target_dir = project_root / "web_app" / "static" / "uploads" / "questions" / str(exam_id)
+        target_dir = project_root / "web_server" / "data_m" / "assets" / "questions" / str(exam_id)
         target_dir.mkdir(parents=True, exist_ok=True)
         target_name = f"{uuid4().hex}{extension}"
         target_path = target_dir / target_name

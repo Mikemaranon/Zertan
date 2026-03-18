@@ -36,6 +36,7 @@ export async function initManagementPage() {
                     <a class="button button--secondary button--small" href="/exams/${exam.id}/questions/new">Create question</a>
                     <a class="button button--secondary button--small" href="/exams/${exam.id}">Study mode</a>
                     <button class="button button--primary button--small js-export-exam" type="button">Export package</button>
+                    <button class="button button--danger button--small js-delete-exam" type="button">Delete exam</button>
                 </div>
             </div>
         `;
@@ -57,6 +58,28 @@ export async function initManagementPage() {
             button.addEventListener("click", (event) => {
                 const examId = event.currentTarget.closest("[data-exam-id]").dataset.examId;
                 window.location.href = `/api/import-export/exams/${examId}/export`;
+            });
+        });
+
+        examList.querySelectorAll(".js-delete-exam").forEach((button) => {
+            button.addEventListener("click", async (event) => {
+                const card = event.currentTarget.closest("[data-exam-id]");
+                const examId = card.dataset.examId;
+                const examTitle = card.querySelector("h3")?.textContent?.trim() || "this exam";
+                const confirmed = window.confirm(`Delete ${examTitle}? This removes the exam, its questions, attempts, answers, and linked assets.`);
+                if (!confirmed) {
+                    return;
+                }
+
+                try {
+                    await request(`/api/exams/${examId}`, { method: "DELETE" });
+                    if (document.getElementById("exam-id").value === examId) {
+                        resetForm();
+                    }
+                    await loadExams();
+                } catch (error) {
+                    examError.textContent = error.message;
+                }
             });
         });
     }
