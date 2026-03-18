@@ -159,11 +159,14 @@ function renderLegacyHotspotQuestion(question, mode) {
 
 function renderDragDropQuestion(question, mode) {
     const wrapper = document.createElement("div");
-    wrapper.className = "stack-gap";
+    wrapper.className = "stack-gap drag-drop-question";
     wrapper.dataset.mappings = JSON.stringify({});
 
+    const layout = document.createElement("div");
+    layout.className = "drag-drop-layout";
+
     const bank = document.createElement("div");
-    bank.className = "grid grid--cards drag-bank";
+    bank.className = "drag-bank";
     for (const item of question.config?.items || []) {
         const itemNode = document.createElement("div");
         itemNode.className = "drag-item";
@@ -177,7 +180,7 @@ function renderDragDropQuestion(question, mode) {
     }
 
     const zones = document.createElement("div");
-    zones.className = "grid grid--cards";
+    zones.className = "drag-zones";
     for (const destination of question.config?.destinations || []) {
         const zone = document.createElement("div");
         zone.className = "drop-zone";
@@ -203,8 +206,9 @@ function renderDragDropQuestion(question, mode) {
         zones.appendChild(zone);
     }
 
-    wrapper.appendChild(bank);
-    wrapper.appendChild(zones);
+    layout.appendChild(bank);
+    layout.appendChild(zones);
+    wrapper.appendChild(layout);
 
     if (mode !== "results") {
         const reset = document.createElement("button");
@@ -238,13 +242,20 @@ function syncDragDropView(wrapper, question) {
     const mappings = JSON.parse(wrapper.dataset.mappings || "{}");
     wrapper.querySelectorAll(".drop-zone").forEach((zone) => {
         zone.classList.remove("assigned");
+        const placeholder = zone.querySelector(".muted");
         const assignedLabel = zone.querySelector(".assigned-label");
+        if (placeholder) {
+            placeholder.hidden = false;
+        }
         assignedLabel.textContent = "";
         const entry = Object.entries(mappings).find(([, destinationId]) => destinationId === zone.dataset.destinationId);
         if (entry) {
             const [itemId] = entry;
             const item = (question.config?.items || []).find((candidate) => candidate.id === itemId);
             assignedLabel.textContent = item?.label || itemId;
+            if (placeholder) {
+                placeholder.hidden = true;
+            }
             zone.classList.add("assigned");
         }
     });

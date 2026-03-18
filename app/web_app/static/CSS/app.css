@@ -498,6 +498,20 @@ textarea {
     cursor: grab;
 }
 
+.drag-drop-layout {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+    align-items: start;
+}
+
+.drag-bank,
+.drag-zones {
+    display: grid;
+    gap: 12px;
+    align-content: start;
+}
+
 .drop-zone.is-active,
 .question-card.is-highlighted {
     border-color: var(--primary);
@@ -1094,6 +1108,10 @@ body.modal-open {
     .content-shell {
         padding: 24px 16px 48px;
         padding-top: calc(var(--mobile-header-height) + 20px);
+    }
+
+    .drag-drop-layout {
+        grid-template-columns: 1fr;
     }
 
     .content-header {
