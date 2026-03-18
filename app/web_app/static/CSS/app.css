@@ -228,6 +228,17 @@ textarea {
     gap: 16px;
 }
 
+.section-heading > :first-child {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.section-heading > .badge {
+    margin-left: auto;
+    flex: 0 0 auto;
+    align-self: flex-start;
+}
+
 .section-heading h2,
 .section-heading h3 {
     margin: 0 0 8px;
@@ -773,6 +784,15 @@ textarea {
     grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
 }
 
+.hotspot-dropdown-row > label,
+.hotspot-dropdown-row > .inline-grid {
+    margin-bottom: 10px;
+}
+
+.hotspot-dropdown-row > .js-remove-row {
+    margin-top: 5px;
+}
+
 .auth-body {
     min-height: 100vh;
     display: grid;
@@ -808,6 +828,7 @@ body.modal-open {
 .profile-modal__dialog {
     position: relative;
     width: min(840px, 100%);
+    max-height: calc(100dvh - 88px);
     border-radius: 28px;
     background: var(--surface);
     border: 1px solid rgba(198, 211, 225, 0.88);
@@ -839,17 +860,28 @@ body.modal-open {
 .profile-modal__close {
     position: absolute;
     top: 18px;
-    right: 20px;
-    padding: 0;
-    border: 0;
-    background: transparent;
-    color: var(--muted);
+    right: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    height: 44px;
+    padding: 0 14px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.9);
+    color: var(--text);
+    font-weight: 600;
     cursor: pointer;
+    box-shadow: 0 8px 18px rgba(16, 34, 52, 0.08);
 }
 
 .profile-modal__layout {
     display: grid;
     grid-template-columns: minmax(0, 0.96fr) minmax(0, 1.04fr);
+    max-height: calc(100dvh - 88px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
 }
 
 .profile-summary,
@@ -1069,7 +1101,15 @@ body.modal-open {
     }
 
     .profile-modal {
-        padding: 16px;
+        padding: 20px;
+    }
+
+    .profile-modal__dialog {
+        max-height: calc(100dvh - 52px);
+    }
+
+    .profile-modal__layout {
+        max-height: calc(100dvh - 52px);
     }
 
     .profile-summary,

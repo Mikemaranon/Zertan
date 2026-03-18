@@ -67,25 +67,32 @@ export async function initAdminPage() {
             scrollContainer.style.maxHeight = "";
             return;
         }
+        const grid = scrollContainer.closest(".grid--two");
+        const gridTemplateColumns = grid ? window.getComputedStyle(grid).gridTemplateColumns : "";
+        const isVerticalLayout = !gridTemplateColumns || !gridTemplateColumns.includes(" ");
         const styles = window.getComputedStyle(list);
         const gap = Number.parseFloat(styles.rowGap || styles.gap || "0") || 0;
         const panel = scrollContainer.closest(".panel");
         const panelStyles = panel ? window.getComputedStyle(panel) : null;
         const panelBottomPadding = Number.parseFloat(panelStyles?.paddingBottom || "0") || 0;
+        const maxVisibleCards = isVerticalLayout ? 3 : 4;
         const totalHeight =
             cards.reduce((total, card) => total + card.offsetHeight, 0) + gap * Math.max(cards.length - 1, 0);
-        const fourCardHeight =
-            cards.slice(0, 4).reduce((total, card) => total + card.offsetHeight, 0) + gap * Math.max(Math.min(cards.length, 4) - 1, 0);
+        const targetCardHeight =
+            cards.slice(0, maxVisibleCards).reduce((total, card) => total + card.offsetHeight, 0) +
+            gap * Math.max(Math.min(cards.length, maxVisibleCards) - 1, 0);
         const viewportSafetyOffset = 12;
         const availableViewportHeight = Math.max(
             220,
             window.innerHeight - scrollContainer.getBoundingClientRect().top - panelBottomPadding - viewportSafetyOffset
         );
-        const desiredHeight = cards.length > 4 ? Math.min(fourCardHeight, availableViewportHeight) : Math.min(totalHeight, availableViewportHeight);
+        const desiredHeight = isVerticalLayout
+            ? (cards.length > maxVisibleCards ? targetCardHeight : totalHeight)
+            : (cards.length > maxVisibleCards ? Math.min(targetCardHeight, availableViewportHeight) : Math.min(totalHeight, availableViewportHeight));
         const constrainedHeight = totalHeight > desiredHeight ? Math.ceil(desiredHeight) : null;
         scrollContainer.style.maxHeight = constrainedHeight ? `${constrainedHeight}px` : "";
 
-        if (!constrainedHeight) {
+        if (!constrainedHeight || isVerticalLayout) {
             return;
         }
 
@@ -135,12 +142,25 @@ export async function initAdminPage() {
 }
 
 function fillUserForm(user) {
+    const form = document.getElementById("admin-user-form");
+    const nameInput = document.getElementById("admin-display-name");
     document.getElementById("admin-user-id").value = user.id;
-    document.getElementById("admin-display-name").value = user.display_name;
+    nameInput.value = user.display_name;
     document.getElementById("admin-login-name").value = user.login_name;
     document.getElementById("admin-password").value = "";
     document.getElementById("admin-role").value = user.role;
     document.getElementById("admin-status").value = user.status;
+    const mobileHeaderHeight = Number.parseFloat(
+        getComputedStyle(document.documentElement).getPropertyValue("--mobile-header-height") || "0"
+    ) || 0;
+    const viewportPadding = window.innerWidth <= 720 ? 16 : 24;
+    const topOffset = window.innerWidth <= 1024 ? mobileHeaderHeight + viewportPadding + 23 : 55;
+    const targetTop = Math.max(0, window.scrollY + form.getBoundingClientRect().top - topOffset);
+    window.scrollTo({ top: targetTop, behavior: "smooth" });
+    window.setTimeout(() => {
+        nameInput.focus({ preventScroll: true });
+        nameInput.select();
+    }, 220);
 }
 
 function resetForm() {

@@ -213,11 +213,19 @@ function addHotspotDropdownRow(dropdown = {}) {
             <label><span>Label</span><input class="hotspot-dropdown-label" type="text" value="${dropdown.label || ""}" placeholder="Dropdown 1"></label>
         </div>
         <label><span>Options</span><textarea class="hotspot-dropdown-options" rows="4" placeholder="One option per line">${(dropdown.options || []).join("\n")}</textarea></label>
-        <label><span>Correct option</span><input class="hotspot-dropdown-correct" type="text" value="${dropdown.correct_option || ""}" placeholder="Must match one option exactly"></label>
+        <label>
+            <span>Correct option</span>
+            <select class="hotspot-dropdown-correct">
+                <option value="">Select the correct option</option>
+            </select>
+        </label>
         <button class="button button--secondary button--small js-remove-row" type="button">Remove</button>
     `;
+    const optionsField = row.querySelector(".hotspot-dropdown-options");
+    optionsField.addEventListener("input", () => syncHotspotCorrectOptions(row));
     attachRemoveHandler(row);
     document.getElementById("hotspot-dropdowns-list").appendChild(row);
+    syncHotspotCorrectOptions(row, dropdown.correct_option || "");
 }
 
 function addItemRow(item = {}) {
@@ -258,4 +266,22 @@ function splitLineValues(value) {
         .split(/\n|,/)
         .map((item) => item.trim())
         .filter(Boolean);
+}
+
+function syncHotspotCorrectOptions(row, preferredValue = null) {
+    const optionsField = row.querySelector(".hotspot-dropdown-options");
+    const select = row.querySelector(".hotspot-dropdown-correct");
+    const options = splitLineValues(optionsField.value);
+    const nextValue = preferredValue ?? select.value;
+
+    select.innerHTML = `<option value="">Select the correct option</option>`;
+    options.forEach((option) => {
+        const optionNode = document.createElement("option");
+        optionNode.value = option;
+        optionNode.textContent = option;
+        select.appendChild(optionNode);
+    });
+
+    select.disabled = options.length === 0;
+    select.value = options.includes(nextValue) ? nextValue : "";
 }
