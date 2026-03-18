@@ -318,6 +318,10 @@ textarea {
     align-items: center;
 }
 
+.exam-management__actions {
+    margin-top: 10px;
+}
+
 .button {
     display: inline-flex;
     align-items: center;
@@ -531,6 +535,10 @@ textarea {
     gap: 10px;
 }
 
+.question-card > .button-row {
+    margin-top: 10px;
+}
+
 .question-option,
 .drag-item,
 .drop-zone,
@@ -648,6 +656,24 @@ textarea {
     gap: 12px;
 }
 
+.hotspot-dropdown-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 12px;
+    color: var(--text);
+}
+
+.hotspot-dropdown-row__index {
+    min-width: 24px;
+    text-align: right;
+    color: var(--text);
+}
+
+.feedback-slot:empty {
+    display: none;
+}
+
 .feedback-box {
     padding: 14px 16px;
     border-radius: var(--radius-small);
@@ -763,6 +789,15 @@ textarea {
 .selection-chip:hover {
     border-color: var(--primary);
     background: #e7f2fb;
+}
+
+.selection-chip--static {
+    cursor: default;
+}
+
+.selection-chip--static:hover {
+    border-color: var(--border);
+    background: var(--surface-soft);
 }
 
 .selection-chip--empty {

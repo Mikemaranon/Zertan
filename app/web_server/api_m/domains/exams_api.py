@@ -39,7 +39,13 @@ class ExamsAPI(BaseAPI):
         user, error = self.auth_user(request)
         if error:
             return error
-        exams = self.db.exams.list_all()
+        exams = []
+        for exam in self.db.exams.list_all():
+            enriched_exam = dict(exam)
+            enriched_exam["can_manage"] = self.user_manager.user_has_role(user, "examiner")
+            enriched_exam["can_edit_questions"] = self.user_manager.user_has_role(user, "reviewer")
+            enriched_exam["can_export_package"] = self.user_manager.user_has_role(user, "reviewer")
+            exams.append(enriched_exam)
         return self.ok({"exams": exams, "user": user})
 
     def create_exam(self):
@@ -66,6 +72,7 @@ class ExamsAPI(BaseAPI):
         exam["builder_meta"] = self.db.exams.list_builder_metadata(exam_id)
         exam["can_manage"] = self.user_manager.user_has_role(user, "examiner")
         exam["can_edit_questions"] = self.user_manager.user_has_role(user, "reviewer")
+        exam["can_export_package"] = self.user_manager.user_has_role(user, "reviewer")
         return self.ok({"exam": exam})
 
     def update_exam(self, exam_id):
@@ -112,6 +119,7 @@ class ExamsAPI(BaseAPI):
         exam["builder_meta"] = self.db.exams.list_builder_metadata(exam_id)
         exam["can_manage"] = self.user_manager.user_has_role(user, "examiner")
         exam["can_edit_questions"] = self.user_manager.user_has_role(user, "reviewer")
+        exam["can_export_package"] = self.user_manager.user_has_role(user, "reviewer")
         return self.ok({"exam": exam, "questions": questions})
 
     def get_builder_meta(self, exam_id):

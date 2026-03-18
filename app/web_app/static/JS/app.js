@@ -1,4 +1,4 @@
-import { clearToken, getPageContext, request } from "./core/api.js";
+import { getPageContext, request } from "./core/api.js";
 import { bindProfileModal } from "./components/profile-modal.js";
 import { initAdminPage } from "./pages/admin.js";
 import { initCatalogPage } from "./pages/catalog.js";
@@ -69,7 +69,6 @@ function bindLogoutButton() {
         } catch (error) {
             console.error(error);
         } finally {
-            clearToken();
             window.location.href = "/login";
         }
     });

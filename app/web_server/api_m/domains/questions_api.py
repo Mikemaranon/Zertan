@@ -1,7 +1,6 @@
 # api_m/domains/questions_api.py
 
 import json
-import os
 from pathlib import Path
 from uuid import uuid4
 
@@ -13,6 +12,13 @@ from services_m import build_public_question, evaluate_question_response, normal
 
 
 class QuestionsAPI(BaseAPI):
+    ALLOWED_HOTSPOT_IMAGE_EXTENSIONS = {".png", ".jpg", ".svg"}
+    ALLOWED_HOTSPOT_IMAGE_MIMETYPES = {
+        ".png": {"image/png"},
+        ".jpg": {"image/jpeg"},
+        ".svg": {"image/svg+xml"},
+    }
+
     def register(self):
         self.app.add_url_rule("/api/questions/<int:question_id>", endpoint="api_questions_get", view_func=self.get_question, methods=["GET"])
         self.app.add_url_rule(
@@ -151,9 +157,12 @@ class QuestionsAPI(BaseAPI):
         else:
             payload = request.get_json() or {}
 
+        question_type = (payload.get("type") or (current_question.get("type") if current_question else "")).strip()
         existing_assets = payload.get("assets") or (current_question.get("assets", []) if current_question else [])
         uploaded_asset = request.files.get("asset_file")
         if uploaded_asset and uploaded_asset.filename:
+            if question_type == "hot_spot":
+                self._validate_hotspot_asset_file(uploaded_asset)
             relative_path = self._save_asset_file(exam_id, uploaded_asset)
             asset_meta = {"alt": request.form.get("asset_alt") or payload.get("asset_alt") or uploaded_asset.filename}
             existing_assets = [
@@ -169,13 +178,24 @@ class QuestionsAPI(BaseAPI):
     def _save_asset_file(self, exam_id, file_storage):
         project_root = Path(current_app.root_path).resolve().parents[0]
         safe_name = secure_filename(file_storage.filename)
-        extension = Path(safe_name).suffix
+        extension = Path(safe_name).suffix.lower()
         target_dir = project_root / "web_server" / "data_m" / "assets" / "questions" / str(exam_id)
         target_dir.mkdir(parents=True, exist_ok=True)
         target_name = f"{uuid4().hex}{extension}"
         target_path = target_dir / target_name
         file_storage.save(target_path)
         return str(target_path.relative_to(project_root))
+
+    def _validate_hotspot_asset_file(self, file_storage):
+        safe_name = secure_filename(file_storage.filename or "")
+        extension = Path(safe_name).suffix.lower()
+        if extension not in self.ALLOWED_HOTSPOT_IMAGE_EXTENSIONS:
+            raise ValueError("Hot spot images must use .png, .jpg, or .svg files.")
+
+        mimetype = (file_storage.mimetype or "").lower()
+        allowed_mimetypes = self.ALLOWED_HOTSPOT_IMAGE_MIMETYPES.get(extension, set())
+        if mimetype and mimetype not in allowed_mimetypes:
+            raise ValueError("Hot spot images must be valid PNG, JPG, or SVG uploads.")
 
     def _serialize_question_summary(self, question, user):
         return {

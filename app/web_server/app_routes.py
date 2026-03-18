@@ -51,7 +51,7 @@ class AppRoutes:
         return render_template("auth/login.html", page_title="Login")
 
     def get_logout(self):
-        token = self.user_manager.get_token_from_cookie(request) or self.user_manager.get_request_token(request)
+        token = self.user_manager.get_token_from_cookie(request)
         self.user_manager.logout(token)
         response = make_response(redirect(url_for("login")))
         response.delete_cookie("token")
@@ -82,7 +82,7 @@ class AppRoutes:
         return redirect(url_for("dashboard"))
 
     def get_exam_management(self):
-        return self._render_auth_page("management/exams.html", "Exam Management", min_role="examiner")
+        return self._render_auth_page("management/exams.html", "Exam Management", min_role="reviewer")
 
     def get_question_create(self, exam_id):
         return self._render_auth_page(

@@ -36,10 +36,12 @@ class AuthAPI(BaseAPI):
         if not result:
             return self.error("Invalid credentials.", 401)
 
-        response = make_response(jsonify(result))
+        response_payload = dict(result)
+        token = response_payload.pop("token")
+        response = make_response(jsonify(response_payload))
         response.set_cookie(
             "token",
-            result["token"],
+            token,
             httponly=True,
             samesite="Lax",
             max_age=8 * 60 * 60,
@@ -47,7 +49,7 @@ class AuthAPI(BaseAPI):
         return response
 
     def logout(self):
-        token = self.user_manager.get_token_from_cookie(request) or self.user_manager.get_request_token(request)
+        token = self.user_manager.get_token_from_cookie(request)
         self.user_manager.logout(token)
         response = make_response(jsonify({"status": "ok"}))
         response.delete_cookie("token")

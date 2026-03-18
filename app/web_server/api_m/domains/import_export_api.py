@@ -29,7 +29,7 @@ class ImportExportAPI(BaseAPI):
         if error:
             return error
         uploaded_file = request.files.get("package")
-        if not uploaded_file or not uploaded_file.filename.endswith(".zip"):
+        if not uploaded_file or not uploaded_file.filename or not uploaded_file.filename.lower().endswith(".zip"):
             return self.error("Upload a .zip exam package.", 400)
         try:
             project_root = Path(current_app.root_path).resolve().parents[0]
@@ -39,7 +39,7 @@ class ImportExportAPI(BaseAPI):
         return self.ok({"exam": self.db.exams.get(exam_id)}, 201)
 
     def export_exam(self, exam_id):
-        _, error = self.auth_user(request, min_role="examiner")
+        _, error = self.auth_user(request, min_role="reviewer")
         if error:
             return error
         exam = self.db.exams.get(exam_id)

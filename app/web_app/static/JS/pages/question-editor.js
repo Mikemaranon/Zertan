@@ -1,10 +1,13 @@
 import { getPageContext, request, splitCommaValues } from "../core/api.js";
 
+const ALLOWED_HOTSPOT_FILE_EXTENSIONS = new Set([".png", ".jpg", ".svg"]);
+
 export async function initQuestionEditorPage(pageContext) {
     const form = document.getElementById("question-form");
     const header = document.getElementById("question-editor-header");
     const errorNode = document.getElementById("question-form-error");
     const typeSelect = document.getElementById("question-type");
+    const assetFileInput = document.getElementById("question-asset-file");
     const returnPath = pageContext.return_to || "";
     let loadedQuestion = null;
     let currentExamId = pageContext.exam_id || null;
@@ -18,6 +21,17 @@ export async function initQuestionEditorPage(pageContext) {
 
     bindEditorButtons();
     typeSelect.addEventListener("change", updateVisibleSections);
+    assetFileInput.addEventListener("change", () => {
+        const validationMessage = validateHotspotAssetSelection(assetFileInput);
+        if (validationMessage) {
+            errorNode.textContent = validationMessage;
+            assetFileInput.value = "";
+            return;
+        }
+        if (errorNode.textContent === "Hot spot images must use .png, .jpg, or .svg files.") {
+            errorNode.textContent = "";
+        }
+    });
 
     if (pageContext.question_id) {
         const data = await request(`/api/questions/${pageContext.question_id}`);
@@ -39,7 +53,12 @@ export async function initQuestionEditorPage(pageContext) {
         const payload = buildPayloadFromForm();
         const formData = new FormData();
         formData.append("payload", JSON.stringify(payload));
-        const assetFile = document.getElementById("question-asset-file").files[0];
+        const assetFile = assetFileInput.files[0];
+        const validationMessage = validateHotspotAssetSelection(assetFileInput);
+        if (validationMessage) {
+            errorNode.textContent = validationMessage;
+            return;
+        }
         if (assetFile) {
             formData.append("asset_file", assetFile);
             formData.append("asset_type", "image");
@@ -362,4 +381,23 @@ function syncHotspotCorrectOptions(row, preferredValue = null) {
 
     select.disabled = options.length === 0;
     select.value = options.includes(nextValue) ? nextValue : "";
+}
+
+function validateHotspotAssetSelection(input) {
+    if (document.getElementById("question-type").value !== "hot_spot") {
+        return "";
+    }
+
+    const file = input.files[0];
+    if (!file) {
+        return "";
+    }
+
+    const fileName = String(file.name || "").toLowerCase();
+    const extension = fileName.includes(".") ? `.${fileName.split(".").pop()}` : "";
+    if (!ALLOWED_HOTSPOT_FILE_EXTENSIONS.has(extension)) {
+        return "Hot spot images must use .png, .jpg, or .svg files.";
+    }
+
+    return "";
 }

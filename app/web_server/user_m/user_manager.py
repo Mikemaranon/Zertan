@@ -63,14 +63,8 @@ class UserManager:
     def get_token_from_cookie(self, request):
         return request.cookies.get("token")
 
-    def get_request_token(self, request):
-        auth_header = request.headers.get("Authorization")
-        if auth_header and auth_header.startswith("Bearer "):
-            return auth_header.split(" ", 1)[1]
-        return None
-
     def check_user(self, request):
-        token = self.get_token_from_cookie(request) or self.get_request_token(request)
+        token = self.get_token_from_cookie(request)
         if not token:
             return None
         return self.get_user_from_token(token)

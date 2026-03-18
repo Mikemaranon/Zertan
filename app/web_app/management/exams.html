@@ -1,6 +1,8 @@
 {% set page_id = "exam-management" %}
 {% extends "shared/base.html" %}
 {% block content %}
+{% set can_manage_exams = current_user and current_user.role in ["examiner", "administrator"] %}
+{% if can_manage_exams %}
 <section class="grid grid--two">
     <div class="panel">
         <form id="exam-form" class="form-stack">
@@ -59,19 +61,20 @@
     q_0001.json
     q_0002.json
   assets/
-    images/
-    hotspot/
-    dragdrop/</code></pre>
+    img_1.jpg
+    img_2.png
+    img_3.svg</code></pre>
             </div>
         </form>
     </div>
 </section>
+{% endif %}
 
 <section class="panel stack-gap">
     <div class="section-heading">
         <div>
             <h2>Managed exams</h2>
-            <p class="muted">Edit metadata, open study mode, create questions, or export structured packages.</p>
+            <p class="muted">Edit metadata, manage questions, or export structured packages.</p>
         </div>
     </div>
     <div id="management-exam-list" class="list-stack"></div>

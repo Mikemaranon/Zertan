@@ -1,23 +1,5 @@
-const TOKEN_KEY = "zertan_auth_token";
-
-export function storeToken(token) {
-    localStorage.setItem(TOKEN_KEY, token);
-}
-
-export function getToken() {
-    return localStorage.getItem(TOKEN_KEY);
-}
-
-export function clearToken() {
-    localStorage.removeItem(TOKEN_KEY);
-}
-
 export async function request(endpoint, { method = "GET", body = null, formData = null } = {}) {
     const headers = {};
-    const token = getToken();
-    if (token) {
-        headers.Authorization = `Bearer ${token}`;
-    }
 
     const options = {
         method,
@@ -38,7 +20,6 @@ export async function request(endpoint, { method = "GET", body = null, formData 
 
     if (!response.ok) {
         if (response.status === 401 && document.body.dataset.page !== "login") {
-            clearToken();
             window.location.href = "/login";
         }
         const message = typeof payload === "string" ? payload : payload.error || "Request failed.";

@@ -21,13 +21,7 @@ export function renderQuestionCard(question, { mode = "study", index = 1, respon
     `;
     card.appendChild(header);
 
-    const metadata = document.createElement("div");
-    metadata.className = "meta-row muted";
-    metadata.innerHTML = `
-        <span>Topics: ${question.topics?.length ? escapeHtml(question.topics.join(", ")) : "none"}</span>
-        <span>Tags: ${question.tags?.length ? escapeHtml(question.tags.join(", ")) : "none"}</span>
-    `;
-    card.appendChild(metadata);
+    card.appendChild(renderQuestionMetadata(question));
 
     const statement = document.createElement("div");
     statement.className = "question-card__statement";
@@ -61,6 +55,33 @@ export function renderQuestionCard(question, { mode = "study", index = 1, respon
     }
 
     return card;
+}
+
+function renderQuestionMetadata(question) {
+    const items = [
+        ...(question.tags || []).map((value) => ({ group: "tag", groupLabel: "Tag", value })),
+        ...(question.topics || []).map((value) => ({ group: "topic", groupLabel: "Topic", value })),
+    ];
+
+    const metadata = document.createElement("div");
+
+    if (!items.length) {
+        metadata.className = "meta-row muted";
+        metadata.textContent = "No tags or topics assigned.";
+        return metadata;
+    }
+
+    metadata.className = "selection-field__chips question-card__meta";
+    metadata.innerHTML = items
+        .map((item) => `
+            <span class="selection-chip selection-chip--static" data-group="${escapeHtml(item.group)}">
+                <span class="selection-chip__group">${escapeHtml(item.groupLabel)}</span>
+                <span class="selection-chip__value">${escapeHtml(item.value)}</span>
+            </span>
+        `)
+        .join("");
+
+    return metadata;
 }
 
 function renderChoiceQuestion(question, mode) {
@@ -107,13 +128,10 @@ function renderHotspotQuestion(question, mode) {
     fields.className = "hotspot-dropdowns";
     dropdowns.forEach((dropdown) => {
         const field = document.createElement("label");
-        field.className = "selection-field";
+        field.className = "hotspot-dropdown-row";
         field.innerHTML = `
-            <span class="selection-field__top">
-                <strong>${escapeHtml(String(dropdown.order))}.</strong>
-                <span>${escapeHtml(dropdown.label || `Dropdown ${dropdown.order}`)}</span>
-            </span>
-            <select data-hotspot-dropdown-id="${escapeHtml(dropdown.id)}" ${mode === "results" ? "disabled" : ""}>
+            <strong class="hotspot-dropdown-row__index">${escapeHtml(String(dropdown.order))}.</strong>
+            <select data-hotspot-dropdown-id="${escapeHtml(dropdown.id)}" aria-label="${escapeHtml(dropdown.label || `Dropdown ${dropdown.order}`)}" ${mode === "results" ? "disabled" : ""}>
                 <option value="">Select an option</option>
                 ${(dropdown.options || [])
                     .map((option) => `<option value="${escapeHtml(option)}">${escapeHtml(option)}</option>`)

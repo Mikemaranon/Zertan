@@ -54,7 +54,7 @@
                 <nav class="sidebar-nav">
                     <a href="/dashboard">Dashboard</a>
                     <a href="/catalog">Exam Catalog</a>
-                    {% if current_user and current_user.role in ["examiner", "administrator"] %}
+                    {% if current_user and current_user.role in ["reviewer", "examiner", "administrator"] %}
                     <a href="/management/exams">Management</a>
                     {% endif %}
                     {% if current_user and current_user.role == "administrator" %}
