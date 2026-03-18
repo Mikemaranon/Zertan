@@ -1,0 +1,20 @@
+.pagination {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.pagination .page-link {
+    padding: 10px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+}
+
+.pagination .page-link.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}

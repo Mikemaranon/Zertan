@@ -1,0 +1,22 @@
+.exam-management__actions {
+    margin-top: 10px;
+}
+
+.package-guide {
+    padding: 16px 18px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-small);
+    background: var(--surface-soft);
+}
+
+.package-guide strong {
+    display: block;
+    margin-bottom: 12px;
+}
+
+.package-guide pre {
+    margin: 0;
+    overflow-x: auto;
+    font: 0.92rem/1.6 "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    color: var(--muted);
+}

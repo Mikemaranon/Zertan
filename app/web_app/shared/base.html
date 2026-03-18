@@ -4,7 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ page_title }} | Zertan</title>
-    <link rel="stylesheet" href="/static/CSS/app.css">
+    <link rel="stylesheet" href="/static/CSS/core/tokens.css">
+    <link rel="stylesheet" href="/static/CSS/core/reset.css">
+    <link rel="stylesheet" href="/static/CSS/core/base.css">
+    <link rel="stylesheet" href="/static/CSS/layout/shell.css">
+    <link rel="stylesheet" href="/static/CSS/components/brand.css">
+    <link rel="stylesheet" href="/static/CSS/components/buttons.css">
+    <link rel="stylesheet" href="/static/CSS/components/cards.css">
+    <link rel="stylesheet" href="/static/CSS/components/badges.css">
+    <link rel="stylesheet" href="/static/CSS/components/forms.css">
+    <link rel="stylesheet" href="/static/CSS/components/meta.css">
+    <link rel="stylesheet" href="/static/CSS/components/pagination.css">
+    <link rel="stylesheet" href="/static/CSS/components/selection-field.css">
+    <link rel="stylesheet" href="/static/CSS/components/questions.css">
+    <link rel="stylesheet" href="/static/CSS/components/profile-modal.css">
+    {% block page_styles %}{% endblock %}
 </head>
 <body data-page="{{ page_id }}">
     {% set avatar_url = "" %}

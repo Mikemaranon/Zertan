@@ -1,5 +1,8 @@
 {% set page_id = "question-editor" %}
 {% extends "shared/base.html" %}
+{% block page_styles %}
+<link rel="stylesheet" href="/static/CSS/pages/management/question-editor.css">
+{% endblock %}
 {% block content %}
 <section class="panel">
     <form id="question-form" class="form-stack">
@@ -100,6 +103,7 @@
         <div id="question-form-error" class="error-message"></div>
         <div class="button-row">
             <button class="button button--primary" type="submit">Save question</button>
+            <button id="cancel-question-button" class="button button--danger" type="button">Cancel</button>
             <button id="archive-question-button" class="button button--secondary" type="button">Archive question</button>
         </div>
     </form>

@@ -1,5 +1,8 @@
 {% set page_id = "live-exams" %}
 {% extends "shared/base.html" %}
+{% block page_styles %}
+<link rel="stylesheet" href="/static/CSS/pages/home/live-exams.css">
+{% endblock %}
 {% block content %}
 {% if current_user.role == "administrator" %}
 <section id="live-exams-admin-panel" class="panel stack-gap">

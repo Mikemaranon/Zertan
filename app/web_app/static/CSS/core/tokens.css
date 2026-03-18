@@ -1,0 +1,19 @@
+:root {
+    --bg: #f4f7fb;
+    --surface: #ffffff;
+    --surface-soft: #edf3f9;
+    --border: #d3dce7;
+    --text: #16212f;
+    --muted: #66768a;
+    --primary: #66a8e0;
+    --primary-strong: #4a8dc9;
+    --success: #2a8b57;
+    --danger: #c75a5a;
+    --shadow: 0 16px 32px rgba(20, 48, 74, 0.08);
+    --radius: 18px;
+    --radius-small: 12px;
+    --content-width: 1240px;
+    --sidebar-width: 272px;
+    --mobile-header-height: 76px;
+    --font: "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+}

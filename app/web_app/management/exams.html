@@ -1,5 +1,8 @@
 {% set page_id = "exam-management" %}
 {% extends "shared/base.html" %}
+{% block page_styles %}
+<link rel="stylesheet" href="/static/CSS/pages/management/exams.css">
+{% endblock %}
 {% block content %}
 {% set can_manage_exams = current_user and current_user.role in ["examiner", "administrator"] %}
 {% if can_manage_exams %}

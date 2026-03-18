@@ -8,6 +8,7 @@ export async function initQuestionEditorPage(pageContext) {
     const errorNode = document.getElementById("question-form-error");
     const typeSelect = document.getElementById("question-type");
     const assetFileInput = document.getElementById("question-asset-file");
+    const cancelButton = document.getElementById("cancel-question-button");
     const returnPath = pageContext.return_to || "";
     let loadedQuestion = null;
     let currentExamId = pageContext.exam_id || null;
@@ -21,6 +22,9 @@ export async function initQuestionEditorPage(pageContext) {
 
     bindEditorButtons();
     typeSelect.addEventListener("change", updateVisibleSections);
+    cancelButton.addEventListener("click", () => {
+        window.location.href = resolveReturnPath(returnPath, currentExamId, pageContext);
+    });
     assetFileInput.addEventListener("change", () => {
         const validationMessage = validateHotspotAssetSelection(assetFileInput);
         if (validationMessage) {
@@ -91,6 +95,19 @@ export async function initQuestionEditorPage(pageContext) {
         await request(`/api/questions/${pageContext.question_id}/archive`, { method: "POST" });
         window.location.href = returnPath || `/exams/${currentExamId}`;
     });
+}
+
+function resolveReturnPath(returnPath, currentExamId, pageContext) {
+    if (returnPath) {
+        return returnPath;
+    }
+    if (currentExamId) {
+        return `/exams/${currentExamId}`;
+    }
+    if (pageContext.exam_id) {
+        return `/exams/${pageContext.exam_id}`;
+    }
+    return "/management/exams";
 }
 
 function bindEditorButtons() {
