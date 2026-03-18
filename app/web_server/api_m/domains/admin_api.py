@@ -11,6 +11,13 @@ class AdminAPI(BaseAPI):
         self.app.add_url_rule("/api/admin/users", endpoint="api_admin_users_create", view_func=self.create_user, methods=["POST"])
         self.app.add_url_rule("/api/admin/users/<int:user_id>", endpoint="api_admin_users_update", view_func=self.update_user, methods=["PUT"])
         self.app.add_url_rule("/api/admin/users/<int:user_id>", endpoint="api_admin_users_delete", view_func=self.delete_user, methods=["DELETE"])
+        self.app.add_url_rule("/api/admin/features", endpoint="api_admin_features_list", view_func=self.list_features, methods=["GET"])
+        self.app.add_url_rule(
+            "/api/admin/features/<feature_key>",
+            endpoint="api_admin_features_update",
+            view_func=self.update_feature,
+            methods=["PUT"],
+        )
 
     def list_users(self):
         _, error = self.auth_user(request, min_role="administrator")
@@ -66,3 +73,22 @@ class AdminAPI(BaseAPI):
             return self.error("User not found.", 404)
         self.db.users.delete(user_id)
         return self.ok({"status": "deleted"})
+
+    def list_features(self):
+        _, error = self.auth_user(request, min_role="administrator")
+        if error:
+            return error
+        return self.ok({"features": self.db.site_features.list_all()})
+
+    def update_feature(self, feature_key):
+        _, error = self.auth_user(request, min_role="administrator")
+        if error:
+            return error
+        existing = self.db.site_features.get(feature_key)
+        if not existing:
+            return self.error("Feature not found.", 404)
+        payload = request.get_json() or {}
+        if "enabled" not in payload:
+            return self.error("Enabled flag is required.", 400)
+        updated = self.db.site_features.set_enabled(feature_key, bool(payload.get("enabled")))
+        return self.ok({"feature": updated})

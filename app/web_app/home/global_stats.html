@@ -1,0 +1,76 @@
+{% set page_id = "global-stats" %}
+{% extends "shared/base.html" %}
+{% block content %}
+<section class="panel stack-gap">
+    <div class="section-heading">
+        <div>
+            <h2>Domain-wide statistics</h2>
+            <p class="muted">Compare formal exam activity, answer quality, and content difficulty across the full workspace.</p>
+        </div>
+        <a class="button button--secondary" href="/dashboard">Open personal dashboard</a>
+    </div>
+    <div id="global-stats-kpis" class="grid grid--kpis"></div>
+</section>
+
+<section class="panel stack-gap">
+    <div class="section-heading">
+        <div>
+            <h2>User comparison</h2>
+            <p class="muted">Submitted attempts, answered volume, and official success rate for every user in the domain.</p>
+        </div>
+    </div>
+    <div id="global-stats-users" class="list-stack"></div>
+</section>
+
+<section class="grid grid--two">
+    <div class="panel stack-gap">
+        <div class="section-heading">
+            <div>
+                <h2>Weekly activity</h2>
+                <p class="muted">Formal submissions and active users over the latest reporting weeks.</p>
+            </div>
+        </div>
+        <div id="global-stats-activity" class="global-stats-bars"></div>
+    </div>
+    <div class="panel stack-gap">
+        <div class="section-heading">
+            <div>
+                <h2>Exam performance</h2>
+                <p class="muted">Attempt volume, participating users, and average score by exam.</p>
+            </div>
+        </div>
+        <div id="global-stats-exams" class="list-stack"></div>
+    </div>
+</section>
+
+<section class="grid grid--two">
+    <div class="panel stack-gap">
+        <div class="section-heading">
+            <div>
+                <h2>By question type</h2>
+                <p class="muted">Where the domain performs well and where accuracy drops.</p>
+            </div>
+        </div>
+        <div id="global-stats-types" class="list-stack"></div>
+    </div>
+    <div class="panel stack-gap">
+        <div class="section-heading">
+            <div>
+                <h2>Hardest topics</h2>
+                <p class="muted">Topics with the lowest official accuracy across submitted attempts.</p>
+            </div>
+        </div>
+        <div id="global-stats-topics" class="list-stack"></div>
+    </div>
+</section>
+
+<section class="panel stack-gap">
+    <div class="section-heading">
+        <div>
+            <h2>Hardest tags</h2>
+            <p class="muted">Tag-level friction points across the full question bank.</p>
+        </div>
+    </div>
+    <div id="global-stats-tags" class="grid grid--cards"></div>
+</section>
+{% endblock %}

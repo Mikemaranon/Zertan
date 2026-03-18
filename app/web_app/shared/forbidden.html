@@ -9,8 +9,8 @@
 <body class="auth-body">
     <div class="auth-card">
         <p class="eyebrow">Access denied</p>
-        <h1>Forbidden</h1>
-        <p class="muted">Your current role does not allow access to this workspace.</p>
+        <h1>{{ forbidden_title|default("Forbidden") }}</h1>
+        <p class="muted">{{ forbidden_message|default("Your current role does not allow access to this workspace.") }}</p>
         <div class="button-row">
             <a class="button button--primary" href="/dashboard">Return to dashboard</a>
             <a class="button button--secondary" href="/logout">Log out</a>

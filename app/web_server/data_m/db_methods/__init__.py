@@ -5,6 +5,7 @@ from .t_attempts import AttemptsTable
 from .t_exams import ExamsTable
 from .t_questions import QuestionsTable
 from .t_sessions import SessionsTable
+from .t_site_features import SiteFeaturesTable
 from .t_statistics import StatisticsTable
 from .t_users import UsersTable
 
@@ -14,6 +15,7 @@ __all__ = [
     "ExamsTable",
     "QuestionsTable",
     "SessionsTable",
+    "SiteFeaturesTable",
     "StatisticsTable",
     "UsersTable",
 ]

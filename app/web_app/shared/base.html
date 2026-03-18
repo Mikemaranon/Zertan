@@ -53,6 +53,9 @@
             <div id="sidebar-menu" class="sidebar-menu">
                 <nav class="sidebar-nav">
                     <a href="/dashboard">Dashboard</a>
+                    {% if feature_access.get("global_stats_page") %}
+                    <a href="/global-stats">Global Stats</a>
+                    {% endif %}
                     <a href="/catalog">Exam Catalog</a>
                     {% if current_user and current_user.role in ["reviewer", "examiner", "administrator"] %}
                     <a href="/management/exams">Management</a>

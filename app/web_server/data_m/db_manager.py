@@ -6,6 +6,7 @@ from .db_methods import (
     ExamsTable,
     QuestionsTable,
     SessionsTable,
+    SiteFeaturesTable,
     StatisticsTable,
     UsersTable,
 )
@@ -32,6 +33,7 @@ class DBManager:
         self.exams = ExamsTable(self.db)
         self.questions = QuestionsTable(self.db)
         self.attempts = AttemptsTable(self.db)
+        self.site_features = SiteFeaturesTable(self.db)
         self.statistics = StatisticsTable(self.db)
         self.agent_logs = AgentLogsTable(self.db)
 

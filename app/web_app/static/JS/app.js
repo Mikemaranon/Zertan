@@ -6,6 +6,7 @@ import { initDashboardPage } from "./pages/dashboard.js";
 import { initExamBuilderPage } from "./pages/exam-builder.js";
 import { initExamDetailPage } from "./pages/exam-detail.js";
 import { initExamRunnerPage } from "./pages/exam-runner.js";
+import { initGlobalStatsPage } from "./pages/global-stats.js";
 import { initLoginPage } from "./pages/login.js";
 import { initManagementPage } from "./pages/management.js";
 import { initQuestionManagementPage } from "./pages/question-management.js";
@@ -15,6 +16,7 @@ import { initResultsPage } from "./pages/results.js";
 const pageMap = {
     login: initLoginPage,
     dashboard: initDashboardPage,
+    "global-stats": initGlobalStatsPage,
     catalog: initCatalogPage,
     "exam-detail": initExamDetailPage,
     "exam-builder": initExamBuilderPage,

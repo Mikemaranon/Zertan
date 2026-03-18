@@ -55,4 +55,94 @@
         </div>
     </div>
 </section>
+
+<section class="panel stack-gap">
+    <div class="section-heading">
+        <div>
+            <h2>Workspace access</h2>
+            <p class="muted">Enable or disable domain-level workspaces for every authenticated user.</p>
+        </div>
+    </div>
+    <div id="admin-feature-error" class="error-message"></div>
+    <div id="admin-feature-toggles" class="list-stack"></div>
+</section>
+
+<div id="admin-dashboard-modal" class="profile-modal dashboard-modal" hidden>
+    <div id="admin-dashboard-modal-backdrop" class="profile-modal__backdrop"></div>
+    <div class="profile-modal__dialog dashboard-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="admin-dashboard-user-name">
+        <button id="admin-dashboard-modal-close" class="profile-modal__close" type="button" aria-label="Close user dashboard">Close</button>
+        <div class="dashboard-modal__body">
+            <section class="dashboard-modal__hero">
+                <div class="dashboard-modal__identity">
+                    <span id="admin-dashboard-avatar" class="profile-avatar dashboard-modal__avatar" aria-hidden="true"></span>
+                    <div>
+                        <p class="eyebrow">User dashboard</p>
+                        <h2 id="admin-dashboard-user-name">Loading user...</h2>
+                        <p id="admin-dashboard-subtitle" class="muted">Official KPIs are generated only from submitted exam mode attempts.</p>
+                    </div>
+                </div>
+                <div class="dashboard-modal__meta-grid">
+                    <div class="dashboard-modal__meta-card">
+                        <span class="muted">Login name</span>
+                        <strong id="admin-dashboard-login-name"></strong>
+                    </div>
+                    <div class="dashboard-modal__meta-card">
+                        <span class="muted">Role</span>
+                        <strong id="admin-dashboard-role"></strong>
+                    </div>
+                    <div class="dashboard-modal__meta-card">
+                        <span class="muted">Status</span>
+                        <strong id="admin-dashboard-status"></strong>
+                    </div>
+                    <div class="dashboard-modal__meta-card">
+                        <span class="muted">Last login</span>
+                        <strong id="admin-dashboard-last-login"></strong>
+                    </div>
+                </div>
+                <div id="admin-dashboard-error" class="error-message"></div>
+            </section>
+
+            <section class="panel stack-gap">
+                <div class="section-heading">
+                    <div>
+                        <h2>General dashboard</h2>
+                        <p class="muted">Official KPIs are generated only from submitted exam mode attempts.</p>
+                    </div>
+                </div>
+                <div id="admin-dashboard-kpis" class="grid grid--kpis"></div>
+            </section>
+
+            <section class="grid grid--two">
+                <div class="panel">
+                    <div class="section-heading">
+                        <div>
+                            <h2>Recent attempts</h2>
+                            <p class="muted">Latest submitted and in-progress formal exam attempts.</p>
+                        </div>
+                    </div>
+                    <div id="admin-dashboard-attempts" class="list-stack"></div>
+                </div>
+                <div class="panel">
+                    <div class="section-heading">
+                        <div>
+                            <h2>By question type</h2>
+                            <p class="muted">Personal success rate across submitted answers.</p>
+                        </div>
+                    </div>
+                    <div id="admin-dashboard-types" class="list-stack"></div>
+                </div>
+            </section>
+
+            <section class="panel stack-gap">
+                <div class="section-heading">
+                    <div>
+                        <h2>Success by exam</h2>
+                        <p class="muted">Average score and attempt volume across formal submissions.</p>
+                    </div>
+                </div>
+                <div id="admin-dashboard-exams" class="grid grid--cards"></div>
+            </section>
+        </div>
+    </div>
+</div>
 {% endblock %}

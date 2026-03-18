@@ -8,7 +8,7 @@ from werkzeug.security import generate_password_hash
 from .db_connector import DBConnector
 
 
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 
 
 class Database:
@@ -251,6 +251,15 @@ class Database:
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
 
+            CREATE TABLE IF NOT EXISTS site_features (
+                feature_key TEXT PRIMARY KEY,
+                label TEXT NOT NULL,
+                description TEXT DEFAULT '',
+                enabled INTEGER NOT NULL DEFAULT 1,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+
             CREATE INDEX IF NOT EXISTS idx_questions_exam_id ON questions(exam_id);
             CREATE INDEX IF NOT EXISTS idx_attempts_user_id ON exam_attempts(user_id);
             CREATE INDEX IF NOT EXISTS idx_attempts_exam_id ON exam_attempts(exam_id);
@@ -360,6 +369,21 @@ class Database:
         )
 
     def _seed_defaults(self):
+        self.executemany(
+            """
+            INSERT OR IGNORE INTO site_features (feature_key, label, description, enabled)
+            VALUES (?, ?, ?, ?)
+            """,
+            [
+                (
+                    "global_stats_page",
+                    "Global Stats",
+                    "Expose the domain-wide statistics workspace to all authenticated users.",
+                    1,
+                ),
+            ],
+        )
+
         _, count_row = self.execute("SELECT COUNT(*) AS total FROM users", fetchone=True)
         if count_row["total"] == 0:
             self.executemany(

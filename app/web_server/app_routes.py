@@ -18,6 +18,7 @@ class AppRoutes:
     def _register_routes(self):
         self.app.add_url_rule("/", "home", self.get_home, methods=["GET"])
         self.app.add_url_rule("/dashboard", "dashboard", self.get_dashboard, methods=["GET"])
+        self.app.add_url_rule("/global-stats", "global_stats", self.get_global_stats, methods=["GET"])
         self.app.add_url_rule("/catalog", "catalog", self.get_catalog, methods=["GET"])
         self.app.add_url_rule("/login", "login", self.get_login, methods=["GET"])
         self.app.add_url_rule("/logout", "logout", self.get_logout, methods=["GET", "POST"])
@@ -65,6 +66,13 @@ class AppRoutes:
 
     def get_catalog(self):
         return self._render_auth_page("home/catalog.html", "Exam Catalog")
+
+    def get_global_stats(self):
+        return self._render_auth_page(
+            "home/global_stats.html",
+            "Global Stats",
+            required_feature="global_stats_page",
+        )
 
     def get_exam_detail(self, exam_id):
         return self._render_auth_page("exam/detail.html", "Study Mode", exam_id=exam_id)
@@ -123,20 +131,32 @@ class AppRoutes:
         response.headers["Cache-Control"] = "private, max-age=3600"
         return response
 
-    def _render_auth_page(self, template_name, page_title, min_role=None, **page_context):
+    def _render_auth_page(self, template_name, page_title, min_role=None, required_feature=None, **page_context):
         user = self.user_manager.check_user(request)
         if not user:
             return redirect(url_for("login"))
+        feature_access = self.DBManager.site_features.enabled_map()
+        if required_feature and not feature_access.get(required_feature, False):
+            return render_template(
+                "shared/forbidden.html",
+                page_title="Unavailable",
+                current_user=user,
+                feature_access=feature_access,
+                forbidden_title="Workspace unavailable",
+                forbidden_message="This workspace is currently disabled by an administrator.",
+            ), 403
         if min_role and not self.user_manager.user_has_role(user, min_role):
             return render_template(
                 "shared/forbidden.html",
                 page_title="Forbidden",
                 current_user=user,
+                feature_access=feature_access,
             ), 403
         return render_template(
             template_name,
             page_title=page_title,
             current_user=user,
+            feature_access=feature_access,
             page_context=page_context,
         )
 

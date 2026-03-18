@@ -25,19 +25,44 @@ export async function initExamBuilderPage(pageContext) {
             <span class="badge">${escapeHtml(exam.difficulty)}</span>
             <span class="badge">${exam.question_count} questions in bank</span>
         </div>
+        <div class="study-filters__active">
+            <div class="selection-field__top">
+                <span class="selection-field__label">Selected filters</span>
+                <button id="builder-filters-clear" class="button button--secondary button--small" type="button">Clear</button>
+            </div>
+            <div id="builder-filters-active" class="selection-field__chips selection-field__chips--shared"></div>
+        </div>
     `;
+    const sharedChipsContainer = document.getElementById("builder-filters-active");
+    const clearButton = document.getElementById("builder-filters-clear");
+    const syncClearButton = () => {
+        clearButton.disabled =
+            !topicsField.getValues().length &&
+            !tagsField.getValues().length &&
+            !typesField.getValues().length;
+    };
 
     const topicsField = createAddableSelect(document.getElementById("builder-topics-field"), {
         id: "builder-topics",
         label: "Topics",
         options: meta.topics || [],
         placeholder: "Select a topic",
+        sharedChipsContainer,
+        sharedChipGroup: "topic",
+        sharedChipGroupLabel: "Topic",
+        sharedChipLabel: (value) => value,
+        onChange: syncClearButton,
     });
     const tagsField = createAddableSelect(document.getElementById("builder-tags-field"), {
         id: "builder-tags",
         label: "Tags",
         options: meta.tags || [],
         placeholder: "Select a tag",
+        sharedChipsContainer,
+        sharedChipGroup: "tag",
+        sharedChipGroupLabel: "Tag",
+        sharedChipLabel: (value) => value,
+        onChange: syncClearButton,
     });
     const typesField = createAddableSelect(document.getElementById("builder-types-field"), {
         id: "builder-types",
@@ -45,7 +70,20 @@ export async function initExamBuilderPage(pageContext) {
         options: meta.question_types || [],
         placeholder: "Select a question type",
         formatLabel: (value) => value.replaceAll("_", " "),
+        sharedChipsContainer,
+        sharedChipGroup: "type",
+        sharedChipGroupLabel: "Type",
+        sharedChipLabel: (value) => value.replaceAll("_", " "),
+        onChange: syncClearButton,
     });
+
+    clearButton.addEventListener("click", () => {
+        topicsField.setValues([]);
+        tagsField.setValues([]);
+        typesField.setValues([]);
+    });
+
+    syncClearButton();
 
     form.addEventListener("submit", async (event) => {
         event.preventDefault();

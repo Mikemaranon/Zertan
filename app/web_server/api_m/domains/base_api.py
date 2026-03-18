@@ -24,3 +24,7 @@ class BaseAPI:
         if min_role and not self.user_manager.user_has_role(user, min_role):
             return None, self.error("Forbidden", 403)
         return user, None
+
+    def feature_enabled(self, feature_key):
+        feature = self.db.site_features.get(feature_key)
+        return bool(feature and feature["enabled"])
