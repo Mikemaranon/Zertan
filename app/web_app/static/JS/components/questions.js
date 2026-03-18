@@ -158,36 +158,55 @@ function renderLegacyHotspotQuestion(question, mode) {
 }
 
 function renderDragDropQuestion(question, mode) {
+    const config = normalizeDragDropConfig(question);
     const wrapper = document.createElement("div");
     wrapper.className = "stack-gap drag-drop-question";
     wrapper.dataset.mappings = JSON.stringify({});
+    wrapper.dataset.dragDropMode = config.mode;
+    wrapper.dataset.interactive = mode !== "results" ? "true" : "false";
 
     const layout = document.createElement("div");
     layout.className = "drag-drop-layout";
 
     const bank = document.createElement("div");
     bank.className = "drag-bank";
-    for (const item of question.config?.items || []) {
+    if (mode !== "results") {
+        bank.addEventListener("dragover", (event) => {
+            event.preventDefault();
+            bank.classList.add("is-active");
+        });
+        bank.addEventListener("dragleave", () => bank.classList.remove("is-active"));
+        bank.addEventListener("drop", (event) => {
+            event.preventDefault();
+            bank.classList.remove("is-active");
+            const sourceDestinationId = event.dataTransfer.getData("application/x-zertan-source-destination");
+            if (sourceDestinationId) {
+                unassignDragDropValue(wrapper, sourceDestinationId, question);
+            }
+        });
+    }
+    for (const item of config.items) {
         const itemNode = document.createElement("div");
         itemNode.className = "drag-item";
         itemNode.draggable = mode !== "results";
         itemNode.dataset.itemId = item.id;
+        itemNode.dataset.bankItem = "true";
         itemNode.textContent = item.label;
         itemNode.addEventListener("dragstart", (event) => {
             event.dataTransfer.setData("text/plain", item.id);
+            event.dataTransfer.setData("application/x-zertan-source-destination", "");
         });
         bank.appendChild(itemNode);
     }
 
     const zones = document.createElement("div");
     zones.className = "drag-zones";
-    for (const destination of question.config?.destinations || []) {
+    for (const destination of config.destinations) {
         const zone = document.createElement("div");
         zone.className = "drop-zone";
         zone.dataset.destinationId = destination.id;
         zone.innerHTML = `
-            <strong>${escapeHtml(destination.label)}</strong>
-            <p class="muted">Drop one item here</p>
+            <p class="muted">${escapeHtml(destination.label)}</p>
             <div class="assigned-label"></div>
         `;
         if (mode !== "results") {
@@ -200,7 +219,8 @@ function renderDragDropQuestion(question, mode) {
                 event.preventDefault();
                 zone.classList.remove("is-active");
                 const itemId = event.dataTransfer.getData("text/plain");
-                assignDragDropValue(wrapper, itemId, destination.id, question);
+                const sourceDestinationId = event.dataTransfer.getData("application/x-zertan-source-destination");
+                assignDragDropValue(wrapper, itemId, destination.id, question, sourceDestinationId);
             });
         }
         zones.appendChild(zone);
@@ -226,20 +246,44 @@ function renderDragDropQuestion(question, mode) {
     return wrapper;
 }
 
-function assignDragDropValue(wrapper, itemId, destinationId, question) {
-    const mappings = JSON.parse(wrapper.dataset.mappings || "{}");
-    Object.keys(mappings).forEach((key) => {
-        if (mappings[key] === destinationId) {
-            delete mappings[key];
-        }
-    });
-    mappings[itemId] = destinationId;
+function assignDragDropValue(wrapper, itemId, destinationId, question, sourceDestinationId = "") {
+    if (!itemId || !destinationId) {
+        return;
+    }
+    const mappings = normalizeDragDropMappings(JSON.parse(wrapper.dataset.mappings || "{}"), question);
+    const config = normalizeDragDropConfig(question);
+    if (sourceDestinationId && sourceDestinationId !== destinationId) {
+        delete mappings[sourceDestinationId];
+    }
+    if (config.mode === "U") {
+        Object.keys(mappings).forEach((mappedDestinationId) => {
+            if (mappings[mappedDestinationId] === itemId && mappedDestinationId !== destinationId) {
+                delete mappings[mappedDestinationId];
+            }
+        });
+    }
+    mappings[destinationId] = itemId;
+    wrapper.dataset.mappings = JSON.stringify(mappings);
+    syncDragDropView(wrapper, question);
+}
+
+function unassignDragDropValue(wrapper, destinationId, question) {
+    const mappings = normalizeDragDropMappings(JSON.parse(wrapper.dataset.mappings || "{}"), question);
+    delete mappings[destinationId];
     wrapper.dataset.mappings = JSON.stringify(mappings);
     syncDragDropView(wrapper, question);
 }
 
 function syncDragDropView(wrapper, question) {
-    const mappings = JSON.parse(wrapper.dataset.mappings || "{}");
+    const config = normalizeDragDropConfig(question);
+    const mappings = normalizeDragDropMappings(JSON.parse(wrapper.dataset.mappings || "{}"), question);
+    const usedItemIds = new Set(Object.values(mappings));
+
+    wrapper.querySelectorAll('.drag-item[data-bank-item="true"]').forEach((itemNode) => {
+        const shouldHide = config.mode === "U" && usedItemIds.has(itemNode.dataset.itemId);
+        itemNode.hidden = shouldHide;
+    });
+
     wrapper.querySelectorAll(".drop-zone").forEach((zone) => {
         zone.classList.remove("assigned");
         const placeholder = zone.querySelector(".muted");
@@ -247,12 +291,18 @@ function syncDragDropView(wrapper, question) {
         if (placeholder) {
             placeholder.hidden = false;
         }
-        assignedLabel.textContent = "";
-        const entry = Object.entries(mappings).find(([, destinationId]) => destinationId === zone.dataset.destinationId);
-        if (entry) {
-            const [itemId] = entry;
-            const item = (question.config?.items || []).find((candidate) => candidate.id === itemId);
-            assignedLabel.textContent = item?.label || itemId;
+        assignedLabel.innerHTML = "";
+        const itemId = mappings[zone.dataset.destinationId];
+        if (itemId) {
+            const item = config.items.find((candidate) => candidate.id === itemId);
+            assignedLabel.appendChild(
+                createDragToken({
+                    itemId,
+                    label: item?.label || itemId,
+                    draggable: wrapper.dataset.interactive === "true",
+                    sourceDestinationId: zone.dataset.destinationId,
+                })
+            );
             if (placeholder) {
                 placeholder.hidden = true;
             }
@@ -300,7 +350,8 @@ export function collectResponse(card) {
     }
     if (type === "drag_drop") {
         const wrapper = card.querySelector("[data-mappings]");
-        return { mappings: JSON.parse(wrapper?.dataset.mappings || "{}") };
+        const question = extractQuestionConfig(card);
+        return { mappings: normalizeDragDropMappings(JSON.parse(wrapper?.dataset.mappings || "{}"), question) };
     }
     return {};
 }
@@ -343,8 +394,8 @@ export function applyResponse(card, response) {
     if (type === "drag_drop") {
         const wrapper = card.querySelector("[data-mappings]");
         if (wrapper) {
-            wrapper.dataset.mappings = JSON.stringify(response.mappings || {});
             const question = extractQuestionConfig(card);
+            wrapper.dataset.mappings = JSON.stringify(normalizeDragDropMappings(response.mappings || {}, question));
             syncDragDropView(wrapper, question);
         }
     }
@@ -391,10 +442,63 @@ export function formatCorrectAnswer(question, correctAnswer) {
         return "Correct answer: a point inside the configured valid region.";
     }
     if (question.type === "drag_drop") {
-        const mappings = correctAnswer || {};
-        return `Correct mapping: ${Object.entries(mappings).map(([item, destination]) => `${item} -> ${destination}`).join(", ")}`;
+        const config = normalizeDragDropConfig(question);
+        const itemLabels = new Map(config.items.map((item) => [item.id, item.label]));
+        const destinationLabels = new Map(config.destinations.map((destination) => [destination.id, destination.label]));
+        const mappings = normalizeDragDropMappings(correctAnswer || {}, question);
+        return `Correct mapping: ${Object.entries(mappings).map(([destinationId, itemId]) => `${destinationLabels.get(destinationId) || destinationId} -> ${itemLabels.get(itemId) || itemId}`).join(", ")}`;
     }
     return "";
+}
+
+function normalizeDragDropConfig(question) {
+    const config = question?.config || {};
+    return {
+        mode: ["R", "U"].includes(config.mode) ? config.mode : "U",
+        items: (config.items || []).map((item) => ({
+            id: item.id,
+            label: item.label,
+        })),
+        destinations: (config.destinations || []).map((destination) => ({
+            id: destination.id,
+            label: destination.label,
+        })),
+    };
+}
+
+function normalizeDragDropMappings(mappings, question) {
+    const config = normalizeDragDropConfig(question);
+    const itemIds = new Set(config.items.map((item) => item.id));
+    const destinationIds = new Set(config.destinations.map((destination) => destination.id));
+    const normalized = {};
+    Object.entries(mappings || {}).forEach(([left, right]) => {
+        const leftId = String(left || "").trim();
+        const rightId = String(right || "").trim();
+        if (!leftId || !rightId) {
+            return;
+        }
+        if (destinationIds.has(leftId) && itemIds.has(rightId)) {
+            normalized[leftId] = rightId;
+            return;
+        }
+        if (itemIds.has(leftId) && destinationIds.has(rightId)) {
+            normalized[rightId] = leftId;
+        }
+    });
+    return normalized;
+}
+
+function createDragToken({ itemId, label, draggable, sourceDestinationId = "" }) {
+    const itemNode = document.createElement("div");
+    itemNode.className = "drag-item drag-item--assigned";
+    itemNode.draggable = draggable;
+    itemNode.dataset.itemId = itemId;
+    itemNode.textContent = label;
+    itemNode.addEventListener("dragstart", (event) => {
+        event.dataTransfer.setData("text/plain", itemId);
+        event.dataTransfer.setData("application/x-zertan-source-destination", sourceDestinationId);
+    });
+    return itemNode;
 }
 
 function extractQuestionConfig(card) {

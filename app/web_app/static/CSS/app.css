@@ -482,6 +482,25 @@ textarea {
     padding: 14px 16px;
 }
 
+.drop-zone {
+    display: grid;
+    min-height: 50px;
+    padding: 10px 12px;
+}
+
+.drop-zone .muted {
+    margin: 0;
+}
+
+.drop-zone:not(.assigned) {
+    place-items: center;
+    text-align: center;
+}
+
+.drop-zone:not(.assigned) .assigned-label {
+    display: none;
+}
+
 .question-option {
     display: flex;
     align-items: center;
@@ -512,6 +531,23 @@ textarea {
     align-content: start;
 }
 
+.drag-bank.is-active {
+    padding: 12px;
+    border: 1px dashed rgba(102, 168, 224, 0.55);
+    border-radius: var(--radius-small);
+    background: #f5faff;
+}
+
+.assigned-label {
+    display: grid;
+    gap: 8px;
+    margin-top: 0;
+}
+
+.drag-item--assigned {
+    margin: 0;
+}
+
 .drop-zone.is-active,
 .question-card.is-highlighted {
     border-color: var(--primary);
@@ -519,6 +555,7 @@ textarea {
 
 .drop-zone.assigned {
     background: #eef7ff;
+    align-content: start;
 }
 
 .hotspot-frame {

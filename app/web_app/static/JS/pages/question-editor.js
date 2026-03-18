@@ -95,6 +95,7 @@ function updateVisibleSections() {
 }
 
 function fillQuestionForm(question) {
+    const dragDropConfig = normalizeDragDropConfig(question.config || {});
     document.getElementById("question-id").value = question.id;
     document.getElementById("question-title").value = question.title || "";
     document.getElementById("question-statement").value = question.statement || "";
@@ -113,11 +114,10 @@ function fillQuestionForm(question) {
     (question.config?.dropdowns || []).forEach((dropdown) => addHotspotDropdownRow(dropdown));
 
     document.getElementById("items-list").innerHTML = "";
-    (question.config?.items || []).forEach((item) => addItemRow(item));
+    document.getElementById("dragdrop-mode").value = dragDropConfig.mode;
+    dragDropConfig.items.forEach((item) => addItemRow(item));
     document.getElementById("destinations-list").innerHTML = "";
-    (question.config?.destinations || []).forEach((destination) =>
-        addDestinationRow(destination, findItemIdByDestination(question.config?.mappings || {}, destination.id))
-    );
+    dragDropConfig.destinations.forEach((destination) => addDestinationRow(destination, findItemIdByDestination(dragDropConfig.mappings, destination.id)));
 
     if (!question.options?.length) {
         addOptionRow();
@@ -180,10 +180,15 @@ function buildPayloadFromForm() {
             const destinationId = row.querySelector(".destination-id").value.trim();
             const itemId = row.querySelector(".destination-match").value.trim();
             if (destinationId && itemId) {
-                mappings[itemId] = destinationId;
+                mappings[destinationId] = itemId;
             }
         });
-        payload.config = { items, destinations, mappings };
+        payload.config = {
+            mode: document.getElementById("dragdrop-mode").value,
+            items,
+            destinations,
+            mappings,
+        };
         payload.options = [];
     }
 
@@ -258,7 +263,43 @@ function attachRemoveHandler(row) {
 }
 
 function findItemIdByDestination(mappings, destinationId) {
-    return Object.keys(mappings).find((itemId) => mappings[itemId] === destinationId) || "";
+    return mappings[destinationId] || "";
+}
+
+function normalizeDragDropConfig(config) {
+    const items = (config?.items || []).map((item) => ({
+        id: item.id || "",
+        label: item.label || "",
+    }));
+    const destinations = (config?.destinations || []).map((destination) => ({
+        id: destination.id || "",
+        label: destination.label || "",
+    }));
+    const itemIds = new Set(items.map((item) => item.id));
+    const destinationIds = new Set(destinations.map((destination) => destination.id));
+    const mappings = {};
+
+    Object.entries(config?.mappings || {}).forEach(([left, right]) => {
+        const leftId = String(left || "").trim();
+        const rightId = String(right || "").trim();
+        if (!leftId || !rightId) {
+            return;
+        }
+        if (destinationIds.has(leftId) && itemIds.has(rightId)) {
+            mappings[leftId] = rightId;
+            return;
+        }
+        if (itemIds.has(leftId) && destinationIds.has(rightId)) {
+            mappings[rightId] = leftId;
+        }
+    });
+
+    return {
+        mode: ["R", "U"].includes(config?.mode) ? config.mode : "U",
+        items,
+        destinations,
+        mappings,
+    };
 }
 
 function splitLineValues(value) {

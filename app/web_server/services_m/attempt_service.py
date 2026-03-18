@@ -81,6 +81,7 @@ class AttemptService:
                     question["config"] = {}
             if question["type"] == "drag_drop":
                 question["config"] = {
+                    "mode": question.get("config", {}).get("mode", "U"),
                     "items": question.get("config", {}).get("items", []),
                     "destinations": question.get("config", {}).get("destinations", []),
                 }

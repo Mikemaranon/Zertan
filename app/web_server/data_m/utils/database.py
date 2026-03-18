@@ -599,6 +599,7 @@ class Database:
                     "tags": ["architecture", "dragdrop"],
                     "topics": ["service-selection"],
                     "config": {
+                        "mode": "U",
                         "items": [
                             {"id": "item-search", "label": "Azure AI Search"},
                             {"id": "item-language", "label": "Azure AI Language"},
@@ -610,9 +611,9 @@ class Database:
                             {"id": "dest-guardrails", "label": "Moderation and policy enforcement"},
                         ],
                         "mappings": {
-                            "item-search": "dest-retrieval",
-                            "item-language": "dest-linguistic",
-                            "item-content": "dest-guardrails",
+                            "dest-retrieval": "item-search",
+                            "dest-linguistic": "item-language",
+                            "dest-guardrails": "item-content",
                         },
                     },
                 },

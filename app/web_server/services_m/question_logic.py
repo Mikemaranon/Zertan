@@ -4,6 +4,7 @@ import json
 
 
 QUESTION_TYPES = {"single_select", "multiple_choice", "hot_spot", "drag_drop"}
+DRAG_DROP_MODES = {"R", "U"}
 
 
 def normalize_question_payload(raw_payload):
@@ -89,15 +90,23 @@ def normalize_question_payload(raw_payload):
 
     if payload["type"] == "drag_drop":
         payload["options"] = []
-        items = payload["config"].get("items") or []
-        destinations = payload["config"].get("destinations") or []
-        mappings = payload["config"].get("mappings") or {}
+        items = _normalize_drag_drop_entities(payload["config"].get("items") or [], "item")
+        destinations = _normalize_drag_drop_entities(payload["config"].get("destinations") or [], "destination")
+        mappings_raw = payload["config"].get("mappings") or {}
+        mode = _normalize_drag_drop_mode(payload["config"].get("mode"))
+        mappings = _normalize_drag_drop_mappings(mappings_raw, items, destinations)
         if not items or not destinations or not mappings:
             raise ValueError("Drag and drop questions require items, destinations, and mappings.")
+        missing_destinations = [destination["id"] for destination in destinations if destination["id"] not in mappings]
+        if missing_destinations:
+            raise ValueError("Drag and drop questions require a mapped item for every destination.")
+        if mode == "U" and len(set(mappings.values())) != len(mappings.values()):
+            raise ValueError("Unique drag and drop questions cannot reuse the same item across multiple destinations.")
         payload["config"] = {
-            "items": [{"id": item["id"], "label": item["label"]} for item in items],
-            "destinations": [{"id": destination["id"], "label": destination["label"]} for destination in destinations],
-            "mappings": dict(mappings),
+            "mode": mode,
+            "items": items,
+            "destinations": destinations,
+            "mappings": mappings,
         }
 
     return payload
@@ -129,12 +138,14 @@ def build_public_question(question, include_solution=False):
     elif question["type"] == "hot_spot":
         public_question["config"] = _build_public_hotspot_config(question, include_solution)
     elif question["type"] == "drag_drop":
+        config = _normalize_drag_drop_config(question.get("config", {}))
         public_question["config"] = {
-            "items": question.get("config", {}).get("items", []),
-            "destinations": question.get("config", {}).get("destinations", []),
+            "mode": config["mode"],
+            "items": config["items"],
+            "destinations": config["destinations"],
         }
         if include_solution:
-            public_question["config"]["mappings"] = question.get("config", {}).get("mappings", {})
+            public_question["config"]["mappings"] = config["mappings"]
 
     return public_question
 
@@ -171,8 +182,9 @@ def evaluate_question_response(question, response):
             y = float(response.get("y"))
             is_correct = any(_point_in_region(x, y, region) for region in question.get("config", {}).get("regions", []))
     elif question_type == "drag_drop":
-        submitted = response.get("mappings", {})
-        correct = question.get("config", {}).get("mappings", {})
+        config = _normalize_drag_drop_config(question.get("config", {}))
+        submitted = _normalize_drag_drop_mappings(response.get("mappings", {}), config["items"], config["destinations"])
+        correct = config["mappings"]
         is_correct = submitted == correct
     else:
         raise ValueError("Unsupported question type.")
@@ -235,8 +247,64 @@ def _correct_answer_summary(question):
             ]
         return question.get("config", {}).get("regions", [])
     if question["type"] == "drag_drop":
-        return question.get("config", {}).get("mappings", {})
+        return _normalize_drag_drop_config(question.get("config", {}))["mappings"]
     return None
+
+
+def _normalize_drag_drop_mode(raw_mode):
+    mode = (raw_mode or "U").strip().upper()
+    if mode not in DRAG_DROP_MODES:
+        raise ValueError("Drag and drop mode must be R or U.")
+    return mode
+
+
+def _normalize_drag_drop_entities(entries, prefix):
+    normalized = []
+    seen_ids = set()
+    for index, entry in enumerate(entries, start=1):
+        identifier = (entry.get("id") or f"{prefix}-{index}").strip()
+        label = (entry.get("label") or "").strip()
+        if not identifier or not label:
+            continue
+        if identifier in seen_ids:
+            raise ValueError(f"Duplicate {prefix} ids are not allowed in drag and drop questions.")
+        seen_ids.add(identifier)
+        normalized.append({"id": identifier, "label": label})
+    return normalized
+
+
+def _normalize_drag_drop_mappings(mappings, items, destinations):
+    if not isinstance(mappings, dict):
+        return {}
+
+    item_ids = {item["id"] for item in items}
+    destination_ids = {destination["id"] for destination in destinations}
+    if not item_ids or not destination_ids:
+        return {}
+
+    normalized = {}
+    for left, right in mappings.items():
+        left_id = str(left).strip()
+        right_id = str(right).strip()
+        if not left_id or not right_id:
+            continue
+        if left_id in destination_ids and right_id in item_ids:
+            normalized[left_id] = right_id
+        elif left_id in item_ids and right_id in destination_ids:
+            normalized[right_id] = left_id
+    return normalized
+
+
+def _normalize_drag_drop_config(config):
+    config = config or {}
+    items = _normalize_drag_drop_entities(config.get("items") or [], "item")
+    destinations = _normalize_drag_drop_entities(config.get("destinations") or [], "destination")
+    return {
+        "mode": _normalize_drag_drop_mode(config.get("mode")),
+        "items": items,
+        "destinations": destinations,
+        "mappings": _normalize_drag_drop_mappings(config.get("mappings") or {}, items, destinations),
+    }
 
 
 def _build_public_hotspot_config(question, include_solution):
