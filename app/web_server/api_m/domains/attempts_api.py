@@ -3,7 +3,7 @@
 from flask import request
 
 from api_m.domains.base_api import BaseAPI
-from services_m import AttemptService
+from services_m import AttemptService, LiveExamService
 
 
 class AttemptsAPI(BaseAPI):
@@ -70,6 +70,7 @@ class AttemptsAPI(BaseAPI):
         if answers:
             service.save_answers(attempt_id, answers)
         result = service.submit_attempt(attempt_id)
+        LiveExamService(self.db).mark_completed_for_attempt(attempt_id)
         return self.ok(result)
 
     def get_result(self, attempt_id):

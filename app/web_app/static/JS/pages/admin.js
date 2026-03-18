@@ -227,14 +227,30 @@ function resetForm() {
 }
 
 function syncFeatureNavigation(feature) {
-    if (!feature || feature.feature_key !== "global_stats_page") {
+    if (!feature) {
+        return;
+    }
+    const featureLinks = {
+        global_stats_page: {
+            href: "/global-stats",
+            label: "Global Stats",
+            insertAfter: 'a[href="/dashboard"]',
+        },
+        live_exams_page: {
+            href: "/live-exams",
+            label: "Live Exams",
+            insertAfter: 'a[href="/catalog"]',
+        },
+    };
+    const config = featureLinks[feature.feature_key];
+    if (!config) {
         return;
     }
     const nav = document.querySelector(".sidebar-nav");
     if (!nav) {
         return;
     }
-    const existingLink = nav.querySelector('a[href="/global-stats"]');
+    const existingLink = nav.querySelector(`a[href="${config.href}"]`);
     if (!feature.enabled) {
         existingLink?.remove();
         return;
@@ -242,15 +258,15 @@ function syncFeatureNavigation(feature) {
     if (existingLink) {
         return;
     }
-    const dashboardLink = nav.querySelector('a[href="/dashboard"]');
+    const anchor = nav.querySelector(config.insertAfter);
     const link = document.createElement("a");
-    link.href = "/global-stats";
-    link.textContent = "Global Stats";
-    if (window.location.pathname === "/global-stats") {
+    link.href = config.href;
+    link.textContent = config.label;
+    if (window.location.pathname === config.href) {
         link.classList.add("active");
     }
-    if (dashboardLink) {
-        dashboardLink.insertAdjacentElement("afterend", link);
+    if (anchor) {
+        anchor.insertAdjacentElement("afterend", link);
         return;
     }
     nav.prepend(link);

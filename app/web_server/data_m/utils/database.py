@@ -8,7 +8,7 @@ from werkzeug.security import generate_password_hash
 from .db_connector import DBConnector
 
 
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 7
 
 
 class Database:
@@ -73,6 +73,7 @@ class Database:
 
     def _init_db(self):
         self.upload_root.mkdir(parents=True, exist_ok=True)
+        self._rename_legacy_live_exam_tables()
         self.execute_script(
             """
             CREATE TABLE IF NOT EXISTS schema_meta (
@@ -235,6 +236,39 @@ class Database:
                 FOREIGN KEY (question_id) REFERENCES questions(id) ON DELETE CASCADE
             );
 
+            CREATE TABLE IF NOT EXISTS live_exams (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                exam_id INTEGER NOT NULL,
+                title TEXT NOT NULL,
+                description TEXT DEFAULT '',
+                instructions TEXT DEFAULT '',
+                status TEXT NOT NULL DEFAULT 'active',
+                question_count INTEGER NOT NULL DEFAULT 10,
+                time_limit_minutes INTEGER,
+                criteria_json TEXT DEFAULT '{}',
+                created_by INTEGER,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                closed_at TEXT,
+                FOREIGN KEY (exam_id) REFERENCES exams(id) ON DELETE CASCADE,
+                FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS live_exam_assignments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                live_exam_id INTEGER NOT NULL,
+                user_id INTEGER NOT NULL,
+                attempt_id INTEGER UNIQUE,
+                assignment_status TEXT NOT NULL DEFAULT 'pending',
+                assigned_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                started_at TEXT,
+                completed_at TEXT,
+                FOREIGN KEY (live_exam_id) REFERENCES live_exams(id) ON DELETE CASCADE,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (attempt_id) REFERENCES exam_attempts(id) ON DELETE SET NULL,
+                UNIQUE (live_exam_id, user_id)
+            );
+
             CREATE TABLE IF NOT EXISTS data_logs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -264,6 +298,8 @@ class Database:
             CREATE INDEX IF NOT EXISTS idx_attempts_user_id ON exam_attempts(user_id);
             CREATE INDEX IF NOT EXISTS idx_attempts_exam_id ON exam_attempts(exam_id);
             CREATE INDEX IF NOT EXISTS idx_answers_attempt_id ON exam_answers(attempt_id);
+            CREATE INDEX IF NOT EXISTS idx_live_exam_assignments_user_id ON live_exam_assignments(user_id);
+            CREATE INDEX IF NOT EXISTS idx_live_exam_assignments_live_exam_id ON live_exam_assignments(live_exam_id);
             """
         )
 
@@ -271,6 +307,10 @@ class Database:
         self._ensure_column("users", "login_name", "TEXT")
         self._ensure_column("users", "display_name", "TEXT")
         self._ensure_column("users", "avatar_path", "TEXT")
+        self._ensure_column("live_exams", "status", "TEXT NOT NULL DEFAULT 'active'")
+        self._ensure_column("live_exams", "closed_at", "TEXT")
+        self._migrate_legacy_live_exam_data()
+        self._migrate_live_exam_status()
         self._migrate_user_identity_fields()
 
         _, row = self.execute(
@@ -290,11 +330,111 @@ class Database:
         if current_version < 4:
             self._migrate_static_uploads_to_data_assets()
 
+    def _rename_legacy_live_exam_tables(self):
+        assignment_columns = set(self._table_columns("live_exam_assignments"))
+        if "session_id" not in assignment_columns or "live_exam_id" in assignment_columns:
+            return
+
+        rename_map = {
+            "live_exam_assignments": "legacy_live_exam_assignments",
+            "live_exam_sessions": "legacy_live_exam_sessions",
+            "live_exam_session_questions": "legacy_live_exam_session_questions",
+        }
+        for source_table, target_table in rename_map.items():
+            if not self._table_exists(source_table) or self._table_exists(target_table):
+                continue
+            self.execute(f"ALTER TABLE {source_table} RENAME TO {target_table}")
+
+    def _migrate_legacy_live_exam_data(self):
+        if not self._table_exists("legacy_live_exam_sessions"):
+            return
+
+        self.execute(
+            """
+            INSERT OR IGNORE INTO live_exams (
+                id, exam_id, title, description, instructions, status, question_count, time_limit_minutes, criteria_json,
+                created_by, created_at, updated_at, closed_at
+            )
+            SELECT
+                ls.id,
+                ls.exam_id,
+                ls.title,
+                '',
+                '',
+                CASE
+                    WHEN ls.closed_at IS NOT NULL THEN 'closed'
+                    ELSE 'active'
+                END,
+                ls.question_count,
+                ls.time_limit_minutes,
+                COALESCE(ls.criteria_json, '{}'),
+                ls.created_by,
+                ls.started_at,
+                COALESCE(ls.closed_at, ls.started_at, CURRENT_TIMESTAMP),
+                ls.closed_at
+            FROM legacy_live_exam_sessions ls
+            """
+        )
+
+        if self._table_exists("legacy_live_exam_assignments"):
+            self.execute(
+                """
+                INSERT OR IGNORE INTO live_exam_assignments (
+                    id, live_exam_id, user_id, attempt_id, assignment_status, assigned_at, started_at, completed_at
+                )
+                SELECT
+                    la.id,
+                    la.session_id,
+                    la.user_id,
+                    la.attempt_id,
+                    CASE
+                        WHEN a.status = 'submitted' THEN 'completed'
+                        ELSE 'in_progress'
+                    END,
+                    la.created_at,
+                    COALESCE(a.started_at, la.created_at),
+                    a.submitted_at
+                FROM legacy_live_exam_assignments la
+                LEFT JOIN exam_attempts a ON a.id = la.attempt_id
+                """
+            )
+
+        self.execute("DROP TABLE IF EXISTS legacy_live_exam_assignments")
+        self.execute("DROP TABLE IF EXISTS legacy_live_exam_session_questions")
+        self.execute("DROP TABLE IF EXISTS legacy_live_exam_sessions")
+
+    def _migrate_live_exam_status(self):
+        self.execute(
+            """
+            UPDATE live_exams
+            SET status = CASE WHEN closed_at IS NOT NULL THEN 'closed' ELSE COALESCE(NULLIF(status, ''), 'active') END
+            WHERE status IS NULL OR status = '' OR closed_at IS NOT NULL
+            """
+        )
+
     def _ensure_column(self, table, column_name, definition):
         _, rows = self.execute(f"PRAGMA table_info({table})", fetchall=True)
         existing_columns = {row["name"] for row in rows}
         if column_name not in existing_columns:
             self.execute(f"ALTER TABLE {table} ADD COLUMN {column_name} {definition}")
+
+    def _table_exists(self, table_name):
+        _, row = self.execute(
+            """
+            SELECT name
+            FROM sqlite_master
+            WHERE type = 'table' AND name = ?
+            """,
+            (table_name,),
+            fetchone=True,
+        )
+        return bool(row)
+
+    def _table_columns(self, table_name):
+        if not self._table_exists(table_name):
+            return []
+        _, rows = self.execute(f"PRAGMA table_info({table_name})", fetchall=True)
+        return [row["name"] for row in rows]
 
     def _migrate_user_identity_fields(self):
         _, rows = self.execute(
@@ -379,6 +519,12 @@ class Database:
                     "global_stats_page",
                     "Global Stats",
                     "Expose the domain-wide statistics workspace to all authenticated users.",
+                    1,
+                ),
+                (
+                    "live_exams_page",
+                    "Live Exams",
+                    "Expose the assigned live exam workspace to authenticated non-administrator users.",
                     1,
                 ),
             ],

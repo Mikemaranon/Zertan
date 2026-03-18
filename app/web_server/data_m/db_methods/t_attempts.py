@@ -241,3 +241,6 @@ class AttemptsTable:
             }
             for row in rows
         ]
+
+    def delete(self, attempt_id):
+        self.db.execute("DELETE FROM exam_attempts WHERE id = ?", (attempt_id,))

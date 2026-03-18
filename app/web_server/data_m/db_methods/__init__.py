@@ -3,6 +3,7 @@
 from .t_agent_logs import AgentLogsTable
 from .t_attempts import AttemptsTable
 from .t_exams import ExamsTable
+from .t_live_exams import LiveExamsTable
 from .t_questions import QuestionsTable
 from .t_sessions import SessionsTable
 from .t_site_features import SiteFeaturesTable
@@ -13,6 +14,7 @@ __all__ = [
     "AgentLogsTable",
     "AttemptsTable",
     "ExamsTable",
+    "LiveExamsTable",
     "QuestionsTable",
     "SessionsTable",
     "SiteFeaturesTable",

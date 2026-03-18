@@ -209,6 +209,10 @@ function getSharedChipsStore(container, emptyLabel = "No filters added") {
             this.groups.set(id, config);
             this.render();
         },
+        clear() {
+            this.groups.clear();
+            this.render();
+        },
         render() {
             const items = [];
             this.groups.forEach((config, ownerId) => {

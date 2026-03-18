@@ -20,6 +20,7 @@ class AppRoutes:
         self.app.add_url_rule("/dashboard", "dashboard", self.get_dashboard, methods=["GET"])
         self.app.add_url_rule("/global-stats", "global_stats", self.get_global_stats, methods=["GET"])
         self.app.add_url_rule("/catalog", "catalog", self.get_catalog, methods=["GET"])
+        self.app.add_url_rule("/live-exams", "live_exams", self.get_live_exams, methods=["GET"])
         self.app.add_url_rule("/login", "login", self.get_login, methods=["GET"])
         self.app.add_url_rule("/logout", "logout", self.get_logout, methods=["GET", "POST"])
         self.app.add_url_rule("/exams/<int:exam_id>", "exam_detail", self.get_exam_detail, methods=["GET"])
@@ -72,6 +73,13 @@ class AppRoutes:
             "home/global_stats.html",
             "Global Stats",
             required_feature="global_stats_page",
+        )
+
+    def get_live_exams(self):
+        return self._render_auth_page(
+            "home/live_exams.html",
+            "Live Exams",
+            required_feature="live_exams_page",
         )
 
     def get_exam_detail(self, exam_id):

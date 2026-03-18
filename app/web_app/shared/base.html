@@ -57,6 +57,9 @@
                     <a href="/global-stats">Global Stats</a>
                     {% endif %}
                     <a href="/catalog">Exam Catalog</a>
+                    {% if feature_access.get("live_exams_page") %}
+                    <a href="/live-exams">Live Exams</a>
+                    {% endif %}
                     {% if current_user and current_user.role in ["reviewer", "examiner", "administrator"] %}
                     <a href="/management/exams">Management</a>
                     {% endif %}
