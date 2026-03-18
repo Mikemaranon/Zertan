@@ -8,7 +8,7 @@ from werkzeug.security import generate_password_hash
 from .db_connector import DBConnector
 
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 
 class Database:
@@ -83,9 +83,12 @@ class Database:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT NOT NULL UNIQUE,
                 email TEXT UNIQUE,
+                login_name TEXT,
+                display_name TEXT,
                 password_hash TEXT NOT NULL,
                 role TEXT NOT NULL DEFAULT 'user',
                 status TEXT NOT NULL DEFAULT 'active',
+                avatar_path TEXT,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 last_login_at TEXT
@@ -256,6 +259,10 @@ class Database:
         )
 
         self._ensure_column("exams", "official_url", "TEXT DEFAULT ''")
+        self._ensure_column("users", "login_name", "TEXT")
+        self._ensure_column("users", "display_name", "TEXT")
+        self._ensure_column("users", "avatar_path", "TEXT")
+        self._migrate_user_identity_fields()
 
         _, row = self.execute(
             "SELECT version FROM schema_meta ORDER BY version DESC LIMIT 1",
@@ -268,6 +275,7 @@ class Database:
             self.execute("UPDATE schema_meta SET version = ?", (SCHEMA_VERSION,))
 
         self._seed_defaults()
+        self._ensure_users_indexes()
         if current_version < 2:
             self._seed_exam_links()
 
@@ -277,18 +285,92 @@ class Database:
         if column_name not in existing_columns:
             self.execute(f"ALTER TABLE {table} ADD COLUMN {column_name} {definition}")
 
+    def _migrate_user_identity_fields(self):
+        _, rows = self.execute(
+            """
+            SELECT id, username, email, login_name, display_name
+            FROM users
+            ORDER BY id
+            """,
+            fetchall=True,
+        )
+        if not rows:
+            return
+
+        reserved = set()
+        for row in rows:
+            current_login = (row["login_name"] or "").strip().lower()
+            if current_login:
+                reserved.add(current_login)
+
+        for row in rows:
+            display_name = (row["display_name"] or "").strip() or (row["username"] or "").strip() or "User"
+            login_name = self._build_login_name(row, reserved)
+            self.execute(
+                """
+                UPDATE users
+                SET username = ?, login_name = ?, display_name = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+                """,
+                (login_name, login_name, display_name, row["id"]),
+            )
+
+    def _build_login_name(self, row, reserved):
+        current_login = (row["login_name"] or "").strip().lower()
+        if current_login and self._login_name_is_available(current_login, row["login_name"], reserved):
+            return current_login
+
+        candidates = [
+            self._extract_login_candidate(row["email"]),
+            (row["username"] or "").strip().lower(),
+            f"user{row['id']}",
+        ]
+        for candidate in candidates:
+            if candidate and candidate not in reserved:
+                reserved.add(candidate)
+                return candidate
+
+        suffix = 2
+        base = candidates[-1]
+        while f"{base}{suffix}" in reserved:
+            suffix += 1
+        generated = f"{base}{suffix}"
+        reserved.add(generated)
+        return generated
+
+    def _login_name_is_available(self, candidate, existing_value, reserved):
+        existing_normalized = (existing_value or "").strip().lower()
+        return candidate == existing_normalized or candidate not in reserved
+
+    def _extract_login_candidate(self, email):
+        value = (email or "").strip().lower()
+        if not value:
+            return ""
+        local_part = value.split("@", 1)[0]
+        return local_part.strip()
+
+    def _ensure_users_indexes(self):
+        self.execute(
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_users_login_name_unique
+            ON users (lower(login_name))
+            """
+        )
+
     def _seed_defaults(self):
         _, count_row = self.execute("SELECT COUNT(*) AS total FROM users", fetchone=True)
         if count_row["total"] == 0:
             self.executemany(
                 """
-                INSERT INTO users (username, email, password_hash, role, status)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO users (username, email, login_name, display_name, password_hash, role, status)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
                 """,
                 [
                     (
                         "admin",
                         "admin@zertan.local",
+                        "admin",
+                        "Admin",
                         generate_password_hash("admin123"),
                         "administrator",
                         "active",
@@ -296,6 +378,8 @@ class Database:
                     (
                         "examiner",
                         "examiner@zertan.local",
+                        "examiner",
+                        "Examiner",
                         generate_password_hash("examiner123"),
                         "examiner",
                         "active",
@@ -303,6 +387,8 @@ class Database:
                     (
                         "reviewer",
                         "reviewer@zertan.local",
+                        "reviewer",
+                        "Reviewer",
                         generate_password_hash("reviewer123"),
                         "reviewer",
                         "active",
@@ -310,6 +396,8 @@ class Database:
                     (
                         "candidate",
                         "candidate@zertan.local",
+                        "candidate",
+                        "Candidate",
                         generate_password_hash("candidate123"),
                         "user",
                         "active",

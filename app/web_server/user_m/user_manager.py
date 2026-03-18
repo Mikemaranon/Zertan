@@ -38,6 +38,13 @@ class UserManager:
         aliases = {"admin": "administrator"}
         return aliases.get((role or "user").strip().lower(), (role or "user").strip().lower())
 
+    def normalize_login_name(self, login_name):
+        return (login_name or "").strip().lower()
+
+    def normalize_display_name(self, display_name, fallback=""):
+        value = (display_name or "").strip()
+        return value or (fallback or "").strip()
+
     def user_has_role(self, user, required_role):
         if not user:
             return False
@@ -45,8 +52,8 @@ class UserManager:
         required = self.normalize_role(required_role)
         return self.ROLE_ORDER.get(user_role, -1) >= self.ROLE_ORDER.get(required, -1)
 
-    def authenticate(self, username, password):
-        user = self.db.users.get(username)
+    def authenticate(self, login_name, password):
+        user = self.db.users.get_by_login_name(self.normalize_login_name(login_name))
         if not user or user["status"] != "active":
             return None
         if check_password_hash(user["password_hash"], password):
@@ -68,25 +75,70 @@ class UserManager:
             return None
         return self.get_user_from_token(token)
 
-    def create_user(self, username, password, role="user", email=None, status="active"):
-        if self.db.users.get(username):
+    def create_user(self, display_name, login_name, password, role="user", status="active"):
+        normalized_login = self.normalize_login_name(login_name)
+        normalized_display = self.normalize_display_name(display_name, fallback=normalized_login)
+        if not normalized_login or not normalized_display:
             return None
-        if email and self.db.users.get_by_email(email):
+        if self.db.users.get_by_login_name(normalized_login):
             return None
         normalized_role = self.normalize_role(role)
         password_hash = generate_password_hash(password)
-        self.db.users.create(username, password_hash, role=normalized_role, email=email, status=status)
-        return self.db.users.get(username)
+        self.db.users.create(
+            normalized_login,
+            normalized_display,
+            password_hash,
+            role=normalized_role,
+            status=status,
+        )
+        return self.db.users.get_by_login_name(normalized_login)
 
-    def update_user(self, user_id, username, email, role, status, password=None):
+    def update_user(self, user_id, display_name, login_name, role, status, password=None):
+        normalized_login = self.normalize_login_name(login_name)
+        normalized_display = self.normalize_display_name(display_name, fallback=normalized_login)
+        existing = self.db.users.get_by_id(user_id)
+        if not existing or not normalized_login or not normalized_display:
+            return None
+        conflict = self.db.users.get_by_login_name(normalized_login)
+        if conflict and conflict["id"] != user_id:
+            return None
         normalized_role = self.normalize_role(role)
-        self.db.users.update(user_id, username, email, normalized_role, status)
+        self.db.users.update(user_id, normalized_display, normalized_login, normalized_role, status)
         if password:
             self.db.users.update_password(user_id, generate_password_hash(password))
         return self.db.users.get_by_id(user_id)
 
-    def login(self, username, password):
-        user = self.authenticate(username, password)
+    def update_profile(self, user_id, display_name, current_password="", new_password="", confirm_password=""):
+        user = self.db.users.get_by_id(user_id)
+        if not user:
+            raise ValueError("User not found.")
+
+        normalized_display = self.normalize_display_name(display_name, fallback=user["display_name"])
+        if not normalized_display:
+            raise ValueError("Name is required.")
+
+        password_fields = [current_password or "", new_password or "", confirm_password or ""]
+        filled_count = sum(1 for value in password_fields if value.strip())
+        if filled_count not in (0, 3):
+            raise ValueError(
+                "To change the password, complete current password, new password, and confirm new password, or leave all three blank."
+            )
+        if filled_count == 3:
+            if not check_password_hash(user["password_hash"], current_password):
+                raise ValueError("Current password is incorrect.")
+            if new_password != confirm_password:
+                raise ValueError("New password and confirmation do not match.")
+            self.db.users.update_password(user_id, generate_password_hash(new_password))
+
+        self.db.users.update_profile(user_id, normalized_display)
+        return self.db.users.get_by_id(user_id)
+
+    def update_avatar(self, user_id, avatar_path):
+        self.db.users.update_avatar(user_id, avatar_path)
+        return self.db.users.get_by_id(user_id)
+
+    def login(self, login_name, password):
+        user = self.authenticate(login_name, password)
         if not user:
             return None
 
@@ -120,7 +172,8 @@ class UserManager:
         expiration_time = datetime.datetime.utcnow() + datetime.timedelta(hours=8)
         payload = {
             "user_id": user["id"],
-            "username": user["username"],
+            "login_name": user["login_name"],
+            "display_name": user["display_name"],
             "role": self.normalize_role(user["role"]),
             "exp": expiration_time,
         }
@@ -149,10 +202,12 @@ class UserManager:
             return None
         return {
             "id": user["id"],
-            "username": user["username"],
-            "email": user["email"],
+            "username": user["display_name"],
+            "login_name": user["login_name"],
+            "display_name": user["display_name"],
             "role": self.normalize_role(user["role"]),
             "status": user["status"],
+            "avatar_path": user.get("avatar_path"),
             "created_at": user["created_at"],
             "updated_at": user["updated_at"],
             "last_login_at": user["last_login_at"],

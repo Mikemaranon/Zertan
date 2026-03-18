@@ -26,10 +26,14 @@
                     <span></span>
                     <span></span>
                 </button>
-                <a class="user-chip user-chip--header" href="/dashboard" aria-label="Open dashboard">
-                    <span class="user-chip__avatar">{{ current_user.username[:1]|upper }}</span>
-                    <span class="user-chip__name">{{ current_user.username }}</span>
-                </a>
+                <button class="user-chip user-chip--header" type="button" data-open-profile-modal aria-label="Open profile">
+                    {% if current_user.avatar_path %}
+                    <img class="user-chip__avatar user-chip__avatar--image" src="/{{ current_user.avatar_path|replace('web_app/', '') }}" alt="{{ current_user.display_name }}">
+                    {% else %}
+                    <span class="user-chip__avatar">{{ current_user.display_name[:1]|upper }}</span>
+                    {% endif %}
+                    <span class="user-chip__name">{{ current_user.display_name }}</span>
+                </button>
             </div>
             <div id="sidebar-menu" class="sidebar-menu">
                 <nav class="sidebar-nav">
@@ -43,13 +47,17 @@
                     {% endif %}
                 </nav>
                 <div class="sidebar-footer">
-                    <a class="user-chip user-chip--footer" href="/dashboard">
-                        <span class="user-chip__avatar">{{ current_user.username[:1]|upper }}</span>
+                    <button class="user-chip user-chip--footer" type="button" data-open-profile-modal>
+                        {% if current_user.avatar_path %}
+                        <img class="user-chip__avatar user-chip__avatar--image" src="/{{ current_user.avatar_path|replace('web_app/', '') }}" alt="{{ current_user.display_name }}">
+                        {% else %}
+                        <span class="user-chip__avatar">{{ current_user.display_name[:1]|upper }}</span>
+                        {% endif %}
                         <span class="user-chip__meta">
-                            <span class="user-chip__name">{{ current_user.username }}</span>
+                            <span class="user-chip__name">{{ current_user.display_name }}</span>
                             <span class="user-chip__role">{{ current_user.role }}</span>
                         </span>
-                    </a>
+                    </button>
                     <button id="logout-button" class="button button--secondary button--small" type="button">Log out</button>
                 </div>
             </div>
@@ -61,13 +69,64 @@
                     <h1>{{ page_title }}</h1>
                 </div>
                 <div class="header-meta">
-                    <span class="muted">Signed in as {{ current_user.username }}</span>
+                    <span class="muted">Signed in as {{ current_user.display_name }}</span>
                 </div>
             </header>
             <section class="content-body">
                 {% block content %}{% endblock %}
             </section>
         </main>
+    </div>
+
+    <div id="profile-modal" class="profile-modal" hidden>
+        <div id="profile-modal-backdrop" class="profile-modal__backdrop"></div>
+        <div class="profile-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="profile-modal-title">
+            <button id="profile-modal-close" class="profile-modal__close" type="button" aria-label="Close profile modal">Close</button>
+            <div class="profile-modal__layout">
+                <div class="profile-summary">
+                    <div class="profile-summary__header">
+                        <label class="profile-avatar-picker" for="profile-avatar-input">
+                            <input id="profile-avatar-input" type="file" accept="image/*" hidden>
+                            <span id="profile-avatar" class="profile-avatar" aria-hidden="true"></span>
+                            <span class="profile-avatar-picker__hint">Change photo</span>
+                        </label>
+                        <div class="profile-summary__identity">
+                            <h2 id="profile-modal-title"></h2>
+                            <p id="profile-role" class="profile-summary__role"></p>
+                        </div>
+                    </div>
+                    <div class="profile-summary__stats">
+                        <span class="eyebrow">Activity</span>
+                        <strong id="profile-exam-count">0 exams completed</strong>
+                    </div>
+                    <div class="profile-summary__meta">
+                        <span class="muted">Login name</span>
+                        <strong id="profile-login-name"></strong>
+                    </div>
+                    <div id="profile-avatar-error" class="error-message"></div>
+                    <button id="profile-edit-toggle" class="button button--secondary" type="button">Modify credentials</button>
+                </div>
+                <div id="profile-edit-panel" class="profile-edit-panel" hidden>
+                    <form id="profile-credentials-form" class="form-stack">
+                        <div class="section-heading">
+                            <div>
+                                <h3>Edit credentials</h3>
+                                <p class="muted">Leave all password fields blank to keep the current password.</p>
+                            </div>
+                        </div>
+                        <label><span>Name</span><input id="profile-display-name" type="text" required></label>
+                        <label><span>Current password</span><input id="profile-current-password" type="password"></label>
+                        <label><span>New password</span><input id="profile-new-password" type="password"></label>
+                        <label><span>Confirm new password</span><input id="profile-confirm-password" type="password"></label>
+                        <div id="profile-form-error" class="error-message"></div>
+                        <div class="button-row">
+                            <button class="button button--primary" type="submit">Save changes</button>
+                            <button id="profile-form-cancel" class="button button--secondary" type="button">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script id="current-user-data" type="application/json">{{ current_user|tojson }}</script>

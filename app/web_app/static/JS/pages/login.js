@@ -12,7 +12,7 @@ export async function initLoginPage() {
             const payload = await request("/api/auth/login", {
                 method: "POST",
                 body: {
-                    username: document.getElementById("username").value,
+                    login_name: document.getElementById("login-name").value,
                     password: document.getElementById("password").value,
                 },
             });

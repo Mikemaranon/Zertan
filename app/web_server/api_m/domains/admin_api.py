@@ -23,18 +23,18 @@ class AdminAPI(BaseAPI):
         if error:
             return error
         payload = request.get_json() or {}
-        required = ["username", "password", "role"]
+        required = ["display_name", "login_name", "password", "role"]
         if any(not str(payload.get(field, "")).strip() for field in required):
-            return self.error("Username, password, and role are required.", 400)
+            return self.error("Name, login name, password, and role are required.", 400)
         user = self.user_manager.create_user(
-            payload["username"],
+            payload["display_name"],
+            payload["login_name"],
             payload["password"],
             role=payload["role"],
-            email=payload.get("email"),
             status=payload.get("status", "active"),
         )
         if not user:
-            return self.error("User already exists.", 400)
+            return self.error("Login name already exists or the payload is invalid.", 400)
         return self.ok({"user": self.user_manager.public_user(user)}, 201)
 
     def update_user(self, user_id):
@@ -47,12 +47,14 @@ class AdminAPI(BaseAPI):
         payload = request.get_json() or {}
         updated = self.user_manager.update_user(
             user_id=user_id,
-            username=payload.get("username", existing["username"]),
-            email=payload.get("email", existing["email"]),
+            display_name=payload.get("display_name", existing["display_name"]),
+            login_name=payload.get("login_name", existing["login_name"]),
             role=payload.get("role", existing["role"]),
             status=payload.get("status", existing["status"]),
             password=payload.get("password"),
         )
+        if not updated:
+            return self.error("Login name already exists or the user could not be updated.", 400)
         return self.ok({"user": self.user_manager.public_user(updated)})
 
     def delete_user(self, user_id):

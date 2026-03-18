@@ -1,4 +1,5 @@
 import { clearToken, getPageContext, request } from "./core/api.js";
+import { bindProfileModal } from "./components/profile-modal.js";
 import { initAdminPage } from "./pages/admin.js";
 import { initCatalogPage } from "./pages/catalog.js";
 import { initDashboardPage } from "./pages/dashboard.js";
@@ -30,6 +31,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     highlightActiveNavigation();
     bindSidebarToggle();
     bindLogoutButton();
+    bindProfileModal();
 
     const initializer = pageMap[page];
     if (!initializer) {

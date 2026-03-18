@@ -14,7 +14,7 @@ export async function initAdminPage() {
             if (!query) {
                 return true;
             }
-            return [user.username, user.email || "", user.role, user.status].some((value) =>
+            return [user.display_name, user.login_name, user.role, user.status].some((value) =>
                 String(value).toLowerCase().includes(query)
             );
         });
@@ -26,8 +26,8 @@ export async function initAdminPage() {
             <div class="card" data-user-id="${user.id}">
                 <div class="section-heading">
                     <div>
-                        <h3>${escapeHtml(user.username)}</h3>
-                        <p class="muted">${escapeHtml(user.email || "No email")}</p>
+                        <h3>${escapeHtml(user.display_name)}</h3>
+                        <p class="muted">${escapeHtml(user.login_name)}</p>
                     </div>
                     <span class="badge">${escapeHtml(user.role)}</span>
                 </div>
@@ -110,8 +110,8 @@ export async function initAdminPage() {
         errorNode.textContent = "";
         const userId = document.getElementById("admin-user-id").value;
         const payload = {
-            username: document.getElementById("admin-username").value.trim(),
-            email: document.getElementById("admin-email").value.trim(),
+            display_name: document.getElementById("admin-display-name").value.trim(),
+            login_name: document.getElementById("admin-login-name").value.trim(),
             password: document.getElementById("admin-password").value,
             role: document.getElementById("admin-role").value,
             status: document.getElementById("admin-status").value,
@@ -136,8 +136,8 @@ export async function initAdminPage() {
 
 function fillUserForm(user) {
     document.getElementById("admin-user-id").value = user.id;
-    document.getElementById("admin-username").value = user.username;
-    document.getElementById("admin-email").value = user.email || "";
+    document.getElementById("admin-display-name").value = user.display_name;
+    document.getElementById("admin-login-name").value = user.login_name;
     document.getElementById("admin-password").value = "";
     document.getElementById("admin-role").value = user.role;
     document.getElementById("admin-status").value = user.status;
