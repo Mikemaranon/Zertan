@@ -33,8 +33,8 @@ export async function initManagementPage() {
                 <div class="badge-row">${(exam.tags || []).map((tag) => `<span class="badge">${escapeHtml(tag)}</span>`).join("")}</div>
                 <div class="button-row">
                     <button class="button button--secondary button--small js-edit-exam" type="button">Edit metadata</button>
-                    <a class="button button--secondary button--small" href="/exams/${exam.id}/questions/new">Create question</a>
-                    <a class="button button--secondary button--small" href="/exams/${exam.id}">Study mode</a>
+                    <a class="button button--secondary button--small" href="/exams/${exam.id}/questions/new?return_to=${encodeURIComponent(`/management/exams/${exam.id}/questions`)}">Create question</a>
+                    <a class="button button--secondary button--small" href="/management/exams/${exam.id}/questions">Edit questions</a>
                     <button class="button button--primary button--small js-export-exam" type="button">Export package</button>
                     <button class="button button--danger button--small js-delete-exam" type="button">Delete exam</button>
                 </div>

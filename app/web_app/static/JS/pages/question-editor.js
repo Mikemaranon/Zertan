@@ -5,6 +5,7 @@ export async function initQuestionEditorPage(pageContext) {
     const header = document.getElementById("question-editor-header");
     const errorNode = document.getElementById("question-form-error");
     const typeSelect = document.getElementById("question-type");
+    const returnPath = pageContext.return_to || "";
     let loadedQuestion = null;
     let currentExamId = pageContext.exam_id || null;
 
@@ -57,7 +58,7 @@ export async function initQuestionEditorPage(pageContext) {
                     formData,
                 });
             }
-            window.location.href = `/exams/${currentExamId}`;
+            window.location.href = returnPath || `/exams/${currentExamId}`;
         } catch (error) {
             errorNode.textContent = error.message;
         }
@@ -69,7 +70,7 @@ export async function initQuestionEditorPage(pageContext) {
             return;
         }
         await request(`/api/questions/${pageContext.question_id}/archive`, { method: "POST" });
-        window.location.href = `/exams/${currentExamId}`;
+        window.location.href = returnPath || `/exams/${currentExamId}`;
     });
 }
 

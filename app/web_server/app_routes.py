@@ -27,6 +27,12 @@ class AppRoutes:
         self.app.add_url_rule("/attempts/<int:attempt_id>/results", "attempt_results", self.get_attempt_results, methods=["GET"])
         self.app.add_url_rule("/profile", "profile", self.get_profile, methods=["GET"])
         self.app.add_url_rule("/management/exams", "exam_management", self.get_exam_management, methods=["GET"])
+        self.app.add_url_rule(
+            "/management/exams/<int:exam_id>/questions",
+            "exam_question_management",
+            self.get_exam_question_management,
+            methods=["GET"],
+        )
         self.app.add_url_rule("/exams/<int:exam_id>/questions/new", "question_create", self.get_question_create, methods=["GET"])
         self.app.add_url_rule("/questions/<int:question_id>/edit", "question_edit", self.get_question_edit, methods=["GET"])
         self.app.add_url_rule("/admin", "admin", self.get_admin, methods=["GET"])
@@ -84,6 +90,15 @@ class AppRoutes:
             "Create Question",
             min_role="reviewer",
             exam_id=exam_id,
+            return_to=self._get_safe_return_to(),
+        )
+
+    def get_exam_question_management(self, exam_id):
+        return self._render_auth_page(
+            "management/questions.html",
+            "Question Management",
+            min_role="reviewer",
+            exam_id=exam_id,
         )
 
     def get_question_edit(self, question_id):
@@ -92,6 +107,7 @@ class AppRoutes:
             "Edit Question",
             min_role="reviewer",
             question_id=question_id,
+            return_to=self._get_safe_return_to(),
         )
 
     def get_admin(self):
@@ -123,3 +139,9 @@ class AppRoutes:
             current_user=user,
             page_context=page_context,
         )
+
+    def _get_safe_return_to(self):
+        return_to = (request.args.get("return_to") or "").strip()
+        if not return_to.startswith("/") or return_to.startswith("//"):
+            return ""
+        return return_to

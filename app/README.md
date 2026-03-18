@@ -97,6 +97,7 @@ The server-rendered templates are organized by purpose:
 - `app/web_app/exam/runner.html`
 - `app/web_app/exam/results.html`
 - `app/web_app/management/exams.html`
+- `app/web_app/management/questions.html`
 - `app/web_app/management/question_editor.html`
 - `app/web_app/management/admin.html`
 
@@ -176,6 +177,7 @@ HTML pages served by Flask:
 - `GET /attempts/<int:attempt_id>/results`
 - `GET /profile`
 - `GET /management/exams`
+- `GET /management/exams/<int:exam_id>/questions`
 - `GET /exams/<int:exam_id>/questions/new`
 - `GET /questions/<int:question_id>/edit`
 - `GET /admin`

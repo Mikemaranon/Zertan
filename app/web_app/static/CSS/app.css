@@ -433,6 +433,24 @@ textarea {
     margin-bottom: 16px;
 }
 
+.question-management-tools {
+    align-items: end;
+}
+
+.question-management-summary {
+    display: grid;
+    gap: 8px;
+    align-content: end;
+    padding: 18px 20px;
+    border-radius: var(--radius-small);
+    border: 1px solid var(--border);
+    background: var(--surface-soft);
+}
+
+.question-management-summary strong {
+    font-size: 1.1rem;
+}
+
 .admin-directory-search {
     max-width: 100%;
 }

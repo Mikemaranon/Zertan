@@ -17,6 +17,12 @@ class QuestionsAPI(BaseAPI):
         self.app.add_url_rule("/api/questions/<int:question_id>", endpoint="api_questions_get", view_func=self.get_question, methods=["GET"])
         self.app.add_url_rule(
             "/api/exams/<int:exam_id>/questions",
+            endpoint="api_questions_list",
+            view_func=self.list_questions_for_exam,
+            methods=["GET"],
+        )
+        self.app.add_url_rule(
+            "/api/exams/<int:exam_id>/questions",
             endpoint="api_questions_create",
             view_func=self.create_question,
             methods=["POST"],
@@ -34,6 +40,27 @@ class QuestionsAPI(BaseAPI):
             endpoint="api_questions_check",
             view_func=self.check_question,
             methods=["POST"],
+        )
+
+    def list_questions_for_exam(self, exam_id):
+        user, error = self.auth_user(request, min_role="reviewer")
+        if error:
+            return error
+        exam = self.db.exams.get(exam_id)
+        if not exam:
+            return self.error("Exam not found.", 404)
+
+        questions = self.db.questions.list_for_exam(exam_id, include_answers=False, include_archived=True)
+        items = [self._serialize_question_summary(question, user) for question in questions]
+        return self.ok(
+            {
+                "exam": {
+                    **exam,
+                    "can_edit_questions": self.user_manager.user_has_role(user, "reviewer"),
+                    "can_delete_questions": self.user_manager.user_has_role(user, "examiner"),
+                },
+                "questions": items,
+            }
         )
 
     def get_question(self, question_id):
@@ -149,3 +176,22 @@ class QuestionsAPI(BaseAPI):
         target_path = target_dir / target_name
         file_storage.save(target_path)
         return str(target_path.relative_to(project_root))
+
+    def _serialize_question_summary(self, question, user):
+        return {
+            "id": question["id"],
+            "exam_id": question["exam_id"],
+            "title": (question.get("title") or "").strip(),
+            "type": question["type"],
+            "difficulty": question.get("difficulty") or "intermediate",
+            "status": question.get("status") or "active",
+            "position": question.get("position") or 0,
+            "tags": question.get("tags", []),
+            "topics": question.get("topics", []),
+            "option_count": len(question.get("options", [])),
+            "asset_count": len(question.get("assets", [])),
+            "updated_at": question.get("updated_at"),
+            "created_at": question.get("created_at"),
+            "can_edit": self.user_manager.user_has_role(user, "reviewer"),
+            "can_delete": self.user_manager.user_has_role(user, "examiner"),
+        }

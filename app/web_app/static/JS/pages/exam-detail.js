@@ -33,7 +33,6 @@ export async function initExamDetailPage(pageContext) {
         </div>
         <div class="button-row">
             <a class="button button--primary" href="/exams/${exam.id}/builder">Start exam mode</a>
-            ${exam.can_edit_questions ? `<a class="button button--secondary" href="/exams/${exam.id}/questions/new">Create question</a>` : ""}
         </div>
     `;
 
@@ -114,12 +113,6 @@ export async function initExamDetailPage(pageContext) {
         visible.forEach((question, index) => {
             const card = renderQuestionCard(question, { mode: "study", index: index + 1 });
             attachQuestionConfig(card, question);
-            if (exam.can_edit_questions) {
-                const actions = document.createElement("div");
-                actions.className = "button-row";
-                actions.innerHTML = `<a class="button button--secondary button--small" href="/questions/${question.id}/edit">Edit question</a>`;
-                card.appendChild(actions);
-            }
             card.querySelector(".js-check-question").addEventListener("click", async () => {
                 try {
                     const payload = await request(`/api/questions/${question.id}/check`, {

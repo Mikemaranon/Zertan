@@ -8,6 +8,7 @@ import { initExamDetailPage } from "./pages/exam-detail.js";
 import { initExamRunnerPage } from "./pages/exam-runner.js";
 import { initLoginPage } from "./pages/login.js";
 import { initManagementPage } from "./pages/management.js";
+import { initQuestionManagementPage } from "./pages/question-management.js";
 import { initQuestionEditorPage } from "./pages/question-editor.js";
 import { initResultsPage } from "./pages/results.js";
 
@@ -20,6 +21,7 @@ const pageMap = {
     "exam-runner": initExamRunnerPage,
     results: initResultsPage,
     "exam-management": initManagementPage,
+    "question-management": initQuestionManagementPage,
     "question-editor": initQuestionEditorPage,
     admin: initAdminPage,
 };

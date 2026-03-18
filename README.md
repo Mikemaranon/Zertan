@@ -1,5 +1,19 @@
 # Zertan
 
+<table>
+  <tr>
+    <td>
+      <img src="app/web_app/static/assets/Zertan.png" alt="Zertan" width="132">
+    </td>
+    <td>&#9474;</td>
+    <td>
+      <strong>Certification</strong><br>
+      <strong>Preparation</strong><br>
+      <strong>Workspace</strong>
+    </td>
+  </tr>
+</table>
+
 Zertan is a collaborative workspace for certification exam preparation.
 
 Its purpose is straightforward:
@@ -41,14 +55,16 @@ Technical documentation lives in [`app/README.md`](/Users/myke/Desktop/codes/Pro
 | `/api/auth/login` | `POST` | Sign in and issue the JWT-backed session token. |
 | `/api/auth/logout` | `POST` | End the current session and clear the token cookie. |
 | `/api/auth/me` | `GET` | Return the authenticated user behind the current token. |
+| `/api/auth/profile` | `PUT` | Update the current user profile and optional password change. |
+| `/api/auth/profile/avatar` | `POST` | Upload or replace the current user avatar image. |
 | `/api/users/me` | `GET` | Return the current user profile for the signed-in account. |
 | `/api/users/recent-attempts` | `GET` | Return the latest exam attempts for the current user. |
 | `/api/exams` | `GET`, `POST` | List exams or create a new exam bank. |
-| `/api/exams/<int:exam_id>` | `GET`, `PUT` | Read or update exam metadata. |
+| `/api/exams/<int:exam_id>` | `GET`, `PUT`, `DELETE` | Read, update, or delete exam metadata and its dependent records. |
 | `/api/exams/<int:exam_id>/study` | `GET` | Load the study-mode payload for an exam and its questions. |
 | `/api/exams/<int:exam_id>/builder-meta` | `GET` | Return the metadata used to assemble an exam attempt. |
 | `/api/exams/<int:exam_id>/builder` | `POST` | Create a fixed exam attempt from builder criteria. |
-| `/api/exams/<int:exam_id>/questions` | `POST` | Create a new question inside an exam. |
+| `/api/exams/<int:exam_id>/questions` | `GET`, `POST` | List question-management metadata for an exam or create a new question inside it. |
 | `/api/questions/<int:question_id>` | `GET`, `PUT`, `DELETE` | Read, update, or delete a question. |
 | `/api/questions/<int:question_id>/archive` | `POST` | Archive a question without removing it from the system. |
 | `/api/questions/<int:question_id>/check` | `POST` | Evaluate a study-mode response and return correction data. |
