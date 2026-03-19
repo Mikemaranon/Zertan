@@ -54,9 +54,9 @@ The default catalog contains a single mock exam:
 
 The repository now includes a production-oriented container setup:
 
-- [`deploy/docker/Dockerfile`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/docker/Dockerfile)
-- [`deploy/docker/compose.yml`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/docker/compose.yml)
-- [`deploy/docker/.env.example`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/docker/.env.example)
+- [`deploy/docker/Dockerfile`](deploy/docker/Dockerfile)
+- [`deploy/docker/compose.yml`](deploy/docker/compose.yml)
+- [`deploy/docker/.env.example`](deploy/docker/.env.example)
 
 Quick start with Docker Compose:
 
