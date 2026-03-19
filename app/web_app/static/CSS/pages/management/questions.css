@@ -1,3 +1,8 @@
+.question-management-header__actions {
+    margin-left: auto;
+    justify-content: flex-end;
+}
+
 .question-management-tools {
     align-items: end;
 }
@@ -14,4 +19,18 @@
 
 .question-management-summary strong {
     font-size: 1.1rem;
+}
+
+#question-management-list {
+    margin-top: 24px;
+}
+
+#question-management-pagination-bottom {
+    margin-top: 24px;
+}
+
+@media (max-width: 720px) {
+    .question-management-header__actions {
+        width: 100%;
+    }
 }

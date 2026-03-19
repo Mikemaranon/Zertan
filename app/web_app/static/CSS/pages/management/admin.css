@@ -93,6 +93,10 @@
     padding-right: 6px;
 }
 
+.admin-group-view-tools {
+    margin-bottom: 0;
+}
+
 .admin-group-view-card {
     display: grid;
     gap: 12px;

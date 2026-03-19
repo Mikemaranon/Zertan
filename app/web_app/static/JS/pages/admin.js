@@ -9,6 +9,7 @@ export async function initAdminPage() {
         groups: [],
         features: [],
         selectedGroupMemberIds: [],
+        activeGroupViewId: null,
     };
 
     const nodes = {
@@ -31,6 +32,7 @@ export async function initAdminPage() {
         groupMembersContainer: document.getElementById("admin-group-members"),
         groupViewTitle: document.getElementById("admin-group-view-title"),
         groupViewSubtitle: document.getElementById("admin-group-view-subtitle"),
+        groupViewSearchInput: document.getElementById("admin-group-view-search"),
         groupViewMembers: document.getElementById("admin-group-view-members"),
         featureContainer: document.getElementById("admin-feature-toggles"),
         featureErrorNode: document.getElementById("admin-feature-error"),
@@ -54,6 +56,7 @@ export async function initAdminPage() {
         modalId: "admin-group-view-modal",
         backdropId: "admin-group-view-modal-backdrop",
         closeButtonId: "admin-group-view-modal-close",
+        onClose: () => resetGroupView(nodes, state),
     });
     const dashboardModal = bindAdminDashboardModal();
 
@@ -73,6 +76,7 @@ export async function initAdminPage() {
         !nodes.groupMembersContainer ||
         !nodes.groupViewTitle ||
         !nodes.groupViewSubtitle ||
+        !nodes.groupViewSearchInput ||
         !nodes.groupViewMembers ||
         !nodes.featureContainer
     ) {
@@ -216,6 +220,7 @@ export async function initAdminPage() {
         state.groups = data.groups || [];
         renderGroups();
         renderUsers();
+        renderActiveGroupView(nodes, state);
     }
 
     async function loadFeatures() {
@@ -306,6 +311,7 @@ export async function initAdminPage() {
     nodes.userSearchInput.addEventListener("input", renderUsers);
     nodes.groupSearchInput.addEventListener("input", renderGroups);
     nodes.groupMemberSearchInput.addEventListener("input", renderGroupMemberSearchResults);
+    nodes.groupViewSearchInput.addEventListener("input", () => renderActiveGroupView(nodes, state));
     nodes.userForm.addEventListener("submit", handleUserSubmit);
     nodes.groupForm.addEventListener("submit", handleGroupSubmit);
     nodes.featureContainer.addEventListener("change", handleFeatureToggleChange);
@@ -355,7 +361,7 @@ export async function initAdminPage() {
         }
 
         if (event.target.closest(".js-view-group")) {
-            openGroupViewModal(nodes, groupViewModal, group);
+            openGroupViewModal(nodes, state, groupViewModal, group);
             return;
         }
 
@@ -589,6 +595,12 @@ function ensureAdminGroupViewModal() {
                                 <p id="admin-group-view-subtitle" class="muted">Members assigned to this group.</p>
                             </div>
                         </div>
+                        <div class="admin-directory-tools admin-group-view-tools">
+                            <label class="admin-directory-search">
+                                <span>Search users</span>
+                                <input id="admin-group-view-search" type="search" placeholder="Search by name, login name, role, or status">
+                            </label>
+                        </div>
                         <div id="admin-group-view-members" class="admin-group-view-list list-stack"></div>
                     </section>
                 </div>
@@ -686,12 +698,43 @@ function openGroupEditModal(nodes, state, modal, group) {
     renderSelectedMembersLater(nodes, state);
 }
 
-function openGroupViewModal(nodes, modal, group) {
+function openGroupViewModal(nodes, state, modal, group) {
+    state.activeGroupViewId = group.id;
+    nodes.groupViewSearchInput.value = "";
+    renderGroupView(nodes, group);
+    modal.open();
+}
+
+function renderActiveGroupView(nodes, state) {
+    if (!state.activeGroupViewId) {
+        return;
+    }
+    const group = state.groups.find((entry) => Number(entry.id) === Number(state.activeGroupViewId));
+    if (!group) {
+        nodes.groupViewTitle.textContent = "Group members";
+        nodes.groupViewSubtitle.textContent = "This group is no longer available.";
+        nodes.groupViewMembers.innerHTML = `<div class="empty-state">The selected group is no longer available.</div>`;
+        return;
+    }
+    renderGroupView(nodes, group);
+}
+
+function renderGroupView(nodes, group) {
     const members = group.members || [];
+    const query = nodes.groupViewSearchInput.value.trim().toLowerCase();
+    const filteredMembers = members.filter((member) => {
+        if (!query) {
+            return true;
+        }
+        return [member.display_name, member.login_name, member.role, member.status].some((value) =>
+            String(value || "").toLowerCase().includes(query)
+        );
+    });
+
     nodes.groupViewTitle.textContent = group.name || "Group members";
     nodes.groupViewSubtitle.textContent = `${members.length} member${members.length === 1 ? "" : "s"} assigned to ${group.name}.`;
-    nodes.groupViewMembers.innerHTML = members.length
-        ? members
+    nodes.groupViewMembers.innerHTML = filteredMembers.length
+        ? filteredMembers
             .map(
                 (member) => `
                     <article class="card admin-group-view-card">
@@ -707,8 +750,7 @@ function openGroupViewModal(nodes, modal, group) {
                 `,
             )
             .join("")
-        : `<div class="empty-state">No users are assigned to this group yet.</div>`;
-    modal.open();
+        : `<div class="empty-state">${members.length ? "No users match the current search." : "No users are assigned to this group yet."}</div>`;
 }
 
 function renderSelectedMembersLater(nodes, state) {
@@ -752,6 +794,14 @@ function resetGroupForm(nodes, state) {
             No users added yet
         </button>
     `;
+}
+
+function resetGroupView(nodes, state) {
+    state.activeGroupViewId = null;
+    nodes.groupViewSearchInput.value = "";
+    nodes.groupViewTitle.textContent = "Group members";
+    nodes.groupViewSubtitle.textContent = "Members assigned to this group.";
+    nodes.groupViewMembers.innerHTML = "";
 }
 
 function buildGroupsByUserId(groups) {

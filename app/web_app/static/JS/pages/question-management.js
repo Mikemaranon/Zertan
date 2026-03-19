@@ -1,11 +1,17 @@
 import { escapeHtml, request } from "../core/api.js";
+import { renderPagination } from "../components/pagination.js";
 
 export async function initQuestionManagementPage(pageContext) {
     const header = document.getElementById("question-management-header");
     const searchInput = document.getElementById("question-management-search");
     const countNode = document.getElementById("question-management-count");
     const list = document.getElementById("question-management-list");
+    const paginationTop = document.getElementById("question-management-pagination-top");
+    const paginationBottom = document.getElementById("question-management-pagination-bottom");
     const returnPath = `/management/exams/${pageContext.exam_id}/questions`;
+    const pageUrl = new URL(window.location.href);
+    let currentPage = Math.max(1, Number(pageUrl.searchParams.get("page") || 1) || 1);
+    let lastPageSize = 1;
 
     const data = await request(`/api/exams/${pageContext.exam_id}/questions`);
     const exam = data.exam;
@@ -17,13 +23,26 @@ export async function initQuestionManagementPage(pageContext) {
             <h2>${escapeHtml(exam.code)} · ${escapeHtml(exam.title)}</h2>
             <p class="muted">Manage questions separately from study mode. Search the bank, edit entries, or remove them when permitted.</p>
         </div>
-        <div class="button-row">
+        <div class="button-row question-management-header__actions">
             ${exam.can_edit_questions ? `<a class="button button--primary" href="/exams/${exam.id}/questions/new?return_to=${encodeURIComponent(returnPath)}">Create question</a>` : ""}
             <a class="button button--secondary" href="/management/exams">Back to management</a>
         </div>
     `;
 
-    searchInput.addEventListener("input", renderQuestions);
+    searchInput.addEventListener("input", () => {
+        currentPage = 1;
+        renderQuestions();
+    });
+
+    window.addEventListener("resize", () => {
+        const nextPageSize = getPageSize();
+        if (nextPageSize === lastPageSize) {
+            return;
+        }
+        const firstVisibleIndex = (currentPage - 1) * lastPageSize;
+        currentPage = Math.floor(firstVisibleIndex / nextPageSize) + 1;
+        renderQuestions();
+    });
 
     async function handleDelete(question) {
         const confirmed = window.confirm(
@@ -38,6 +57,43 @@ export async function initQuestionManagementPage(pageContext) {
             questions.splice(index, 1);
         }
         renderQuestions();
+    }
+
+    function syncPageUrl() {
+        const nextUrl = new URL(window.location.href);
+        if (currentPage <= 1) {
+            nextUrl.searchParams.delete("page");
+        } else {
+            nextUrl.searchParams.set("page", String(currentPage));
+        }
+        window.history.replaceState({}, "", nextUrl);
+    }
+
+    function getColumnsPerPage() {
+        const computedColumns = window.getComputedStyle(list).gridTemplateColumns;
+        if (computedColumns && computedColumns !== "none" && !computedColumns.includes("repeat(")) {
+            const columnCount = computedColumns
+                .split(" ")
+                .map((value) => value.trim())
+                .filter(Boolean).length;
+            if (columnCount > 0) {
+                return columnCount;
+            }
+        }
+
+        const gap = Number.parseFloat(window.getComputedStyle(list).columnGap || window.getComputedStyle(list).gap || "24") || 24;
+        return Math.max(1, Math.floor((list.clientWidth + gap) / (280 + gap)));
+    }
+
+    function getPageSize() {
+        const rowsPerPage = window.matchMedia("(max-width: 720px)").matches ? 3 : 2;
+        return Math.max(1, getColumnsPerPage() * rowsPerPage);
+    }
+
+    function navigateToPage(page) {
+        currentPage = page;
+        renderQuestions();
+        window.scrollTo({ top: 0, behavior: "auto" });
     }
 
     function renderQuestions() {
@@ -60,15 +116,24 @@ export async function initQuestionManagementPage(pageContext) {
             return haystack.includes(searchTerm);
         });
 
+        lastPageSize = getPageSize();
+        const totalPages = Math.max(1, Math.ceil(visibleQuestions.length / lastPageSize));
+        currentPage = Math.min(currentPage, totalPages);
+        const startIndex = (currentPage - 1) * lastPageSize;
+        const pageQuestions = visibleQuestions.slice(startIndex, startIndex + lastPageSize);
+
         countNode.textContent = `${visibleQuestions.length} question${visibleQuestions.length === 1 ? "" : "s"}`;
         list.innerHTML = "";
 
         if (!visibleQuestions.length) {
+            syncPageUrl();
+            paginationTop.innerHTML = "";
+            paginationBottom.innerHTML = "";
             list.innerHTML = `<div class="empty-state">No questions match the current search.</div>`;
             return;
         }
 
-        visibleQuestions.forEach((question) => {
+        pageQuestions.forEach((question) => {
             const title = question.title || `Question #${question.id}`;
             const card = document.createElement("article");
             card.className = "card question-management-card";
@@ -111,6 +176,10 @@ export async function initQuestionManagementPage(pageContext) {
             }
             list.appendChild(card);
         });
+
+        syncPageUrl();
+        renderPagination(paginationTop, currentPage, totalPages, navigateToPage);
+        renderPagination(paginationBottom, currentPage, totalPages, navigateToPage);
     }
 
     renderQuestions();
