@@ -4,9 +4,11 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "app" / "web_server"))
+WEB_SERVER_ROOT = ROOT / "app" / "web_server"
+sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(WEB_SERVER_ROOT))
 
-from services_m.live_exam_service import LiveExamService
+from app.web_server.services_m.live_exam_service import LiveExamService
 
 
 class _FakeUsersTable:

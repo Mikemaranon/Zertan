@@ -10,11 +10,13 @@ from werkzeug.security import generate_password_hash
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 WEB_SERVER_ROOT = PROJECT_ROOT / "app" / "web_server"
 
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 if str(WEB_SERVER_ROOT) not in sys.path:
     sys.path.insert(0, str(WEB_SERVER_ROOT))
 
-from data_m.db_manager import DBManager  # noqa: E402
-from services_m.attempt_service import AttemptService  # noqa: E402
+from app.web_server.data_m.db_manager import DBManager
+from app.web_server.services_m.attempt_service import AttemptService
 
 
 MOCK_PASSWORD = "zertan-mock-2026"
