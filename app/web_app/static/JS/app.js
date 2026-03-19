@@ -1,4 +1,4 @@
-import { getPageContext, request } from "./core/api.js";
+import { getPageContext, isMobileViewport, request } from "./core/api.js";
 import { bindProfileModal } from "./components/profile-modal.js";
 import { initAdminPage } from "./pages/admin.js";
 import { initCatalogPage } from "./pages/catalog.js";
@@ -37,6 +37,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     highlightActiveNavigation();
     bindSidebarToggle();
     bindLogoutButton();
+    bindMobileKeyboardDismissal();
     bindProfileModal();
 
     const initializer = pageMap[page];
@@ -76,6 +77,46 @@ function bindLogoutButton() {
             window.location.href = "/login";
         }
     });
+}
+
+function bindMobileKeyboardDismissal() {
+    document.addEventListener("pointerdown", (event) => {
+        if (!isMobileViewport()) {
+            return;
+        }
+
+        const activeElement = document.activeElement;
+        if (!isEditableElement(activeElement)) {
+            return;
+        }
+
+        const target = event.target;
+        if (!(target instanceof Element)) {
+            return;
+        }
+
+        if (target.closest("input, textarea, select, [contenteditable='true'], label")) {
+            return;
+        }
+
+        if (target.closest("[data-floating-panel='true']")) {
+            return;
+        }
+
+        if (target.closest("button, a, [role='button'], .button")) {
+            activeElement.blur();
+        }
+    });
+}
+
+function isEditableElement(element) {
+    if (!(element instanceof HTMLElement)) {
+        return false;
+    }
+    if (element.isContentEditable) {
+        return true;
+    }
+    return ["INPUT", "TEXTAREA", "SELECT"].includes(element.tagName);
 }
 
 function bindSidebarToggle() {

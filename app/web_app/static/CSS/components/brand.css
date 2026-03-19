@@ -35,3 +35,23 @@
 .brand-copy span {
     display: block;
 }
+
+@media (max-width: 1024px) {
+    .sidebar .brand {
+        gap: 8px;
+    }
+
+    .sidebar .brand__logo {
+        width: 32px;
+    }
+}
+
+@media (max-width: 720px) {
+    .sidebar .brand {
+        gap: 6px;
+    }
+
+    .sidebar .brand__logo {
+        width: 24px;
+    }
+}

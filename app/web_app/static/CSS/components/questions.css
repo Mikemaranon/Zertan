@@ -1,13 +1,13 @@
 .question-card {
     display: grid;
-    gap: 16px;
+    gap: calc(16px * var(--app-density));
 }
 
 .question-card__header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    gap: 16px;
+    gap: calc(16px * var(--app-density));
 }
 
 .question-card__statement {
@@ -19,11 +19,11 @@
     padding: 0;
     border: 0;
     display: grid;
-    gap: 10px;
+    gap: calc(10px * var(--app-density));
 }
 
 .question-card > .button-row {
-    margin-top: 10px;
+    margin-top: calc(10px * var(--app-density));
 }
 
 .question-option,
@@ -32,13 +32,13 @@
     border: 1px solid var(--border);
     border-radius: var(--radius-small);
     background: var(--surface);
-    padding: 14px 16px;
+    padding: calc(14px * var(--app-density)) calc(16px * var(--app-density));
 }
 
 .drop-zone {
     display: grid;
-    min-height: 50px;
-    padding: 10px 12px;
+    min-height: calc(50px * var(--app-density));
+    padding: calc(10px * var(--app-density)) calc(12px * var(--app-density));
 }
 
 .drop-zone .muted {
@@ -57,7 +57,7 @@
 .question-option {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: calc(12px * var(--app-density));
 }
 
 .question-option input {
@@ -73,19 +73,19 @@
 .drag-drop-layout {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 20px;
+    gap: calc(20px * var(--app-density));
     align-items: start;
 }
 
 .drag-bank,
 .drag-zones {
     display: grid;
-    gap: 12px;
+    gap: calc(12px * var(--app-density));
     align-content: start;
 }
 
 .drag-bank.is-active {
-    padding: 12px;
+    padding: calc(12px * var(--app-density));
     border: 1px dashed rgba(102, 168, 224, 0.55);
     border-radius: var(--radius-small);
     background: #f5faff;
@@ -93,7 +93,7 @@
 
 .assigned-label {
     display: grid;
-    gap: 8px;
+    gap: calc(8px * var(--app-density));
     margin-top: 0;
 }
 
@@ -128,8 +128,8 @@
 
 .hotspot-marker {
     position: absolute;
-    width: 18px;
-    height: 18px;
+    width: calc(18px * var(--app-density));
+    height: calc(18px * var(--app-density));
     border-radius: 50%;
     background: rgba(102, 168, 224, 0.88);
     border: 2px solid white;
@@ -139,19 +139,19 @@
 
 .hotspot-dropdowns {
     display: grid;
-    gap: 12px;
+    gap: calc(12px * var(--app-density));
 }
 
 .hotspot-dropdown-row {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
     align-items: center;
-    gap: 12px;
+    gap: calc(12px * var(--app-density));
     color: var(--text);
 }
 
 .hotspot-dropdown-row__index {
-    min-width: 24px;
+    min-width: calc(24px * var(--app-density));
     text-align: right;
     color: var(--text);
 }
@@ -161,7 +161,7 @@
 }
 
 .feedback-box {
-    padding: 14px 16px;
+    padding: calc(14px * var(--app-density)) calc(16px * var(--app-density));
     border-radius: var(--radius-small);
     background: var(--surface-soft);
     border: 1px solid var(--border);

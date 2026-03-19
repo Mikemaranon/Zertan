@@ -1,7 +1,7 @@
 import { renderDashboardLoadingState, renderDashboardView } from "../components/dashboard-view.js";
 import { createGroupScopePicker } from "../components/group-scope-picker.js";
 import { createSearchResultsPopover } from "../components/search-results-popover.js";
-import { assetPathToUrl, escapeHtml, request } from "../core/api.js";
+import { assetPathToUrl, escapeHtml, focusFieldForDesktop, request } from "../core/api.js";
 
 export async function initAdminPage() {
     ensureAdminDom();
@@ -931,8 +931,7 @@ function bindManagedModal({ modalId, backdropId, closeButtonId, cancelButtonId, 
 function focusField(id) {
     window.setTimeout(() => {
         const field = document.getElementById(id);
-        field?.focus({ preventScroll: true });
-        field?.select?.();
+        focusFieldForDesktop(field, { select: true });
     }, 140);
 }
 

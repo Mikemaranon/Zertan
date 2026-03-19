@@ -1,4 +1,4 @@
-import { assetPathToUrl, getCurrentUser, request } from "../core/api.js";
+import { assetPathToUrl, focusFieldForDesktop, getCurrentUser, request } from "../core/api.js";
 
 export function bindProfileModal() {
     const modal = document.getElementById("profile-modal");
@@ -104,7 +104,7 @@ export function bindProfileModal() {
     function showEditPanel() {
         editPanel.dataset.mode = "editing";
         editToggle.hidden = true;
-        nameInput.focus();
+        focusFieldForDesktop(nameInput);
     }
 
     function hideEditPanel() {

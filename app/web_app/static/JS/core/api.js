@@ -62,6 +62,20 @@ export function assetPathToUrl(path) {
     return `/media/${path.replace(/^web_server\/data_m\/assets\//, "").replace(/^\/+/, "")}`;
 }
 
+export function isMobileViewport() {
+    return window.matchMedia("(max-width: 720px)").matches;
+}
+
+export function focusFieldForDesktop(field, { select = false } = {}) {
+    if (!field || isMobileViewport()) {
+        return;
+    }
+    field.focus({ preventScroll: true });
+    if (select && typeof field.select === "function") {
+        field.select();
+    }
+}
+
 export function splitCommaValues(value) {
     return value
         .split(",")

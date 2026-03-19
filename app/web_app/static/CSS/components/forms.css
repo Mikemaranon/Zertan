@@ -1,6 +1,6 @@
 label {
     display: grid;
-    gap: 8px;
+    gap: calc(8px * var(--app-density));
     color: var(--muted);
 }
 
@@ -13,7 +13,7 @@ input,
 select,
 textarea {
     width: 100%;
-    padding: 12px 14px;
+    padding: calc(12px * var(--app-density)) calc(14px * var(--app-density));
     border-radius: 12px;
     border: 1px solid var(--border);
     background: #fff;
@@ -21,8 +21,8 @@ textarea {
 }
 
 select {
-    min-height: 52px;
-    padding: 14px 48px 14px 16px;
+    min-height: calc(52px * var(--app-density));
+    padding: calc(14px * var(--app-density)) calc(48px * var(--app-density)) calc(14px * var(--app-density)) calc(16px * var(--app-density));
     border-radius: 14px;
     border-color: #c5d3e2;
     background-color: #fdfefe;
@@ -38,8 +38,8 @@ select:not([multiple]) {
         linear-gradient(135deg, var(--primary-strong) 50%, transparent 50%),
         linear-gradient(180deg, #f7fbff 0%, #eef5fb 100%);
     background-position:
-        calc(100% - 22px) calc(50% - 3px),
-        calc(100% - 16px) calc(50% - 3px),
+        calc(100% - calc(22px * var(--app-density))) calc(50% - 3px),
+        calc(100% - calc(16px * var(--app-density))) calc(50% - 3px),
         0 0;
     background-size:
         6px 6px,
@@ -60,7 +60,7 @@ select:focus {
 }
 
 select[multiple] {
-    min-height: 140px;
+    min-height: calc(140px * var(--app-density));
 }
 
 textarea {
@@ -74,7 +74,7 @@ textarea {
 .checkbox-line {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: calc(10px * var(--app-density));
 }
 
 .checkbox-line input {
@@ -82,7 +82,7 @@ textarea {
 }
 
 .error-message {
-    min-height: 20px;
+    min-height: calc(20px * var(--app-density));
     color: var(--danger);
 }
 

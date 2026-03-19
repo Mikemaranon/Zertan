@@ -1,4 +1,4 @@
-import { escapeHtml, request, splitCommaValues } from "../core/api.js";
+import { escapeHtml, focusFieldForDesktop, request, splitCommaValues } from "../core/api.js";
 import { createGroupScopePicker } from "../components/group-scope-picker.js";
 
 const MAX_IMPORT_PACKAGE_SIZE = 5 * 1024 * 1024;
@@ -81,7 +81,7 @@ export async function initManagementPage() {
                 const payload = await request(`/api/exams/${examId}`);
                 fillForm(payload.exam, examGroupPicker);
                 examForm.scrollIntoView({ behavior: "smooth", block: "start" });
-                document.getElementById("exam-code").focus({ preventScroll: true });
+                focusFieldForDesktop(document.getElementById("exam-code"));
             });
         });
 

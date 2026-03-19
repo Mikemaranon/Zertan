@@ -10,7 +10,7 @@
     height: 100vh;
     display: flex;
     flex-direction: column;
-    padding: 32px 24px;
+    padding: calc(32px * var(--app-density)) calc(24px * var(--app-density));
     background: #f9fcff;
     border-right: 1px solid var(--border);
     overflow: hidden;
@@ -30,21 +30,21 @@
     min-height: 0;
     display: flex;
     flex-direction: column;
-    gap: 24px;
-    margin-top: 24px;
+    gap: calc(24px * var(--app-density));
+    margin-top: calc(24px * var(--app-density));
     overflow-y: auto;
 }
 
 .sidebar-nav {
     display: grid;
-    gap: 18px;
+    gap: calc(18px * var(--app-density));
     margin-block: auto;
-    transform: translateY(24px);
+    transform: translateY(calc(24px * var(--app-density)));
 }
 
 .sidebar-nav__section {
     display: grid;
-    gap: 8px;
+    gap: calc(8px * var(--app-density));
 }
 
 .sidebar-nav__title {
@@ -67,7 +67,7 @@
 }
 
 .sidebar-nav a {
-    padding: 12px 14px;
+    padding: calc(12px * var(--app-density)) calc(14px * var(--app-density));
     border-radius: var(--radius-small);
     color: var(--muted);
     transition: background-color 0.15s ease, color 0.15s ease;
@@ -81,15 +81,15 @@
 
 .sidebar-footer {
     display: grid;
-    gap: 16px;
+    gap: calc(16px * var(--app-density));
     margin-top: auto;
 }
 
 .user-chip {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 16px;
+    gap: calc(12px * var(--app-density));
+    padding: calc(16px * var(--app-density));
     border: 1px solid var(--border);
     background: var(--surface);
     border-radius: var(--radius-small);
@@ -118,7 +118,7 @@
 
 .user-chip__meta {
     display: grid;
-    gap: 4px;
+    gap: calc(4px * var(--app-density));
     min-width: 0;
 }
 
@@ -142,15 +142,15 @@
 .content-shell {
     margin-left: var(--sidebar-width);
     min-height: 100vh;
-    padding: 32px 40px;
+    padding: calc(32px * var(--app-density)) calc(40px * var(--app-density));
 }
 
 .content-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    gap: 24px;
-    margin: 0 auto 32px;
+    gap: calc(24px * var(--app-density));
+    margin: 0 auto calc(32px * var(--app-density));
     max-width: var(--content-width);
 }
 
@@ -161,7 +161,7 @@
 
 .content-body {
     display: grid;
-    gap: 24px;
+    gap: calc(24px * var(--app-density));
     max-width: var(--content-width);
     margin: 0 auto;
 }
@@ -171,7 +171,7 @@
         right: 0;
         width: auto;
         height: var(--mobile-header-height);
-        padding: 12px 16px;
+        padding: calc(12px * var(--app-density)) calc(16px * var(--app-density));
         border-right: 0;
         border-bottom: 1px solid var(--border);
         overflow: visible;
@@ -182,15 +182,11 @@
         display: grid;
         grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
         align-items: center;
-        gap: 12px;
+        gap: calc(12px * var(--app-density));
     }
 
     .brand {
-        gap: 10px;
-    }
-
-    .brand__logo {
-        width: 48px;
+        gap: calc(4px * var(--app-density));
     }
 
     .brand-copy {
@@ -203,9 +199,9 @@
         display: inline-flex;
         flex-direction: column;
         justify-content: center;
-        gap: 4px;
-        width: 44px;
-        height: 44px;
+        gap: calc(4px * var(--app-density));
+        width: calc(44px * var(--app-density));
+        height: calc(44px * var(--app-density));
         padding: 0;
         border: 1px solid var(--border);
         border-radius: 50%;
@@ -216,7 +212,7 @@
 
     .sidebar-toggle span {
         display: block;
-        width: 18px;
+        width: calc(18px * var(--app-density));
         height: 2px;
         margin: 0 auto;
         background: var(--text);
@@ -226,29 +222,29 @@
     .user-chip--header {
         display: inline-flex;
         justify-self: end;
-        padding: 8px 12px;
+        padding: calc(8px * var(--app-density)) calc(12px * var(--app-density));
         min-width: 0;
         max-width: 100%;
     }
 
     .user-chip--header .user-chip__avatar {
-        width: 32px;
-        height: 32px;
+        width: calc(32px * var(--app-density));
+        height: calc(32px * var(--app-density));
     }
 
     .sidebar-menu {
         position: absolute;
-        top: calc(100% + 12px);
+        top: calc(100% + calc(12px * var(--app-density)));
         left: 50%;
-        width: min(320px, calc(100vw - 32px));
-        max-height: calc(100vh - var(--mobile-header-height) - 24px);
+        width: min(calc(320px * var(--app-density)), calc(100vw - calc(32px * var(--app-density))));
+        max-height: calc(100vh - var(--mobile-header-height) - calc(24px * var(--app-density)));
         margin-top: 0;
-        padding: 18px;
+        padding: calc(18px * var(--app-density));
         border: 1px solid var(--border);
         border-radius: var(--radius);
         background: var(--surface);
         box-shadow: var(--shadow);
-        transform: translate(-50%, -8px);
+        transform: translate(-50%, calc(-8px * var(--app-density)));
         opacity: 0;
         visibility: hidden;
         pointer-events: none;
@@ -277,7 +273,7 @@
 
     .content-shell {
         margin-left: 0;
-        padding: calc(var(--mobile-header-height) + 24px) 24px 48px;
+        padding: calc(var(--mobile-header-height) + calc(24px * var(--app-density))) calc(24px * var(--app-density)) calc(48px * var(--app-density));
     }
 }
 
@@ -289,11 +285,7 @@
 
 @media (max-width: 720px) {
     .brand {
-        gap: 8px;
-    }
-
-    .brand__logo {
-        width: 40px;
+        gap: calc(2px * var(--app-density));
     }
 
     .brand-copy {
@@ -302,7 +294,7 @@
     }
 
     .content-shell {
-        padding: 24px 16px 48px;
-        padding-top: calc(var(--mobile-header-height) + 20px);
+        padding: calc(24px * var(--app-density)) calc(16px * var(--app-density)) calc(48px * var(--app-density));
+        padding-top: calc(var(--mobile-header-height) + calc(20px * var(--app-density)));
     }
 }

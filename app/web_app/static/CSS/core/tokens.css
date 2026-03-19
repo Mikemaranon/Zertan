@@ -16,4 +16,22 @@
     --sidebar-width: 272px;
     --mobile-header-height: 76px;
     --font: "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    --app-font-scale: 1;
+    --app-density: 1;
+}
+
+@media (max-width: 1024px) {
+    :root {
+        --app-font-scale: 0.9;
+        --app-density: 0.95;
+        --mobile-header-height: 72px;
+    }
+}
+
+@media (max-width: 720px) {
+    :root {
+        --app-font-scale: 0.75;
+        --app-density: 0.9;
+        --mobile-header-height: 64px;
+    }
 }

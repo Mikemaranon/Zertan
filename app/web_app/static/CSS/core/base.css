@@ -1,5 +1,5 @@
 .panel {
-    padding: 24px;
+    padding: calc(24px * var(--app-density));
     border-radius: var(--radius);
     background: var(--surface);
     border: 1px solid var(--border);
@@ -8,7 +8,7 @@
 
 .grid {
     display: grid;
-    gap: 24px;
+    gap: calc(24px * var(--app-density));
 }
 
 .grid--two {
@@ -27,7 +27,7 @@
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    gap: 16px;
+    gap: calc(16px * var(--app-density));
 }
 
 .section-heading > :first-child {
@@ -55,7 +55,7 @@
 }
 
 .panel > .section-heading .muted {
-    margin-bottom: 15px;
+    margin-bottom: calc(15px * var(--app-density));
 }
 
 .stack-gap > .section-heading .muted {
@@ -79,13 +79,13 @@
 .list-stack,
 .form-stack {
     display: grid;
-    gap: 16px;
+    gap: calc(16px * var(--app-density));
 }
 
 .toolbar {
     display: flex;
     flex-wrap: wrap;
-    gap: 12px;
+    gap: calc(12px * var(--app-density));
     align-items: center;
 }
 
@@ -93,12 +93,12 @@
 .meta-row {
     display: flex;
     flex-wrap: wrap;
-    gap: 12px;
+    gap: calc(12px * var(--app-density));
     align-items: center;
 }
 
 .empty-state {
-    padding: 24px;
+    padding: calc(24px * var(--app-density));
     border: 1px dashed var(--border);
     border-radius: var(--radius-small);
     color: var(--muted);

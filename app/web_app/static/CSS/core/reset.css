@@ -8,6 +8,10 @@ body {
     min-height: 100%;
 }
 
+html {
+    font-size: calc(16px * var(--app-font-scale));
+}
+
 body {
     font-family: var(--font);
     background: linear-gradient(180deg, #f8fbff 0%, var(--bg) 100%);
