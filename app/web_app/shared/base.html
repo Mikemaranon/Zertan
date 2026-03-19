@@ -29,6 +29,8 @@
             {% set avatar_url = "/media/" ~ current_user.avatar_path.replace("web_server/data_m/assets/", "") %}
         {% endif %}
     {% endif %}
+    {% set can_manage = current_user and current_user.role in ["reviewer", "examiner", "administrator"] %}
+    {% set can_admin = current_user and current_user.role == "administrator" %}
     <div class="app-shell">
         <aside class="sidebar">
             <div class="sidebar-topbar">
@@ -66,19 +68,30 @@
             </div>
             <div id="sidebar-menu" class="sidebar-menu">
                 <nav class="sidebar-nav">
-                    <a href="/dashboard">Dashboard</a>
-                    {% if feature_access.get("global_stats_page") %}
-                    <a href="/global-stats">Global Stats</a>
-                    {% endif %}
-                    <a href="/catalog">Exam Catalog</a>
-                    {% if feature_access.get("live_exams_page") %}
-                    <a href="/live-exams">Live Exams</a>
-                    {% endif %}
-                    {% if current_user and current_user.role in ["reviewer", "examiner", "administrator"] %}
-                    <a href="/management/exams">Management</a>
-                    {% endif %}
-                    {% if current_user and current_user.role == "administrator" %}
-                    <a href="/admin">Admin</a>
+                    <div class="sidebar-nav__section">
+                        <p class="sidebar-nav__title">stats</p>
+                        <a href="/dashboard">Dashboard</a>
+                        {% if feature_access.get("global_stats_page") %}
+                        <a href="/global-stats">Global Stats</a>
+                        {% endif %}
+                    </div>
+                    <div class="sidebar-nav__section">
+                        <p class="sidebar-nav__title">exams</p>
+                        <a href="/catalog">Exam Catalog</a>
+                        {% if feature_access.get("live_exams_page") %}
+                        <a href="/live-exams">Live Exams</a>
+                        {% endif %}
+                    </div>
+                    {% if can_manage or can_admin %}
+                    <div class="sidebar-nav__section">
+                        <p class="sidebar-nav__title">admin</p>
+                        {% if can_manage %}
+                        <a href="/management/exams">Management</a>
+                        {% endif %}
+                        {% if can_admin %}
+                        <a href="/admin">Admin Panel</a>
+                        {% endif %}
+                    </div>
                     {% endif %}
                 </nav>
                 <div class="sidebar-footer">

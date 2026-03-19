@@ -7,8 +7,8 @@
 <section class="panel stack-gap">
     <div class="section-heading">
         <div>
-            <h2>Domain-wide statistics</h2>
-            <p class="muted">Compare formal exam activity, answer quality, and content difficulty across the full workspace.</p>
+            <h2>Workspace statistics</h2>
+            <p class="muted">Compare formal exam activity, answer quality, and content difficulty across the visible workspace scope.</p>
         </div>
         <a class="button button--secondary" href="/dashboard">Open personal dashboard</a>
     </div>
@@ -19,7 +19,7 @@
     <div class="section-heading">
         <div>
             <h2>Global user comparison</h2>
-            <p class="muted">Compare non-administrator users through grouped KPI bars, and narrow the comparison to specific user groups when needed.</p>
+            <p class="muted">Compare non-administrator users through grouped KPI bars, and narrow the comparison to a specific group when needed.</p>
         </div>
     </div>
     <div class="global-comparison-layout">
@@ -29,7 +29,7 @@
                 <select id="global-stats-group-select" aria-describedby="global-stats-group-hint"></select>
             </label>
             <div class="global-comparison-note">
-                <p id="global-stats-group-hint" class="muted">Global stats currently include every available user in the domain.</p>
+                <p id="global-stats-group-hint" class="muted">Global stats are limited to the currently visible workspace scope.</p>
                 <p class="muted">Only non-administrator users are represented in the comparison chart.</p>
             </div>
         </div>
@@ -49,7 +49,7 @@
         <div class="section-heading">
             <div>
                 <h2>By question type</h2>
-                <p class="muted">Where the domain performs well and where accuracy drops.</p>
+                <p class="muted">Where the visible workspace performs well and where accuracy drops.</p>
             </div>
         </div>
         <div id="global-stats-types" class="list-stack global-stats-scroll-panel"></div>
@@ -79,7 +79,7 @@
     <div class="section-heading">
         <div>
             <h2>Hardest tags</h2>
-            <p class="muted">Tag-level friction points across the full question bank.</p>
+            <p class="muted">Tag-level friction points across the visible workspace scope.</p>
         </div>
     </div>
     <div id="global-stats-tags" class="grid grid--cards global-stats-scroll-panel global-stats-scroll-panel--cards"></div>

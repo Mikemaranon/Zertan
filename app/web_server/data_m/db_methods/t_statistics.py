@@ -5,6 +5,45 @@ class StatisticsTable:
     def __init__(self, db):
         self.db = db
 
+    def _normalize_group_ids(self, group_ids):
+        if group_ids is None:
+            return None
+        if isinstance(group_ids, (list, tuple, set)):
+            values = group_ids
+        else:
+            values = [group_ids]
+        normalized = []
+        seen = set()
+        for value in values:
+            try:
+                group_id = int(value)
+            except (TypeError, ValueError):
+                continue
+            if group_id < 1 or group_id in seen:
+                continue
+            seen.add(group_id)
+            normalized.append(group_id)
+        return normalized
+
+    def _build_group_scope_clause(self, user_column, group_ids, prefix="AND"):
+        normalized_group_ids = self._normalize_group_ids(group_ids)
+        if normalized_group_ids is None:
+            return "", []
+        if not normalized_group_ids:
+            return f" {prefix} 1 = 0 ", []
+        placeholders = ",".join("?" for _ in normalized_group_ids)
+        return (
+            f"""
+                {prefix} EXISTS (
+                    SELECT 1
+                    FROM user_group_memberships gm
+                    WHERE gm.user_id = {user_column}
+                    AND gm.group_id IN ({placeholders})
+                )
+            """,
+            normalized_group_ids,
+        )
+
     def user_overview(self, user_id):
         _, totals = self.db.execute(
             """
@@ -111,9 +150,9 @@ class StatisticsTable:
             "average_completion_time": int(row["average_completion_time"] or 0),
         }
 
-    def hardest_questions(self, limit=5):
-        _, rows = self.db.execute(
-            """
+    def hardest_questions(self, limit=5, group_ids=None):
+        params = []
+        query = """
             SELECT
                 q.id,
                 q.title,
@@ -126,14 +165,18 @@ class StatisticsTable:
             JOIN exams e ON e.id = q.exam_id
             JOIN exam_attempts a ON a.id = ans.attempt_id
             WHERE a.status = 'submitted'
+        """
+        scope_clause, scope_params = self._build_group_scope_clause("a.user_id", group_ids, prefix="AND")
+        query += scope_clause
+        params.extend(scope_params)
+        query += """
             GROUP BY q.id
             HAVING COUNT(ans.id) > 0
             ORDER BY success_rate ASC, answers_count DESC
             LIMIT ?
-            """,
-            (limit,),
-            fetchall=True,
-        )
+        """
+        params.append(limit)
+        _, rows = self.db.execute(query, tuple(params), fetchall=True)
         return [
             {
                 "question_id": row["id"],
@@ -146,7 +189,7 @@ class StatisticsTable:
             for row in rows
         ]
 
-    def hardest_topics(self, limit=5, group_id=None):
+    def hardest_topics(self, limit=5, group_ids=None):
         params = []
         query = """
             SELECT
@@ -160,16 +203,9 @@ class StatisticsTable:
             JOIN exam_attempts a ON a.id = ans.attempt_id
             WHERE a.status = 'submitted'
         """
-        if group_id is not None:
-            query += """
-                AND EXISTS (
-                    SELECT 1
-                    FROM user_group_memberships gm
-                    WHERE gm.user_id = a.user_id
-                    AND gm.group_id = ?
-                )
-            """
-            params.append(group_id)
+        scope_clause, scope_params = self._build_group_scope_clause("a.user_id", group_ids, prefix="AND")
+        query += scope_clause
+        params.extend(scope_params)
         query += """
             GROUP BY tp.id
             HAVING COUNT(ans.id) > 0
@@ -187,7 +223,7 @@ class StatisticsTable:
             for row in rows
         ]
 
-    def hardest_tags(self, limit=5, group_id=None):
+    def hardest_tags(self, limit=5, group_ids=None):
         params = []
         query = """
             SELECT
@@ -201,16 +237,9 @@ class StatisticsTable:
             JOIN exam_attempts a ON a.id = ans.attempt_id
             WHERE a.status = 'submitted'
         """
-        if group_id is not None:
-            query += """
-                AND EXISTS (
-                    SELECT 1
-                    FROM user_group_memberships gm
-                    WHERE gm.user_id = a.user_id
-                    AND gm.group_id = ?
-                )
-            """
-            params.append(group_id)
+        scope_clause, scope_params = self._build_group_scope_clause("a.user_id", group_ids, prefix="AND")
+        query += scope_clause
+        params.extend(scope_params)
         query += """
             GROUP BY tg.id
             HAVING COUNT(ans.id) > 0
@@ -228,7 +257,7 @@ class StatisticsTable:
             for row in rows
         ]
 
-    def platform_summary(self, group_id=None):
+    def platform_summary(self, group_ids=None):
         user_params = []
         user_query = """
             SELECT
@@ -236,16 +265,9 @@ class StatisticsTable:
                 SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) AS active_users
             FROM users
         """
-        if group_id is not None:
-            user_query += """
-                WHERE EXISTS (
-                    SELECT 1
-                    FROM user_group_memberships gm
-                    WHERE gm.user_id = users.id
-                    AND gm.group_id = ?
-                )
-            """
-            user_params.append(group_id)
+        user_scope_clause, user_scope_params = self._build_group_scope_clause("users.id", group_ids, prefix="WHERE")
+        user_query += user_scope_clause
+        user_params.extend(user_scope_params)
         _, users = self.db.execute(user_query, tuple(user_params), fetchone=True)
 
         attempt_params = []
@@ -261,16 +283,13 @@ class StatisticsTable:
             FROM exam_attempts
             WHERE status = 'submitted'
         """
-        if group_id is not None:
-            attempt_query += """
-                AND EXISTS (
-                    SELECT 1
-                    FROM user_group_memberships gm
-                    WHERE gm.user_id = exam_attempts.user_id
-                    AND gm.group_id = ?
-                )
-            """
-            attempt_params.append(group_id)
+        attempt_scope_clause, attempt_scope_params = self._build_group_scope_clause(
+            "exam_attempts.user_id",
+            group_ids,
+            prefix="AND",
+        )
+        attempt_query += attempt_scope_clause
+        attempt_params.extend(attempt_scope_params)
         _, attempts = self.db.execute(attempt_query, tuple(attempt_params), fetchone=True)
         total_questions = attempts["total_questions_answered"] or 0
         total_correct = attempts["total_correct"] or 0
@@ -288,7 +307,7 @@ class StatisticsTable:
             "average_questions_per_attempt": round(attempts["average_questions_per_attempt"] or 0, 1),
         }
 
-    def platform_user_comparison(self, group_id=None):
+    def platform_user_comparison(self, group_ids=None):
         params = []
         query = """
             SELECT
@@ -305,19 +324,15 @@ class StatisticsTable:
                 COALESCE(AVG(a.score_percent), 0) AS average_score,
                 COALESCE(AVG(a.duration_seconds), 0) AS average_completion_time
             FROM users u
-        """
-        if group_id is not None:
-            query += """
-                JOIN user_group_memberships gm
-                    ON gm.user_id = u.id
-                    AND gm.group_id = ?
-            """
-            params.append(group_id)
-        query += """
             LEFT JOIN exam_attempts a
                 ON a.user_id = u.id
                 AND a.status = 'submitted'
             WHERE lower(COALESCE(u.role, 'user')) != 'administrator'
+        """
+        scope_clause, scope_params = self._build_group_scope_clause("u.id", group_ids, prefix="AND")
+        query += scope_clause
+        params.extend(scope_params)
+        query += """
             GROUP BY u.id
             ORDER BY submitted_attempts DESC, average_score DESC, lower(u.display_name), lower(u.login_name)
         """
@@ -345,7 +360,7 @@ class StatisticsTable:
             )
         return payload
 
-    def platform_success_by_exam(self, group_id=None):
+    def platform_success_by_exam(self, group_ids=None):
         params = []
         query = """
             SELECT
@@ -361,16 +376,9 @@ class StatisticsTable:
                 ON a.exam_id = e.id
                 AND a.status = 'submitted'
         """
-        if group_id is not None:
-            query += """
-                AND EXISTS (
-                    SELECT 1
-                    FROM user_group_memberships gm
-                    WHERE gm.user_id = a.user_id
-                    AND gm.group_id = ?
-                )
-            """
-            params.append(group_id)
+        scope_clause, scope_params = self._build_group_scope_clause("a.user_id", group_ids, prefix="AND")
+        query += scope_clause
+        params.extend(scope_params)
         query += """
             GROUP BY e.id
             ORDER BY attempts DESC, lower(e.code), lower(e.title)
@@ -389,7 +397,7 @@ class StatisticsTable:
             for row in rows
         ]
 
-    def platform_success_by_question_type(self, group_id=None):
+    def platform_success_by_question_type(self, group_ids=None):
         params = []
         query = """
             SELECT
@@ -406,16 +414,9 @@ class StatisticsTable:
             JOIN exam_attempts a ON a.id = ans.attempt_id
             WHERE a.status = 'submitted'
         """
-        if group_id is not None:
-            query += """
-                AND EXISTS (
-                    SELECT 1
-                    FROM user_group_memberships gm
-                    WHERE gm.user_id = a.user_id
-                    AND gm.group_id = ?
-                )
-            """
-            params.append(group_id)
+        scope_clause, scope_params = self._build_group_scope_clause("a.user_id", group_ids, prefix="AND")
+        query += scope_clause
+        params.extend(scope_params)
         query += """
             GROUP BY aq_snapshot.type
             ORDER BY total_answers DESC, aq_snapshot.type
@@ -430,7 +431,7 @@ class StatisticsTable:
             for row in rows
         ]
 
-    def platform_activity_by_week(self, limit=8, group_id=None):
+    def platform_activity_by_week(self, limit=8, group_ids=None):
         params = []
         query = """
             SELECT
@@ -440,16 +441,9 @@ class StatisticsTable:
             FROM exam_attempts
             WHERE status = 'submitted'
         """
-        if group_id is not None:
-            query += """
-                AND EXISTS (
-                    SELECT 1
-                    FROM user_group_memberships gm
-                    WHERE gm.user_id = exam_attempts.user_id
-                    AND gm.group_id = ?
-                )
-            """
-            params.append(group_id)
+        scope_clause, scope_params = self._build_group_scope_clause("exam_attempts.user_id", group_ids, prefix="AND")
+        query += scope_clause
+        params.extend(scope_params)
         query += """
             GROUP BY week_start
             ORDER BY week_start DESC
@@ -468,14 +462,14 @@ class StatisticsTable:
         payload.reverse()
         return payload
 
-    def platform_overview(self, comparison_group_id=None):
+    def platform_overview(self, group_ids=None):
         return {
-            "summary": self.platform_summary(comparison_group_id),
-            "users": self.platform_user_comparison(comparison_group_id),
-            "by_exam": self.platform_success_by_exam(comparison_group_id),
-            "by_question_type": self.platform_success_by_question_type(comparison_group_id),
-            "activity_by_week": self.platform_activity_by_week(group_id=comparison_group_id),
-            "hardest_questions": self.hardest_questions(),
-            "hardest_topics": self.hardest_topics(group_id=comparison_group_id),
-            "hardest_tags": self.hardest_tags(group_id=comparison_group_id),
+            "summary": self.platform_summary(group_ids),
+            "users": self.platform_user_comparison(group_ids),
+            "by_exam": self.platform_success_by_exam(group_ids),
+            "by_question_type": self.platform_success_by_question_type(group_ids),
+            "activity_by_week": self.platform_activity_by_week(group_ids=group_ids),
+            "hardest_questions": self.hardest_questions(group_ids=group_ids),
+            "hardest_topics": self.hardest_topics(group_ids=group_ids),
+            "hardest_tags": self.hardest_tags(group_ids=group_ids),
         }

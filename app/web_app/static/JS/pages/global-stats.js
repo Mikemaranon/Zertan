@@ -68,6 +68,9 @@ export async function initGlobalStatsPage() {
         availableGroups: data.comparison_groups || [],
         users: filterComparableUsers(data.platform?.users || []),
     };
+    userComparisonState.hasScope = userComparisonState.currentUserRole === "administrator"
+        || userComparisonState.availableGroups.length > 0
+        || userComparisonState.selectedGroupId !== null;
     const comparisonControls = ensureUserComparisonControls(usersContainer);
 
     await bindUserComparisonEvents(
@@ -111,7 +114,7 @@ function ensureUserComparisonControls(usersContainer) {
                     <select id="global-stats-group-select" aria-describedby="global-stats-group-hint"></select>
                 </label>
                 <div class="global-comparison-note">
-                    <p id="global-stats-group-hint" class="muted">Global stats currently include every available user in the domain.</p>
+                    <p id="global-stats-group-hint" class="muted">Global stats are limited to the currently visible workspace scope.</p>
                     <p class="muted">Only non-administrator users are represented in the comparison chart.</p>
                 </div>
             </div>
@@ -172,6 +175,9 @@ async function bindUserComparisonEvents(chartContainer, togglesContainer, groupS
                 state.selectedGroupId = data.selected_group_id ? Number(data.selected_group_id) : null;
                 state.availableGroups = data.comparison_groups || state.availableGroups;
                 state.users = filterComparableUsers(data.platform?.users || []);
+                state.hasScope = state.currentUserRole === "administrator"
+                    || state.availableGroups.length > 0
+                    || state.selectedGroupId !== null;
                 populateGroupSelect(groupSelect, groupHint, state.currentUserRole, state.availableGroups, state.selectedGroupId);
                 renderPlatformPanels(pageNodes, data.platform || {}, chartContainer, togglesContainer, state);
             } catch (error) {
@@ -189,6 +195,11 @@ async function bindUserComparisonEvents(chartContainer, togglesContainer, groupS
 }
 
 function renderPlatformPanels(pageNodes, platform, usersContainer, togglesContainer, userComparisonState) {
+    if (!userComparisonState.hasScope) {
+        renderNoScopePanels(pageNodes, usersContainer, togglesContainer);
+        return;
+    }
+
     const summary = platform.summary || {};
     pageNodes.kpiContainer.innerHTML = [
         kpiCard("Active users", `${Number(summary.active_users || 0)} / ${Number(summary.total_users || 0)}`),
@@ -209,7 +220,15 @@ function populateGroupSelect(select, hintNode, currentUserRole, groups, selected
     if (!select || !hintNode) {
         return;
     }
-    const allLabel = currentUserRole === "administrator" ? "All domain users" : "All visible users";
+    if (currentUserRole !== "administrator" && !(groups || []).length) {
+        select.innerHTML = `<option value="">No groups available</option>`;
+        select.value = "";
+        select.disabled = true;
+        updateGroupHint(hintNode, currentUserRole, select);
+        return;
+    }
+
+    const allLabel = currentUserRole === "administrator" ? "All domain users" : "All my groups";
     const options = [{ value: "", label: allLabel }, ...(groups || []).map((group) => ({
         value: String(group.id),
         label: group.name,
@@ -222,6 +241,7 @@ function populateGroupSelect(select, hintNode, currentUserRole, groups, selected
         )
         .join("");
     select.value = selectedGroupId ? String(selectedGroupId) : "";
+    select.disabled = false;
     updateGroupHint(hintNode, currentUserRole, select);
 }
 
@@ -234,14 +254,30 @@ function updateGroupHint(hintNode, currentUserRole, select, { tone = "default", 
         hintNode.dataset.tone = tone;
         return;
     }
+    if (currentUserRole !== "administrator" && select.options.length === 1 && !select.value) {
+        hintNode.textContent = "You do not belong to any group, so no global comparison data is available.";
+        hintNode.dataset.tone = tone;
+        return;
+    }
     const selectedLabel = select.options[select.selectedIndex]?.textContent || "Current selection";
     const scopeMessage = select.value
         ? `Global stats are filtered to "${selectedLabel}".`
         : currentUserRole === "administrator"
             ? "Global stats currently include every available user in the domain."
-            : "Global stats currently include every available user visible on this workspace.";
+            : "Global stats currently include users from the groups you belong to.";
     hintNode.textContent = scopeMessage;
     hintNode.dataset.tone = tone;
+}
+
+function renderNoScopePanels(pageNodes, usersContainer, togglesContainer) {
+    const message = "You do not belong to any group, so no global statistics are available.";
+    pageNodes.kpiContainer.innerHTML = `<div class="empty-state">${escapeHtml(message)}</div>`;
+    usersContainer.innerHTML = `<div class="empty-state">${escapeHtml(message)}</div>`;
+    togglesContainer.innerHTML = "";
+    pageNodes.examContainer.innerHTML = `<div class="empty-state">${escapeHtml(message)}</div>`;
+    pageNodes.typeContainer.innerHTML = `<div class="empty-state">${escapeHtml(message)}</div>`;
+    pageNodes.topicContainer.innerHTML = `<div class="empty-state">${escapeHtml(message)}</div>`;
+    pageNodes.tagContainer.innerHTML = `<div class="empty-state">${escapeHtml(message)}</div>`;
 }
 
 function renderUserComparison(container, togglesContainer, state) {

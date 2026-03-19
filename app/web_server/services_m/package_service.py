@@ -129,86 +129,124 @@ class PackageService:
             raise ValueError("Exam package is empty.")
 
         root_folder = None
-        file_entries = {}
-        directory_entries = set()
-        casefold_entries = set()
+        roots = {}
 
         for info in members:
             entry_name = self._normalize_archive_name(info.filename)
             parts = entry_name.split("/")
-            if any(part in self.IGNORED_ARCHIVE_NAMES or part.startswith(".") for part in parts):
-                raise ValueError("Exam packages cannot include hidden system files such as __MACOSX or .DS_Store.")
+            if any(
+                part in self.IGNORED_ARCHIVE_NAMES
+                or part.startswith(".")
+                or part.startswith("._")
+                for part in parts
+            ):
+                continue
 
-            if root_folder is None:
-                root_folder = parts[0]
-            elif parts[0] != root_folder:
-                raise ValueError("Exam packages must contain exactly one top-level folder.")
+            root_name = parts[0]
+            root_data = roots.setdefault(
+                root_name,
+                {
+                    "file_entries": {},
+                    "directory_entries": set(),
+                    "casefold_entries": set(),
+                    "has_relevant_structure": False,
+                },
+            )
 
             if len(parts) == 1:
-                if not info.is_dir():
-                    raise ValueError("Exam packages must store files inside the top-level exam package folder.")
-                directory_entries.add(parts[0])
+                if info.is_dir():
+                    root_data["directory_entries"].add(parts[0])
                 continue
 
             relative_path = "/".join(parts[1:])
             relative_casefold = relative_path.casefold()
             if info.is_dir():
-                directory_entries.add(relative_path.rstrip("/"))
+                if relative_path in {"questions", "assets"}:
+                    root_data["has_relevant_structure"] = True
+                    root_data["directory_entries"].add(relative_path.rstrip("/"))
                 continue
 
-            if relative_casefold in casefold_entries:
+            is_exam_file = relative_path == "exam.json"
+            is_question_file = (
+                relative_path.startswith("questions/")
+                and relative_path.count("/") == 1
+                and Path(relative_path).suffix.lower() == ".json"
+            )
+            is_asset_file = (
+                relative_path.startswith("assets/")
+                and relative_path.count("/") == 1
+                and Path(relative_path).suffix.lower() in self.ALLOWED_ASSET_EXTENSIONS
+            )
+            if not any((is_exam_file, is_question_file, is_asset_file)):
+                continue
+
+            root_data["has_relevant_structure"] = True
+            if relative_casefold in root_data["casefold_entries"]:
                 raise ValueError(f"Exam package contains duplicate entries for {relative_path}.")
-            casefold_entries.add(relative_casefold)
+            root_data["casefold_entries"].add(relative_casefold)
+            root_data["file_entries"][relative_path] = info
 
-            extension = Path(relative_path).suffix.lower()
-            if extension not in self.ALLOWED_ARCHIVE_EXTENSIONS:
-                raise ValueError(f"Unsupported file type in package: {relative_path}")
-            file_entries[relative_path] = info
+        relevant_roots = {
+            name: data
+            for name, data in roots.items()
+            if data["has_relevant_structure"] or data["file_entries"]
+        }
+        if not relevant_roots:
+            raise ValueError("Exam package must contain a valid top-level folder with exam.json and questions/*.json.")
 
-        if root_folder is None:
-            raise ValueError("Exam package is empty.")
-        if root_folder != "exam-package":
-            raise ValueError("Exam packages must use a single top-level exam-package/ folder.")
+        selected_root = None
+        selected_data = None
+        for name, data in relevant_roots.items():
+            file_entries = data["file_entries"]
+            question_files = {
+                path: info
+                for path, info in file_entries.items()
+                if path.startswith("questions/") and path.count("/") == 1
+            }
+            if file_entries.get("exam.json") and question_files:
+                selected_root = name
+                selected_data = data
+                break
+
+        if selected_data is None:
+            selected_root, selected_data = max(
+                relevant_roots.items(),
+                key=lambda item: (
+                    1 if item[1]["file_entries"].get("exam.json") else 0,
+                    sum(
+                        1
+                        for path in item[1]["file_entries"]
+                        if path.startswith("questions/") and path.count("/") == 1
+                    ),
+                    len(item[1]["file_entries"]),
+                ),
+            )
+
+        root_folder = selected_root
+        file_entries = selected_data["file_entries"]
+        directory_entries = selected_data["directory_entries"]
 
         exam_info = file_entries.get("exam.json")
         if not exam_info:
-            raise ValueError("Exam package must include exam-package/exam.json.")
+            raise ValueError("Exam package must include an exam.json file in the package root.")
 
         questions_dir_present = "questions" in directory_entries or any(path.startswith("questions/") for path in file_entries)
         if not questions_dir_present:
-            raise ValueError("Exam package must include a questions/ directory.")
+            raise ValueError("Exam package must include a questions/ directory in the package root.")
 
         question_files = {
             path: info
             for path, info in file_entries.items()
             if path.startswith("questions/") and path.count("/") == 1
         }
-        invalid_question_paths = [
-            path
-            for path in file_entries
-            if path.startswith("questions/") and path not in question_files
-        ]
-        if invalid_question_paths:
-            raise ValueError("Question JSON files must be stored directly inside questions/.")
         if not question_files:
             raise ValueError("Exam package must include at least one questions/*.json file.")
-        if any(Path(path).suffix.lower() != ".json" for path in question_files):
-            raise ValueError("questions/ can only contain .json files.")
 
         asset_files = {
             path: info
             for path, info in file_entries.items()
             if path.startswith("assets/") and path.count("/") == 1
         }
-        invalid_asset_paths = [
-            path
-            for path in file_entries
-            if path.startswith("assets/") and path not in asset_files
-        ]
-        if invalid_asset_paths:
-            raise ValueError("Asset files must be stored directly inside assets/.")
-        if any(Path(path).suffix.lower() not in self.ALLOWED_ASSET_EXTENSIONS for path in asset_files):
-            raise ValueError("assets/ can only contain .png, .jpg, or .svg files.")
 
         exam_payload = self._normalize_exam_payload(self._load_json_document(archive, exam_info, "exam.json"))
 
