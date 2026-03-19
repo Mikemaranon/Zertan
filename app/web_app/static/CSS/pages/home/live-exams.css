@@ -164,7 +164,12 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.live-exam-user-list {
+.live-exam-assignment-picker {
+    display: grid;
+    gap: 12px;
+}
+
+.live-exam-picker-results {
     display: grid;
     gap: 12px;
     max-height: 280px;
@@ -173,26 +178,52 @@
     align-content: flex-start;
 }
 
-.live-exam-user-card {
+.admin-picker-results {
+    display: grid;
+    gap: 10px;
+    max-height: 260px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.admin-picker-result {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
-    gap: 16px;
+    gap: 14px;
     padding: 14px 16px;
     border: 1px solid var(--border);
     border-radius: var(--radius-small);
-    background: var(--surface-soft);
+    background: rgba(255, 255, 255, 0.88);
 }
 
-.live-exam-user-card p {
-    margin: 4px 0 0;
+.admin-picker-result p,
+.admin-picker-result strong {
+    margin: 0;
 }
 
-.live-exam-user-card__meta {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
+.live-exam-selection-box {
+    gap: 12px;
+}
+
+.live-exam-selection-box__chips {
+    min-height: 52px;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-small);
+    background: rgba(237, 243, 249, 0.58);
+}
+
+.selection-chip[data-group="group"] .selection-chip__group {
+    color: #2f7fd8;
+}
+
+.selection-chip[data-group="user"] .selection-chip__group {
+    color: #5482b4;
+}
+
+.selection-chip[data-group="excluded-user"] .selection-chip__group {
+    color: #be4d4d;
 }
 
 @media (max-width: 1024px) {

@@ -21,14 +21,16 @@ class LiveExamService:
         question_count = int(payload.get("question_count") or 0)
         time_limit_minutes = self._normalize_time_limit(payload.get("time_limit_minutes"))
         criteria = self._normalize_criteria(payload)
-        user_ids = self._normalize_user_ids(payload.get("user_ids") or [])
+        direct_user_ids = self._normalize_user_ids(payload.get("user_ids") or payload.get("direct_user_ids") or [])
+        group_ids = self._normalize_group_ids(payload.get("group_ids") or [])
+        excluded_user_ids = self._normalize_user_ids(payload.get("excluded_user_ids") or [])
 
         if not title:
             raise ValueError("Live exam title is required.")
         if not exam_id:
             raise ValueError("Select a source exam.")
-        if not user_ids:
-            raise ValueError("Assign at least one user to the live exam.")
+        if not direct_user_ids and not group_ids:
+            raise ValueError("Assign at least one user or group to the live exam.")
 
         exam = self.db.exams.get(exam_id)
         if not exam:
@@ -45,14 +47,9 @@ class LiveExamService:
         if question_count > len(available_question_ids):
             raise ValueError("Question count exceeds the number of questions that match the selected criteria.")
 
-        eligible_users = []
-        for user_id in user_ids:
-            user = self.db.users.get_by_id(user_id)
-            if user and user["status"] == "active":
-                eligible_users.append(user["id"])
-        eligible_users = sorted(set(eligible_users))
+        eligible_users = self._resolve_assignment_user_ids(direct_user_ids, group_ids, excluded_user_ids)
         if not eligible_users:
-            raise ValueError("Only active users can be assigned to a live exam.")
+            raise ValueError("The selected users and groups do not produce any active assignees.")
 
         live_exam_id = self.db.live_exams.create(
             {
@@ -141,6 +138,44 @@ class LiveExamService:
             if normalized > 0:
                 user_ids.append(normalized)
         return user_ids
+
+    def _normalize_group_ids(self, values):
+        group_ids = []
+        for value in values:
+            try:
+                normalized = int(value)
+            except (TypeError, ValueError):
+                continue
+            if normalized > 0:
+                group_ids.append(normalized)
+        return group_ids
+
+    def _resolve_assignment_user_ids(self, direct_user_ids, group_ids, excluded_user_ids):
+        active_users = {
+            int(user["id"]): user
+            for user in self.db.users.all()
+            if user["status"] == "active"
+        }
+        active_groups = {
+            int(group["id"]): group
+            for group in self.db.groups.all()
+            if group["status"] == "active"
+        }
+
+        resolved_user_ids = {user_id for user_id in direct_user_ids if user_id in active_users}
+        for group_id in group_ids:
+            group = active_groups.get(group_id)
+            if not group:
+                continue
+            for member in group.get("members", []):
+                member_id = int(member["id"])
+                if member_id in active_users:
+                    resolved_user_ids.add(member_id)
+
+        resolved_user_ids.difference_update(
+            user_id for user_id in excluded_user_ids if user_id in resolved_user_ids
+        )
+        return sorted(resolved_user_ids)
 
     def _normalize_criteria(self, payload):
         return {

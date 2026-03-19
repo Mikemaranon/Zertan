@@ -15,10 +15,13 @@ export async function initLiveExamsPage() {
 function initAdministratorView(payload) {
     const openModalButton = document.getElementById("live-exam-open-modal");
     const list = document.getElementById("live-exams-admin-list");
-    const canCreate = (payload.available_exams || []).length > 0 && (payload.available_users || []).length > 0;
+    const canCreate =
+        (payload.available_exams || []).length > 0 &&
+        ((payload.available_users || []).length > 0 || (payload.available_groups || []).length > 0);
     const modal = bindLiveExamModal({
         availableExams: payload.available_exams || [],
         availableUsers: payload.available_users || [],
+        availableGroups: payload.available_groups || [],
         onCreated: async () => {
             const refreshed = await request("/api/live-exams");
             renderAdministratorList(list, refreshed.live_exams || []);
@@ -185,7 +188,7 @@ function renderAdminCard(liveExam) {
     `;
 }
 
-function bindLiveExamModal({ availableExams, availableUsers, onCreated }) {
+function bindLiveExamModal({ availableExams, availableUsers, availableGroups, onCreated }) {
     const modal = document.getElementById("live-exam-modal");
     const form = document.getElementById("live-exam-form");
     const sourceSelect = document.getElementById("live-exam-source");
@@ -218,7 +221,10 @@ function bindLiveExamModal({ availableExams, availableUsers, onCreated }) {
 
     const userPicker = createUserAssignmentField(
         document.getElementById("live-exam-users-field"),
-        availableUsers,
+        {
+            users: availableUsers,
+            groups: availableGroups,
+        },
     );
 
     sourceSelect.innerHTML = availableExams.length
@@ -325,7 +331,7 @@ function bindLiveExamModal({ availableExams, availableUsers, onCreated }) {
             random_order: randomCheckbox.checked,
             description: document.getElementById("live-exam-description").value.trim(),
             instructions: document.getElementById("live-exam-instructions").value.trim(),
-            user_ids: userPicker.getValues(),
+            ...userPicker.getPayload(),
         };
 
         try {
@@ -402,7 +408,7 @@ function bindLiveExamModal({ availableExams, availableUsers, onCreated }) {
 
     return {
         open() {
-            if (!availableExams.length || !availableUsers.length) {
+            if (!availableExams.length || (!availableUsers.length && !availableGroups.length)) {
                 return;
             }
             modal.hidden = false;
@@ -417,98 +423,352 @@ function bindLiveExamModal({ availableExams, availableUsers, onCreated }) {
     };
 }
 
-function createUserAssignmentField(container, users) {
+function createUserAssignmentField(container, { users = [], groups = [] } = {}) {
     if (!container) {
         return {
-            getValues: () => [],
+            getPayload: () => ({ user_ids: [], group_ids: [], excluded_user_ids: [] }),
             reset: () => {},
         };
     }
 
-    let selectedIds = [];
-    container.classList.add("selection-field");
-    container.innerHTML = `
-        <div class="selection-field__top">
-            <span class="selection-field__label">Assigned users</span>
-            <div class="selection-field__actions">
-                <button id="live-exam-user-add" class="button button--secondary button--small" type="button">Add user</button>
-            </div>
-        </div>
-        <select id="live-exam-users">
-            <option value="">Select a user</option>
-            ${users.map((user) => `<option value="${user.id}">${escapeHtml(user.display_name)} (${escapeHtml(user.login_name)})</option>`).join("")}
-        </select>
-        <div id="live-exam-user-list" class="live-exam-user-list"></div>
-    `;
-
-    const select = container.querySelector("#live-exam-users");
-    const addButton = container.querySelector("#live-exam-user-add");
-    const list = container.querySelector("#live-exam-user-list");
-
-    const render = () => {
-        if (!selectedIds.length) {
-            list.innerHTML = `<div class="empty-state">No users assigned yet.</div>`;
-            return;
-        }
-        list.innerHTML = selectedIds
-            .map((userId) => {
-                const user = users.find((entry) => entry.id === userId);
-                if (!user) {
-                    return "";
-                }
-                return `
-                    <article class="live-exam-user-card" data-user-id="${user.id}">
-                        <div>
-                            <strong>${escapeHtml(user.display_name)}</strong>
-                            <p class="muted">@${escapeHtml(user.login_name)}</p>
-                        </div>
-                        <div class="live-exam-user-card__meta">
-                            <span class="badge">${escapeHtml(user.role)}</span>
-                            <button class="button button--secondary button--small js-live-exam-user-remove" type="button">Remove</button>
-                        </div>
-                    </article>
-                `;
-            })
-            .join("");
+    const usersById = new Map(
+        users.map((user) => [Number(user.id), { ...user, id: Number(user.id) }])
+    );
+    const groupsById = new Map(
+        groups.map((group) => [
+            Number(group.id),
+            {
+                ...group,
+                id: Number(group.id),
+                members: (group.members || [])
+                    .map((member) => ({ ...member, id: Number(member.id) }))
+                    .filter((member) => usersById.has(member.id)),
+            },
+        ])
+    );
+    const state = {
+        directUserIds: [],
+        groupIds: [],
+        excludedUserIds: [],
     };
 
-    const addSelectedUser = () => {
-        const userId = Number(select.value);
-        if (!userId || selectedIds.includes(userId)) {
+    container.classList.add("selection-field");
+    container.innerHTML = `
+        <div class="selection-field__top live-exam-assignment-field__top">
+            <span class="selection-field__label">Assigned users and groups</span>
+        </div>
+        <div class="admin-group-picker live-exam-assignment-picker">
+            <label>
+                <span>Search users or groups</span>
+                <input id="live-exam-entity-search" type="search" placeholder="Search by login name or group">
+            </label>
+            <div id="live-exam-entity-results" class="admin-picker-results live-exam-picker-results"></div>
+        </div>
+        <div class="selection-field live-exam-selection-box">
+            <div class="selection-field__top">
+                <span class="selection-field__label">Included in exam</span>
+            </div>
+            <div id="live-exam-selection-list" class="selection-field__chips live-exam-selection-box__chips"></div>
+        </div>
+        <div class="selection-field live-exam-selection-box">
+            <div class="selection-field__top">
+                <span class="selection-field__label">Excluded from exam</span>
+            </div>
+            <div id="live-exam-exclusion-list" class="selection-field__chips live-exam-selection-box__chips"></div>
+        </div>
+    `;
+
+    const searchInput = container.querySelector("#live-exam-entity-search");
+    const results = container.querySelector("#live-exam-entity-results");
+    const selectionList = container.querySelector("#live-exam-selection-list");
+    const exclusionList = container.querySelector("#live-exam-exclusion-list");
+
+    const getSelectedGroupMemberIds = () => {
+        const memberIds = new Set();
+        for (const groupId of state.groupIds) {
+            const group = groupsById.get(Number(groupId));
+            if (!group) {
+                continue;
+            }
+            for (const member of group.members) {
+                memberIds.add(Number(member.id));
+            }
+        }
+        return memberIds;
+    };
+
+    const getGroupCoverageByUserId = () => {
+        const coverage = new Map();
+        for (const groupId of state.groupIds) {
+            const group = groupsById.get(Number(groupId));
+            if (!group) {
+                continue;
+            }
+            for (const member of group.members) {
+                const userId = Number(member.id);
+                if (!coverage.has(userId)) {
+                    coverage.set(userId, []);
+                }
+                coverage.get(userId).push(group);
+            }
+        }
+        return coverage;
+    };
+
+    const ensureUniqueIds = (values) => Array.from(new Set(values.map((value) => Number(value)).filter((value) => value > 0)));
+
+    const pruneRedundantState = () => {
+        const selectedGroupMemberIds = getSelectedGroupMemberIds();
+        state.groupIds = ensureUniqueIds(state.groupIds).filter((groupId) => groupsById.has(groupId));
+        state.directUserIds = ensureUniqueIds(state.directUserIds).filter((userId) => usersById.has(userId) && !selectedGroupMemberIds.has(userId));
+        state.excludedUserIds = ensureUniqueIds(state.excludedUserIds).filter((userId) => usersById.has(userId) && selectedGroupMemberIds.has(userId));
+    };
+
+    const renderSelectedEntities = () => {
+        const selectedGroups = state.groupIds
+            .map((groupId) => groupsById.get(Number(groupId)))
+            .filter(Boolean);
+        const selectedUsers = state.directUserIds
+            .map((userId) => usersById.get(Number(userId)))
+            .filter(Boolean);
+        const excludedUsers = state.excludedUserIds
+            .map((userId) => usersById.get(Number(userId)))
+            .filter(Boolean);
+
+        if (!selectedGroups.length && !selectedUsers.length) {
+            selectionList.innerHTML = `
+                <button class="selection-chip selection-chip--empty" type="button" tabindex="-1">
+                    No users or groups added yet
+                </button>
+            `;
+        } else {
+            selectionList.innerHTML = [
+                ...selectedGroups.map(
+                    (group) => `
+                        <button class="selection-chip" type="button" data-selection-kind="group" data-selection-id="${group.id}" data-group="group">
+                            <span class="selection-chip__group">Group</span>
+                            <span class="selection-chip__value">${escapeHtml(group.name)}</span>
+                        </button>
+                    `,
+                ),
+                ...selectedUsers.map(
+                    (user) => `
+                        <button class="selection-chip" type="button" data-selection-kind="user" data-selection-id="${user.id}" data-group="user">
+                            <span class="selection-chip__group">${escapeHtml(user.login_name)}</span>
+                            <span class="selection-chip__value">${escapeHtml(user.display_name)}</span>
+                        </button>
+                    `,
+                ),
+            ].join("");
+        }
+
+        if (!excludedUsers.length) {
+            exclusionList.innerHTML = `
+                <button class="selection-chip selection-chip--empty" type="button" tabindex="-1">
+                    No excluded users
+                </button>
+            `;
+        } else {
+            exclusionList.innerHTML = excludedUsers
+                .map(
+                    (user) => `
+                        <button class="selection-chip" type="button" data-selection-kind="excluded-user" data-selection-id="${user.id}" data-group="excluded-user">
+                            <span class="selection-chip__group">${escapeHtml(user.login_name)}</span>
+                            <span class="selection-chip__value">${escapeHtml(user.display_name)}</span>
+                        </button>
+                    `,
+                )
+                .join("");
+        }
+    };
+
+    const renderSearchResults = () => {
+        const query = searchInput.value.trim().toLowerCase();
+        if (!query) {
+            results.innerHTML = `<div class="empty-state">Type a login name or group to search available users and groups.</div>`;
             return;
         }
-        selectedIds = [...selectedIds, userId];
-        select.value = "";
+
+        const groupCoverageByUserId = getGroupCoverageByUserId();
+        const matchingUsers = users.filter((user) =>
+            String(user.login_name || "").toLowerCase().includes(query)
+        );
+        const matchingGroups = groups.filter((group) => {
+            const memberTerms = (group.members || []).flatMap((member) => [member.login_name, member.display_name]);
+            return [group.name, group.code, ...memberTerms].some((value) =>
+                String(value || "").toLowerCase().includes(query)
+            );
+        });
+
+        if (!matchingUsers.length && !matchingGroups.length) {
+            results.innerHTML = `<div class="empty-state">No users or groups match the current search.</div>`;
+            return;
+        }
+
+        results.innerHTML = [
+            ...matchingUsers.map((user) => {
+                const userId = Number(user.id);
+                const isExcluded = state.excludedUserIds.includes(userId);
+                const isDirect = state.directUserIds.includes(userId);
+                const groupCoverage = groupCoverageByUserId.get(userId) || [];
+                const isCoveredByGroup = Boolean(groupCoverage.length);
+                const isSelected = isExcluded || isDirect || isCoveredByGroup;
+                const helper = isExcluded
+                    ? `${user.display_name} · ${user.role} · Excluded from this live exam.`
+                    : isDirect
+                        ? `${user.display_name} · ${user.role} · Added individually.`
+                        : isCoveredByGroup
+                            ? `${user.display_name} · ${user.role} · Included via ${groupCoverage.map((group) => group.name).join(", ")}.`
+                            : `${user.display_name} · ${user.role}`;
+                return `
+                    <div class="admin-picker-result" data-entity-kind="user" data-entity-id="${user.id}">
+                        <div>
+                            <strong>${escapeHtml(user.login_name)}</strong>
+                            <p class="muted">${escapeHtml(helper)}</p>
+                        </div>
+                        <button
+                            class="button ${isSelected ? "button--danger js-live-exam-delete-entity" : "button--secondary js-live-exam-add-entity"} button--small"
+                            type="button"
+                            data-entity-kind="user"
+                            data-entity-id="${user.id}"
+                        >
+                            ${isSelected ? "Delete" : "Add"}
+                        </button>
+                    </div>
+                `;
+            }),
+            ...matchingGroups.map((group) => {
+                const isSelected = state.groupIds.includes(Number(group.id));
+                const memberPreview = (group.members || [])
+                    .slice(0, 3)
+                    .map((member) => `@${member.login_name}`)
+                    .join(", ");
+                const extraMembers = Math.max((group.members || []).length - 3, 0);
+                const helperParts = [`${group.member_count || (group.members || []).length} members`];
+                if (memberPreview) {
+                    helperParts.push(memberPreview + (extraMembers ? ` +${extraMembers}` : ""));
+                }
+                return `
+                    <div class="admin-picker-result" data-entity-kind="group" data-entity-id="${group.id}">
+                        <div>
+                            <strong>${escapeHtml(group.name)}</strong>
+                            <p class="muted">${escapeHtml(helperParts.join(" · "))}</p>
+                        </div>
+                        <button
+                            class="button ${isSelected ? "button--danger js-live-exam-delete-entity" : "button--secondary js-live-exam-add-entity"} button--small"
+                            type="button"
+                            data-entity-kind="group"
+                            data-entity-id="${group.id}"
+                        >
+                            ${isSelected ? "Delete" : "Add"}
+                        </button>
+                    </div>
+                `;
+            }),
+        ].join("");
+    };
+
+    const render = () => {
+        pruneRedundantState();
+        renderSelectedEntities();
+        renderSearchResults();
+    };
+
+    const addEntity = (kind, id) => {
+        const normalizedId = Number(id);
+        if (kind === "group") {
+            if (!groupsById.has(normalizedId) || state.groupIds.includes(normalizedId)) {
+                return;
+            }
+            state.groupIds = [...state.groupIds, normalizedId];
+            render();
+            return;
+        }
+        if (!usersById.has(normalizedId)) {
+            return;
+        }
+        if (state.directUserIds.includes(normalizedId)) {
+            return;
+        }
+        state.directUserIds = [...state.directUserIds, normalizedId];
         render();
     };
 
-    addButton.addEventListener("click", addSelectedUser);
-    select.addEventListener("keydown", (event) => {
-        if (event.key === "Enter") {
-            event.preventDefault();
-            addSelectedUser();
+    const deleteEntity = (kind, id) => {
+        const normalizedId = Number(id);
+        if (kind === "group") {
+            state.groupIds = state.groupIds.filter((groupId) => groupId !== normalizedId);
+            render();
+            return;
         }
-    });
-    list.addEventListener("click", (event) => {
-        const button = event.target.closest(".js-live-exam-user-remove");
+        if (state.excludedUserIds.includes(normalizedId)) {
+            state.excludedUserIds = state.excludedUserIds.filter((userId) => userId !== normalizedId);
+            render();
+            return;
+        }
+        if (state.directUserIds.includes(normalizedId)) {
+            state.directUserIds = state.directUserIds.filter((userId) => userId !== normalizedId);
+            render();
+            return;
+        }
+        if (getSelectedGroupMemberIds().has(normalizedId)) {
+            state.excludedUserIds = [...state.excludedUserIds, normalizedId];
+            render();
+        }
+    };
+
+    searchInput.addEventListener("input", renderSearchResults);
+    results.addEventListener("click", (event) => {
+        const button = event.target.closest("button[data-entity-kind][data-entity-id]");
         if (!button) {
             return;
         }
-        const card = button.closest("[data-user-id]");
-        const userId = Number(card?.dataset.userId);
-        selectedIds = selectedIds.filter((value) => value !== userId);
+        const { entityKind, entityId } = button.dataset;
+        if (button.classList.contains("js-live-exam-add-entity")) {
+            addEntity(entityKind, entityId);
+            return;
+        }
+        if (button.classList.contains("js-live-exam-delete-entity")) {
+            deleteEntity(entityKind, entityId);
+        }
+    });
+    selectionList.addEventListener("click", (event) => {
+        const chip = event.target.closest("[data-selection-kind][data-selection-id]");
+        if (!chip) {
+            return;
+        }
+        if (chip.dataset.selectionKind === "group") {
+            state.groupIds = state.groupIds.filter((groupId) => groupId !== Number(chip.dataset.selectionId));
+        } else {
+            state.directUserIds = state.directUserIds.filter((userId) => userId !== Number(chip.dataset.selectionId));
+        }
+        render();
+    });
+    exclusionList.addEventListener("click", (event) => {
+        const chip = event.target.closest('[data-selection-kind="excluded-user"][data-selection-id]');
+        if (!chip) {
+            return;
+        }
+        state.excludedUserIds = state.excludedUserIds.filter((userId) => userId !== Number(chip.dataset.selectionId));
         render();
     });
 
     render();
 
     return {
-        getValues() {
-            return [...selectedIds];
+        getPayload() {
+            pruneRedundantState();
+            return {
+                user_ids: [...state.directUserIds],
+                group_ids: [...state.groupIds],
+                excluded_user_ids: [...state.excludedUserIds],
+            };
         },
         reset() {
-            selectedIds = [];
-            select.value = "";
+            state.directUserIds = [];
+            state.groupIds = [];
+            state.excludedUserIds = [];
+            searchInput.value = "";
             render();
         },
     };

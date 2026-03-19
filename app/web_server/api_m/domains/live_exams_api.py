@@ -40,12 +40,27 @@ class LiveExamsAPI(BaseAPI):
         is_admin = self.user_manager.user_has_role(user, "administrator")
         if is_admin:
             users = [entry for entry in self.db.users.all() if entry["status"] == "active"]
+            groups = []
+            for entry in self.db.groups.all():
+                if entry["status"] != "active":
+                    continue
+                active_members = [member for member in entry.get("members", []) if member["status"] == "active"]
+                if not active_members:
+                    continue
+                groups.append(
+                    {
+                        **entry,
+                        "members": active_members,
+                        "member_count": len(active_members),
+                    }
+                )
             exams = [entry for entry in self.db.exams.list_all() if entry["question_count"] > 0]
             return self.ok(
                 {
                     "mode": "administrator",
                     "live_exams": service.list_for_admin(),
                     "available_users": users,
+                    "available_groups": groups,
                     "available_exams": exams,
                     "feature_enabled": self.feature_enabled("live_exams_page"),
                 }
