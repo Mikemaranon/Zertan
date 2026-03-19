@@ -1,11 +1,10 @@
 .pagination {
     display: flex;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     gap: 8px;
     align-items: center;
     justify-content: center;
     overflow-x: auto;
-    white-space: nowrap;
     scrollbar-width: thin;
 }
 
@@ -27,6 +26,12 @@
 .pagination .muted,
 .pagination-ellipsis {
     flex: 0 0 auto;
+}
+
+.pagination .muted {
+    flex-basis: 100%;
+    margin-top: 10px;
+    text-align: center;
 }
 
 .pagination-ellipsis {

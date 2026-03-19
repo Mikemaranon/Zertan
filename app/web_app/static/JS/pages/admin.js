@@ -1,4 +1,6 @@
 import { renderDashboardLoadingState, renderDashboardView } from "../components/dashboard-view.js";
+import { createGroupScopePicker } from "../components/group-scope-picker.js";
+import { createSearchResultsPopover } from "../components/search-results-popover.js";
 import { assetPathToUrl, escapeHtml, request } from "../core/api.js";
 
 export async function initAdminPage() {
@@ -24,6 +26,7 @@ export async function initAdminPage() {
         userForm: document.getElementById("admin-user-form"),
         userErrorNode: document.getElementById("admin-error"),
         userModalTitle: document.getElementById("admin-user-modal-title"),
+        userGroupsField: document.getElementById("admin-user-groups-field"),
         groupForm: document.getElementById("admin-group-form"),
         groupErrorNode: document.getElementById("admin-group-error"),
         groupModalTitle: document.getElementById("admin-group-modal-title"),
@@ -43,7 +46,7 @@ export async function initAdminPage() {
         backdropId: "admin-user-modal-backdrop",
         closeButtonId: "admin-user-modal-close",
         cancelButtonId: "admin-user-form-cancel",
-        onClose: () => resetUserForm(nodes),
+        onClose: () => resetUserForm(nodes, userGroupPicker),
     });
     const groupModal = bindManagedModal({
         modalId: "admin-group-modal",
@@ -70,6 +73,7 @@ export async function initAdminPage() {
         !nodes.userCreateButton ||
         !nodes.groupCreateButton ||
         !nodes.userForm ||
+        !nodes.userGroupsField ||
         !nodes.groupForm ||
         !nodes.groupMemberSearchInput ||
         !nodes.groupMemberResults ||
@@ -82,6 +86,18 @@ export async function initAdminPage() {
     ) {
         throw new Error("Admin workspace markup is incomplete. Reload the page and try again.");
     }
+
+    const groupMemberPopover = createSearchResultsPopover(nodes.groupMemberSearchInput, nodes.groupMemberResults, {
+        maxHeight: 320,
+        renderPanel: renderGroupMemberSearchResults,
+    });
+    const userGroupPicker = createGroupScopePicker(nodes.userGroupsField, {
+        searchLabel: "Search groups",
+        searchPlaceholder: "Search by name or code",
+        selectedLabel: "Assigned groups",
+        emptySearchMessage: "Type a group name or code to search available groups.",
+        emptySelectionMessage: "No groups assigned yet",
+    });
 
     function renderUsers() {
         const groupsByUserId = buildGroupsByUserId(state.groups);
@@ -218,6 +234,7 @@ export async function initAdminPage() {
     async function loadGroups() {
         const data = await request("/api/admin/user-groups");
         state.groups = data.groups || [];
+        userGroupPicker?.setOptions(state.groups);
         renderGroups();
         renderUsers();
         renderActiveGroupView(nodes, state);
@@ -240,6 +257,7 @@ export async function initAdminPage() {
             password: document.getElementById("admin-password").value,
             role: document.getElementById("admin-role").value,
             status: document.getElementById("admin-status").value,
+            group_ids: userGroupPicker?.getValues() || [],
         };
 
         try {
@@ -306,11 +324,10 @@ export async function initAdminPage() {
         }
     }
 
-    nodes.userCreateButton.addEventListener("click", () => openUserCreateModal(nodes, userModal));
+    nodes.userCreateButton.addEventListener("click", () => openUserCreateModal(nodes, userModal, userGroupPicker));
     nodes.groupCreateButton.addEventListener("click", () => openGroupCreateModal(nodes, state, groupModal));
     nodes.userSearchInput.addEventListener("input", renderUsers);
     nodes.groupSearchInput.addEventListener("input", renderGroups);
-    nodes.groupMemberSearchInput.addEventListener("input", renderGroupMemberSearchResults);
     nodes.groupViewSearchInput.addEventListener("input", () => renderActiveGroupView(nodes, state));
     nodes.userForm.addEventListener("submit", handleUserSubmit);
     nodes.groupForm.addEventListener("submit", handleGroupSubmit);
@@ -332,7 +349,7 @@ export async function initAdminPage() {
         }
 
         if (event.target.closest(".js-edit-user")) {
-            openUserEditModal(nodes, userModal, user);
+            openUserEditModal(nodes, state, userModal, user, userGroupPicker);
             return;
         }
 
@@ -382,6 +399,7 @@ export async function initAdminPage() {
                 state.selectedGroupMemberIds = [...state.selectedGroupMemberIds, userId];
                 renderSelectedGroupMembers();
                 renderGroupMemberSearchResults();
+                groupMemberPopover.refresh();
             }
             return;
         }
@@ -392,6 +410,7 @@ export async function initAdminPage() {
             state.selectedGroupMemberIds = state.selectedGroupMemberIds.filter((value) => value !== userId);
             renderSelectedGroupMembers();
             renderGroupMemberSearchResults();
+            groupMemberPopover.refresh();
         }
     });
 
@@ -515,6 +534,7 @@ function ensureAdminUserModal() {
                                 <option value="disabled">Disabled</option>
                             </select>
                         </label>
+                        <div id="admin-user-groups-field"></div>
                         <div id="admin-error" class="error-message"></div>
                         <div class="button-row">
                             <button class="button button--primary" type="submit">Save user</button>
@@ -630,7 +650,7 @@ function renderUserCard(user, groups) {
             <div class="button-row">
                 <button class="button button--secondary button--small js-view-user" type="button">View</button>
                 <button class="button button--secondary button--small js-edit-user" type="button">Edit</button>
-                <button class="button button--secondary button--small js-delete-user" type="button">Delete</button>
+                <button class="button button--danger button--small js-delete-user" type="button">Delete</button>
             </div>
         </div>
     `;
@@ -650,21 +670,22 @@ function renderGroupCard(group) {
             <div class="button-row">
                 <button class="button button--secondary button--small js-view-group" type="button">View</button>
                 <button class="button button--secondary button--small js-edit-group" type="button">Edit</button>
-                <button class="button button--secondary button--small js-delete-group" type="button">Delete</button>
+                <button class="button button--danger button--small js-delete-group" type="button">Delete</button>
             </div>
         </div>
     `;
 }
 
-function openUserCreateModal(nodes, modal) {
-    resetUserForm(nodes);
+function openUserCreateModal(nodes, modal, userGroupPicker) {
+    resetUserForm(nodes, userGroupPicker);
     nodes.userModalTitle.textContent = "Create user";
     modal.open();
     focusField("admin-display-name");
 }
 
-function openUserEditModal(nodes, modal, user) {
-    resetUserForm(nodes);
+function openUserEditModal(nodes, state, modal, user, userGroupPicker) {
+    resetUserForm(nodes, userGroupPicker);
+    const groupsByUserId = buildGroupsByUserId(state.groups);
     nodes.userModalTitle.textContent = "Edit user";
     document.getElementById("admin-user-id").value = user.id;
     document.getElementById("admin-display-name").value = user.display_name;
@@ -672,6 +693,8 @@ function openUserEditModal(nodes, modal, user) {
     document.getElementById("admin-password").value = "";
     document.getElementById("admin-role").value = user.role;
     document.getElementById("admin-status").value = user.status;
+    userGroupPicker?.setValues((groupsByUserId.get(user.id) || []).map((group) => group.id));
+    userGroupPicker?.clearSearch();
     modal.open();
     focusField("admin-display-name");
 }
@@ -773,11 +796,13 @@ function renderSelectedMembersLater(nodes, state) {
     });
 }
 
-function resetUserForm(nodes) {
+function resetUserForm(nodes, userGroupPicker) {
     document.getElementById("admin-user-id").value = "";
     nodes.userForm.reset();
     document.getElementById("admin-role").value = "user";
     document.getElementById("admin-status").value = "active";
+    userGroupPicker?.setValues([]);
+    userGroupPicker?.clearSearch();
     nodes.userModalTitle.textContent = "Create user";
     nodes.userErrorNode.textContent = "";
 }
@@ -809,7 +834,7 @@ function buildGroupsByUserId(groups) {
     groups.forEach((group) => {
         (group.members || []).forEach((member) => {
             const existing = groupsByUserId.get(member.id) || [];
-            existing.push({ id: group.id, name: group.name });
+            existing.push({ id: group.id, name: group.name, code: group.code });
             groupsByUserId.set(member.id, existing);
         });
     });

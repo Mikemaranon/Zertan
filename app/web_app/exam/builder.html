@@ -13,8 +13,7 @@
                     <p class="muted">The server assembles a fixed attempt from the selected criteria.</p>
                 </div>
             </div>
-            <div id="builder-topics-field"></div>
-            <div id="builder-tags-field"></div>
+            <div id="builder-content-field"></div>
             <div id="builder-types-field"></div>
             <label>
                 <span>Difficulty</span>
@@ -38,7 +37,10 @@
                 <span>Random order</span>
             </label>
             <div id="builder-error" class="error-message"></div>
-            <button class="button button--primary" type="submit">Create formal attempt</button>
+            <div class="button-row">
+                <button class="button button--primary" type="submit">Create formal attempt</button>
+                <a class="button button--secondary" href="/exams/{{ page_context.exam_id }}">Cancel</a>
+            </div>
         </form>
     </div>
 </section>

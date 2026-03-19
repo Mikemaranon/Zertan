@@ -38,13 +38,13 @@ export async function initExamDetailPage(pageContext) {
             ${officialLink}
         </div>
         <div class="button-row">
+            <a class="button button--secondary" href="/catalog">Catalog</a>
             <a class="button button--primary" href="/exams/${exam.id}/builder">Start exam mode</a>
         </div>
     `;
 
     filters.innerHTML = `
-        <div id="filter-tags-field"></div>
-        <div id="filter-topics-field"></div>
+        <div id="filter-content-field"></div>
         <div id="filter-types-field"></div>
         <div class="study-filters__active">
             <div class="selection-field__top">
@@ -76,44 +76,37 @@ export async function initExamDetailPage(pageContext) {
     };
     const clearIncludeButton = document.getElementById("study-filters-clear-include");
     const clearExcludeButton = document.getElementById("study-filters-clear-exclude");
-    let tagFilter;
-    let topicFilter;
+    let contentFilter;
     let typeFilter;
     const syncClearButtons = () => {
-        const tags = tagFilter.getValues();
-        const topics = topicFilter.getValues();
+        const content = contentFilter.getValues();
         const types = typeFilter.getValues();
-        clearIncludeButton.disabled = !tags.include.length && !topics.include.length && !types.include.length;
-        clearExcludeButton.disabled = !tags.exclude.length && !topics.exclude.length && !types.exclude.length;
+        clearIncludeButton.disabled = !content.include.length && !types.include.length;
+        clearExcludeButton.disabled = !content.exclude.length && !types.exclude.length;
     };
 
-    tagFilter = createAddableSelect(document.getElementById("filter-tags-field"), {
-        id: "filter-tag",
-        label: "Tags",
-        options: exam.builder_meta.tags || [],
-        placeholder: "All tags",
+    contentFilter = createAddableSelect(document.getElementById("filter-content-field"), {
+        id: "filter-content",
+        label: "Content filters",
+        options: buildContentFilterOptions(exam.builder_meta),
+        searchable: true,
+        searchPlaceholder: "Search tags or topics",
+        emptySearchMessage: "Type to search available tags and topics.",
+        noResultsMessage: "No tags or topics match the current search.",
         sharedChipsContainers,
-        sharedChipGroup: "tag",
-        sharedChipGroupLabel: "Tag",
-        sharedChipLabel: (value) => value,
-        onChange: handleFiltersChanged,
-    });
-    topicFilter = createAddableSelect(document.getElementById("filter-topics-field"), {
-        id: "filter-topic",
-        label: "Topics",
-        options: exam.builder_meta.topics || [],
-        placeholder: "All topics",
-        sharedChipsContainers,
-        sharedChipGroup: "topic",
-        sharedChipGroupLabel: "Topic",
-        sharedChipLabel: (value) => value,
+        sharedChipGroup: (_value, option) => option.group,
+        sharedChipGroupLabel: (_value, option) => option.groupLabel,
+        sharedChipLabel: (_value, option) => option.label.replace(/^(Tag|Topic)\s+\u00b7\s+/u, ""),
         onChange: handleFiltersChanged,
     });
     typeFilter = createAddableSelect(document.getElementById("filter-types-field"), {
         id: "filter-type",
         label: "Question type",
         options: exam.builder_meta.question_types || [],
-        placeholder: "All question types",
+        searchable: true,
+        searchPlaceholder: "Search question types",
+        emptySearchMessage: "Type to search available question types.",
+        noResultsMessage: "No question types match the current search.",
         formatLabel: (type) => type.replaceAll("_", " "),
         sharedChipsContainers,
         sharedChipGroup: "type",
@@ -123,19 +116,16 @@ export async function initExamDetailPage(pageContext) {
     });
 
     clearIncludeButton.addEventListener("click", () => {
-        tagFilter.setModeValues("include", []);
-        topicFilter.setModeValues("include", []);
+        contentFilter.setModeValues("include", []);
         typeFilter.setModeValues("include", []);
     });
     clearExcludeButton.addEventListener("click", () => {
-        tagFilter.setModeValues("exclude", []);
-        topicFilter.setModeValues("exclude", []);
+        contentFilter.setModeValues("exclude", []);
         typeFilter.setModeValues("exclude", []);
     });
 
     function renderQuestions() {
-        const selectedTags = tagFilter.getValues();
-        const selectedTopics = topicFilter.getValues();
+        const selectedContent = splitContentFilterValues(contentFilter.getValues());
         const selectedTypes = typeFilter.getValues();
         syncClearButtons();
 
@@ -143,11 +133,11 @@ export async function initExamDetailPage(pageContext) {
             const questionTags = question.tags || [];
             const questionTopics = question.topics || [];
             const tagMatch =
-                (!selectedTags.include.length || selectedTags.include.some((tag) => questionTags.includes(tag))) &&
-                !selectedTags.exclude.some((tag) => questionTags.includes(tag));
+                (!selectedContent.tags.include.length || selectedContent.tags.include.some((tag) => questionTags.includes(tag))) &&
+                !selectedContent.tags.exclude.some((tag) => questionTags.includes(tag));
             const topicMatch =
-                (!selectedTopics.include.length || selectedTopics.include.some((topic) => questionTopics.includes(topic))) &&
-                !selectedTopics.exclude.some((topic) => questionTopics.includes(topic));
+                (!selectedContent.topics.include.length || selectedContent.topics.include.some((topic) => questionTopics.includes(topic))) &&
+                !selectedContent.topics.exclude.some((topic) => questionTopics.includes(topic));
             const typeMatch =
                 (!selectedTypes.include.length || selectedTypes.include.includes(question.type)) &&
                 !selectedTypes.exclude.includes(question.type);
@@ -217,4 +207,36 @@ export async function initExamDetailPage(pageContext) {
     }
 
     renderQuestions();
+}
+
+function buildContentFilterOptions(builderMeta) {
+    return [
+        ...(builderMeta.tags || []).map((value) => ({
+            value: `tag:${value}`,
+            label: `Tag · ${value}`,
+            group: "tag",
+            groupLabel: "Tag",
+            searchTerms: [value, "tag"],
+        })),
+        ...(builderMeta.topics || []).map((value) => ({
+            value: `topic:${value}`,
+            label: `Topic · ${value}`,
+            group: "topic",
+            groupLabel: "Topic",
+            searchTerms: [value, "topic"],
+        })),
+    ];
+}
+
+function splitContentFilterValues(values) {
+    return {
+        tags: {
+            include: (values.include || []).filter((value) => value.startsWith("tag:")).map((value) => value.slice(4)),
+            exclude: (values.exclude || []).filter((value) => value.startsWith("tag:")).map((value) => value.slice(4)),
+        },
+        topics: {
+            include: (values.include || []).filter((value) => value.startsWith("topic:")).map((value) => value.slice(6)),
+            exclude: (values.exclude || []).filter((value) => value.startsWith("topic:")).map((value) => value.slice(6)),
+        },
+    };
 }

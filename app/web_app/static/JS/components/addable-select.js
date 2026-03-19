@@ -1,10 +1,15 @@
 import { escapeHtml } from "../core/api.js";
+import { createSearchResultsPopover } from "./search-results-popover.js";
 
 export function createAddableSelect(container, {
     id,
     label,
     options = [],
     placeholder = "Select an option",
+    searchable = false,
+    searchPlaceholder = "Type to search available options",
+    emptySearchMessage = "Type to search available options.",
+    noResultsMessage = "No options match the current search.",
     includeLabel = "Include",
     excludeLabel = "Exclude",
     formatLabel = (value) => value,
@@ -15,8 +20,11 @@ export function createAddableSelect(container, {
     sharedChipGroupLabel = label,
     sharedChipLabel = (value) => formatLabel(value),
 } = {}) {
-    const normalizedOptions = Array.from(new Set(options.filter(Boolean)));
-    let selectedValues = normalizeModeValues(initialValues, normalizedOptions);
+    const normalizedOptions = normalizeOptions(options, formatLabel);
+    const optionValues = normalizedOptions.map((option) => option.value);
+    const optionMap = new Map(normalizedOptions.map((option) => [option.value, option]));
+    let selectedValues = normalizeModeValues(initialValues, optionValues);
+    let activeMode = "include";
     const usesSharedChips = Boolean(
         sharedChipsContainers?.includeContainer && sharedChipsContainers?.excludeContainer
     );
@@ -30,12 +38,22 @@ export function createAddableSelect(container, {
                 <button class="button button--secondary button--small" type="button" data-selection-mode="exclude">${escapeHtml(excludeLabel)}</button>
             </div>
         </div>
-        <select id="${escapeHtml(id)}">
-            <option value="">${escapeHtml(placeholder)}</option>
-            ${normalizedOptions
-                .map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(formatLabel(value))}</option>`)
-                .join("")}
-        </select>
+        ${
+            searchable
+                ? `
+            <div class="selection-field__search">
+                <input id="${escapeHtml(id)}" class="selection-field__search-input" type="search" placeholder="${escapeHtml(searchPlaceholder)}" autocomplete="off">
+            </div>
+        `
+                : `
+            <select id="${escapeHtml(id)}">
+                <option value="">${escapeHtml(placeholder)}</option>
+                ${normalizedOptions
+                    .map((option) => `<option value="${escapeHtml(option.value)}">${escapeHtml(option.label)}</option>`)
+                    .join("")}
+            </select>
+        `
+        }
         ${
             usesSharedChips
                 ? ""
@@ -56,7 +74,15 @@ export function createAddableSelect(container, {
 
     const includeButton = container.querySelector('[data-selection-mode="include"]');
     const excludeButton = container.querySelector('[data-selection-mode="exclude"]');
-    const select = container.querySelector("select");
+    const select = searchable ? null : container.querySelector("select");
+    const searchInput = searchable ? container.querySelector(".selection-field__search-input") : null;
+    const searchResults = searchable ? createFloatingResultsLayer() : null;
+    const searchPopover = searchable
+        ? createSearchResultsPopover(searchInput, searchResults, {
+            maxHeight: 320,
+            renderPanel: renderSearchResults,
+        })
+        : null;
     const localChips = usesSharedChips
         ? null
         : {
@@ -75,6 +101,38 @@ export function createAddableSelect(container, {
             ),
         }
         : null;
+    const getOptionMeta = (value) => optionMap.get(value) || createFallbackOption(value, formatLabel);
+    const resolveValueLabel = (value) => {
+        const option = getOptionMeta(value);
+        return option.label || formatLabel(value, option);
+    };
+    const resolveSharedChipGroup = (value) => {
+        const option = getOptionMeta(value);
+        return typeof sharedChipGroup === "function" ? sharedChipGroup(value, option) : sharedChipGroup || option.group || id;
+    };
+    const resolveSharedChipGroupLabel = (value) => {
+        const option = getOptionMeta(value);
+        return typeof sharedChipGroupLabel === "function"
+            ? sharedChipGroupLabel(value, option)
+            : sharedChipGroupLabel || option.groupLabel || label;
+    };
+    const resolveSharedChipLabel = (value) => {
+        const option = getOptionMeta(value);
+        return sharedChipLabel(value, option);
+    };
+
+    const renderModeButtons = () => {
+        const buttonMap = {
+            include: includeButton,
+            exclude: excludeButton,
+        };
+        Object.entries(buttonMap).forEach(([mode, button]) => {
+            const isActive = mode === activeMode;
+            button.classList.toggle("button--primary", isActive);
+            button.classList.toggle("button--secondary", !isActive);
+            button.setAttribute("aria-pressed", String(isActive));
+        });
+    };
 
     const notifyChange = () => {
         if (typeof onChange === "function") {
@@ -88,16 +146,35 @@ export function createAddableSelect(container, {
     const renderChipsForMode = (mode) => {
         const modeValues = selectedValues[mode];
         if (usesSharedChips) {
-            sharedStores[mode].setGroup(`${id}:${mode}`, {
-                group: sharedChipGroup || id,
-                groupLabel: sharedChipGroupLabel || label,
-                values: modeValues,
-                formatLabel: sharedChipLabel,
-                removeValue(value) {
-                    selectedValues[mode] = selectedValues[mode].filter((item) => item !== value);
-                    renderChips();
-                    notifyChange();
-                },
+            const groupedValues = new Map();
+            modeValues.forEach((value) => {
+                const group = resolveSharedChipGroup(value);
+                const groupLabel = resolveSharedChipGroupLabel(value);
+                const ownerId = `${id}:${mode}:${group}`;
+                if (!groupedValues.has(ownerId)) {
+                    groupedValues.set(ownerId, {
+                        ownerId,
+                        group,
+                        groupLabel,
+                        values: [],
+                    });
+                }
+                groupedValues.get(ownerId).values.push(value);
+            });
+
+            sharedStores[mode].clearGroupPrefix(`${id}:${mode}:`);
+            groupedValues.forEach((groupConfig) => {
+                sharedStores[mode].setGroup(groupConfig.ownerId, {
+                    group: groupConfig.group,
+                    groupLabel: groupConfig.groupLabel,
+                    values: groupConfig.values,
+                    formatLabel: resolveSharedChipLabel,
+                    removeValue(value) {
+                        selectedValues[mode] = selectedValues[mode].filter((item) => item !== value);
+                        renderChips();
+                        notifyChange();
+                    },
+                });
             });
             return;
         }
@@ -112,19 +189,80 @@ export function createAddableSelect(container, {
         localChips[mode].innerHTML = modeValues
             .map((value) => `
                 <button class="selection-chip" type="button" data-mode="${escapeHtml(mode)}" data-value="${escapeHtml(value)}">
-                    ${escapeHtml(formatLabel(value))}
+                    ${escapeHtml(resolveValueLabel(value))}
                 </button>
             `)
             .join("");
     };
 
-    const renderChips = () => {
-        renderChipsForMode("include");
-        renderChipsForMode("exclude");
+    const getSearchMatches = () => {
+        if (!searchable) {
+            return [];
+        }
+
+        const query = searchInput.value.trim().toLowerCase();
+        if (!query) {
+            return [];
+        }
+
+        return normalizedOptions.filter((option) =>
+            option.searchTerms.some((term) => String(term || "").toLowerCase().includes(query))
+        );
     };
 
-    const addSelectedValue = (mode) => {
-        const value = select.value;
+    function renderSearchResults() {
+        if (!searchable) {
+            return;
+        }
+
+        const query = searchInput.value.trim().toLowerCase();
+        if (!query) {
+            searchResults.innerHTML = `<div class="empty-state">${escapeHtml(emptySearchMessage)}</div>`;
+            return;
+        }
+
+        const matches = getSearchMatches();
+        if (!matches.length) {
+            searchResults.innerHTML = `<div class="empty-state">${escapeHtml(noResultsMessage)}</div>`;
+            return;
+        }
+
+        const oppositeMode = activeMode === "include" ? "exclude" : "include";
+        const activeModeLabel = activeMode === "include" ? includeLabel : excludeLabel;
+
+        searchResults.innerHTML = matches
+            .map((option) => {
+                const value = option.value;
+                const isInActiveMode = selectedValues[activeMode].includes(value);
+                const isInOppositeMode = selectedValues[oppositeMode].includes(value);
+                const actionLabel = isInActiveMode ? "Delete" : isInOppositeMode ? `Move to ${activeModeLabel}` : "Add";
+
+                return `
+                    <div class="selection-field__result">
+                        <div>
+                            <strong>${escapeHtml(option.label)}</strong>
+                        </div>
+                        <button
+                            class="button ${isInActiveMode ? "button--danger js-remove-search-value" : "button--secondary js-add-search-value"} button--small"
+                            type="button"
+                            data-value="${escapeHtml(value)}"
+                        >
+                            ${escapeHtml(actionLabel)}
+                        </button>
+                    </div>
+                `;
+            })
+            .join("");
+    }
+
+    const renderChips = () => {
+        renderModeButtons();
+        renderChipsForMode("include");
+        renderChipsForMode("exclude");
+        renderSearchResults();
+    };
+
+    const addValue = (mode, value) => {
         if (!value || selectedValues[mode].includes(value)) {
             return;
         }
@@ -133,10 +271,18 @@ export function createAddableSelect(container, {
         selectedValues[oppositeMode] = selectedValues[oppositeMode].filter((item) => item !== value);
         renderChips();
         notifyChange();
+        searchPopover?.refresh();
+    };
+
+    const addSelectedValue = (mode) => {
+        if (!select) {
+            return;
+        }
+        addValue(mode, select.value);
     };
 
     const setValues = (values = { include: [], exclude: [] }) => {
-        selectedValues = normalizeModeValues(values, normalizedOptions);
+        selectedValues = normalizeModeValues(values, optionValues);
         renderChips();
     };
 
@@ -147,7 +293,7 @@ export function createAddableSelect(container, {
                 exclude: selectedValues.exclude,
                 [mode]: values,
             },
-            normalizedOptions,
+            optionValues,
         );
         const oppositeMode = mode === "include" ? "exclude" : "include";
         nextValues[oppositeMode] = nextValues[oppositeMode].filter((value) => !nextValues[mode].includes(value));
@@ -156,14 +302,66 @@ export function createAddableSelect(container, {
         notifyChange();
     };
 
-    includeButton.addEventListener("click", () => addSelectedValue("include"));
-    excludeButton.addEventListener("click", () => addSelectedValue("exclude"));
-    select.addEventListener("keydown", (event) => {
-        if (event.key === "Enter") {
-            event.preventDefault();
-            addSelectedValue("include");
+    includeButton.addEventListener("click", () => {
+        activeMode = "include";
+        if (searchable) {
+            renderChips();
+            return;
         }
+        addSelectedValue("include");
     });
+    excludeButton.addEventListener("click", () => {
+        activeMode = "exclude";
+        if (searchable) {
+            renderChips();
+            return;
+        }
+        addSelectedValue("exclude");
+    });
+    if (select) {
+        select.addEventListener("keydown", (event) => {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                addSelectedValue("include");
+            }
+        });
+    }
+    if (searchInput && searchResults) {
+        searchInput.addEventListener("keydown", (event) => {
+            if (event.key !== "Enter") {
+                return;
+            }
+            event.preventDefault();
+            const firstMatch = getSearchMatches()[0];
+            if (firstMatch) {
+                addValue(activeMode, firstMatch.value);
+            }
+        });
+        searchInput.addEventListener("blur", () => {
+            window.setTimeout(() => {
+                const activeNode = document.activeElement;
+                if (activeNode === searchInput || searchResults.contains(activeNode)) {
+                    return;
+                }
+                closeSearchResults();
+            }, 0);
+        });
+        searchResults.addEventListener("click", (event) => {
+            const button = event.target.closest("button[data-value]");
+            if (!button) {
+                return;
+            }
+            const value = button.dataset.value;
+            if (selectedValues[activeMode].includes(value)) {
+                selectedValues[activeMode] = selectedValues[activeMode].filter((item) => item !== value);
+                renderChips();
+                notifyChange();
+                searchPopover?.refresh();
+                return;
+            }
+            addValue(activeMode, value);
+        });
+    }
 
     if (localChips) {
         Object.entries(localChips).forEach(([mode, chipsContainer]) => {
@@ -207,6 +405,14 @@ function getSharedChipsStore(container, emptyLabel = "No filters added") {
         groups: new Map(),
         setGroup(id, config) {
             this.groups.set(id, config);
+            this.render();
+        },
+        clearGroupPrefix(prefix) {
+            this.groups.forEach((_, key) => {
+                if (key.startsWith(prefix)) {
+                    this.groups.delete(key);
+                }
+            });
             this.render();
         },
         clear() {
@@ -258,6 +464,50 @@ function getSharedChipsStore(container, emptyLabel = "No filters added") {
     container.__selectionChipStore = store;
     store.render();
     return store;
+}
+
+function createFloatingResultsLayer() {
+    const node = document.createElement("div");
+    node.className = "selection-field__results";
+    node.hidden = true;
+    return node;
+}
+
+function normalizeOptions(options, formatLabel) {
+    const normalized = new Map();
+    options.filter(Boolean).forEach((option) => {
+        const entry = typeof option === "object" && option !== null
+            ? {
+                value: String(option.value || "").trim(),
+                label: String(option.label || formatLabel(option.value || "", option) || "").trim(),
+                group: String(option.group || "").trim(),
+                groupLabel: String(option.groupLabel || "").trim(),
+                searchTerms: Array.from(new Set([
+                    option.value,
+                    option.label,
+                    option.group,
+                    option.groupLabel,
+                    ...(option.searchTerms || []),
+                ].filter(Boolean).map((value) => String(value)))),
+            }
+            : createFallbackOption(option, formatLabel);
+
+        if (entry.value) {
+            normalized.set(entry.value, entry);
+        }
+    });
+
+    return Array.from(normalized.values());
+}
+
+function createFallbackOption(value, formatLabel) {
+    return {
+        value: String(value || "").trim(),
+        label: String(formatLabel(value) || value || "").trim(),
+        group: "",
+        groupLabel: "",
+        searchTerms: Array.from(new Set([value, formatLabel(value)].filter(Boolean).map((item) => String(item)))),
+    };
 }
 
 function normalizeModeValues(values, options) {

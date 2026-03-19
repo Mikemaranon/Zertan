@@ -178,30 +178,6 @@
     align-content: flex-start;
 }
 
-.admin-picker-results {
-    display: grid;
-    gap: 10px;
-    max-height: 260px;
-    overflow-y: auto;
-    padding-right: 4px;
-}
-
-.admin-picker-result {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 14px;
-    padding: 14px 16px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-small);
-    background: rgba(255, 255, 255, 0.88);
-}
-
-.admin-picker-result p,
-.admin-picker-result strong {
-    margin: 0;
-}
-
 .live-exam-selection-box {
     gap: 12px;
 }

@@ -68,6 +68,22 @@ class GroupsTable:
         )
         return [row["group_id"] for row in rows]
 
+    def set_memberships_for_user(self, user_id, group_ids):
+        if not self.db.execute("SELECT id FROM users WHERE id = ?", (user_id,), fetchone=True)[1]:
+            return []
+        normalized_group_ids = self._normalize_group_ids(group_ids)
+        self.db.execute("DELETE FROM user_group_memberships WHERE user_id = ?", (user_id,))
+        if not normalized_group_ids:
+            return []
+        self.db.executemany(
+            """
+            INSERT INTO user_group_memberships (group_id, user_id)
+            VALUES (?, ?)
+            """,
+            [(group_id, user_id) for group_id in normalized_group_ids],
+        )
+        return normalized_group_ids
+
     def create(self, name, description="", user_ids=None):
         normalized_name = self._normalize_name(name)
         if not normalized_name:
@@ -144,6 +160,22 @@ class GroupsTable:
                 continue
             seen.add(user_id)
             normalized.append(user_id)
+        return normalized
+
+    def _normalize_group_ids(self, group_ids):
+        normalized = []
+        seen = set()
+        for value in group_ids or []:
+            try:
+                group_id = int(value)
+            except (TypeError, ValueError):
+                continue
+            if group_id < 1 or group_id in seen:
+                continue
+            if not self.db.execute("SELECT id FROM user_groups WHERE id = ?", (group_id,), fetchone=True)[1]:
+                continue
+            seen.add(group_id)
+            normalized.append(group_id)
         return normalized
 
     def _members_by_group_ids(self, group_ids):

@@ -2,60 +2,6 @@
     margin-top: 10px;
 }
 
-.exam-scope-picker {
-    display: grid;
-    gap: 12px;
-}
-
-.exam-scope-picker__search {
-    display: grid;
-    gap: 12px;
-}
-
-.exam-scope-picker__results {
-    display: grid;
-    gap: 10px;
-    max-height: 220px;
-    overflow-y: auto;
-    padding-right: 4px;
-}
-
-.exam-scope-picker__selection-box {
-    gap: 12px;
-}
-
-.exam-scope-picker__chips {
-    min-height: 52px;
-    max-height: 132px;
-    overflow-y: auto;
-    padding: 14px 16px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-small);
-    background: rgba(237, 243, 249, 0.58);
-    align-content: flex-start;
-}
-
-.admin-picker-results {
-    display: grid;
-    gap: 10px;
-}
-
-.admin-picker-result {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 14px;
-    padding: 14px 16px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-small);
-    background: rgba(255, 255, 255, 0.88);
-}
-
-.admin-picker-result p,
-.admin-picker-result strong {
-    margin: 0;
-}
-
 .package-guide {
     padding: 16px 18px;
     border: 1px solid var(--border);

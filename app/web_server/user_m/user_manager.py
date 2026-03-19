@@ -71,7 +71,7 @@ class UserManager:
             return None
         return self.get_user_from_token(token)
 
-    def create_user(self, display_name, login_name, password, role="user", status="active"):
+    def create_user(self, display_name, login_name, password, role="user", status="active", group_ids=None):
         normalized_login = self.normalize_login_name(login_name)
         normalized_display = self.normalize_display_name(display_name, fallback=normalized_login)
         if not normalized_login or not normalized_display:
@@ -87,9 +87,13 @@ class UserManager:
             role=normalized_role,
             status=status,
         )
-        return self.db.users.get_by_login_name(normalized_login)
+        created_user = self.db.users.get_by_login_name(normalized_login)
+        if created_user and group_ids is not None:
+            self.db.groups.set_memberships_for_user(created_user["id"], group_ids)
+            created_user = self.db.users.get_by_id(created_user["id"])
+        return created_user
 
-    def update_user(self, user_id, display_name, login_name, role, status, password=None):
+    def update_user(self, user_id, display_name, login_name, role, status, password=None, group_ids=None):
         normalized_login = self.normalize_login_name(login_name)
         normalized_display = self.normalize_display_name(display_name, fallback=normalized_login)
         existing = self.db.users.get_by_id(user_id)
@@ -102,6 +106,8 @@ class UserManager:
         self.db.users.update(user_id, normalized_display, normalized_login, normalized_role, status)
         if password:
             self.db.users.update_password(user_id, generate_password_hash(password))
+        if group_ids is not None:
+            self.db.groups.set_memberships_for_user(user_id, group_ids)
         return self.db.users.get_by_id(user_id)
 
     def update_profile(self, user_id, display_name, current_password="", new_password="", confirm_password=""):

@@ -53,6 +53,7 @@ class AdminAPI(BaseAPI):
             payload["password"],
             role=payload["role"],
             status=payload.get("status", "active"),
+            group_ids=payload.get("group_ids", []),
         )
         if not user:
             return self.error("Login name already exists or the payload is invalid.", 400)
@@ -73,6 +74,7 @@ class AdminAPI(BaseAPI):
             role=payload.get("role", existing["role"]),
             status=payload.get("status", existing["status"]),
             password=payload.get("password"),
+            group_ids=payload.get("group_ids", self.db.groups.list_ids_for_user(user_id)),
         )
         if not updated:
             return self.error("Login name already exists or the user could not be updated.", 400)
