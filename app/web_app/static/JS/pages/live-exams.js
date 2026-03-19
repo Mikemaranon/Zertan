@@ -1,4 +1,5 @@
 import { createAddableSelect } from "../components/addable-select.js";
+import { createSearchResultsPopover } from "../components/search-results-popover.js";
 import { escapeHtml, formatPercent, request } from "../core/api.js";
 
 export async function initLiveExamsPage() {
@@ -481,7 +482,6 @@ function createUserAssignmentField(container, { users = [], groups = [] } = {}) 
         </div>
         <div class="admin-group-picker live-exam-assignment-picker">
             <label>
-                <span>Search users or groups</span>
                 <input id="live-exam-entity-search" type="search" placeholder="Search by login name or group">
             </label>
             <div id="live-exam-entity-results" class="admin-picker-results live-exam-picker-results"></div>
@@ -504,6 +504,7 @@ function createUserAssignmentField(container, { users = [], groups = [] } = {}) 
     const results = container.querySelector("#live-exam-entity-results");
     const selectionList = container.querySelector("#live-exam-selection-list");
     const exclusionList = container.querySelector("#live-exam-exclusion-list");
+    let resultsPopover = null;
 
     const getSelectedGroupMemberIds = () => {
         const memberIds = new Set();
@@ -690,6 +691,11 @@ function createUserAssignmentField(container, { users = [], groups = [] } = {}) 
         ].join("");
     };
 
+    resultsPopover = createSearchResultsPopover(searchInput, results, {
+        maxHeight: 360,
+        renderPanel: renderSearchResults,
+    });
+
     const render = () => {
         pruneRedundantState();
         renderSelectedEntities();
@@ -704,6 +710,7 @@ function createUserAssignmentField(container, { users = [], groups = [] } = {}) 
             }
             state.groupIds = [...state.groupIds, normalizedId];
             render();
+            resultsPopover.refresh();
             return;
         }
         if (!usersById.has(normalizedId)) {
@@ -714,6 +721,7 @@ function createUserAssignmentField(container, { users = [], groups = [] } = {}) 
         }
         state.directUserIds = [...state.directUserIds, normalizedId];
         render();
+        resultsPopover.refresh();
     };
 
     const deleteEntity = (kind, id) => {
@@ -721,25 +729,37 @@ function createUserAssignmentField(container, { users = [], groups = [] } = {}) 
         if (kind === "group") {
             state.groupIds = state.groupIds.filter((groupId) => groupId !== normalizedId);
             render();
+            resultsPopover.refresh();
             return;
         }
         if (state.excludedUserIds.includes(normalizedId)) {
             state.excludedUserIds = state.excludedUserIds.filter((userId) => userId !== normalizedId);
             render();
+            resultsPopover.refresh();
             return;
         }
         if (state.directUserIds.includes(normalizedId)) {
             state.directUserIds = state.directUserIds.filter((userId) => userId !== normalizedId);
             render();
+            resultsPopover.refresh();
             return;
         }
         if (getSelectedGroupMemberIds().has(normalizedId)) {
             state.excludedUserIds = [...state.excludedUserIds, normalizedId];
             render();
+            resultsPopover.refresh();
         }
     };
 
-    searchInput.addEventListener("input", renderSearchResults);
+    results.addEventListener("pointerdown", (event) => {
+        const target = event.target;
+        if (!(target instanceof Element)) {
+            return;
+        }
+        if (target.closest("button, [role='button'], a")) {
+            event.preventDefault();
+        }
+    });
     results.addEventListener("click", (event) => {
         const button = event.target.closest("button[data-entity-kind][data-entity-id]");
         if (!button) {
@@ -776,6 +796,7 @@ function createUserAssignmentField(container, { users = [], groups = [] } = {}) 
     });
 
     render();
+    resultsPopover.close();
 
     return {
         getPayload() {
