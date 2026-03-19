@@ -19,7 +19,7 @@ export async function initLoginPage() {
                     password: document.getElementById("password").value,
                 },
             });
-            window.location.href = "/dashboard";
+            window.location.href = "/home";
         } catch (error) {
             errorMessage.textContent = error.message;
             errorMessage.hidden = false;

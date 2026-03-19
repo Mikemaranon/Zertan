@@ -1,0 +1,118 @@
+{% set page_id = "home" %}
+{% extends "shared/base.html" %}
+{% block page_styles %}
+<link rel="stylesheet" href="/static/CSS/pages/home/home.css?v={{ asset_version }}">
+{% endblock %}
+{% block content %}
+{% set display_name = current_user.display_name or current_user.username %}
+{% set can_manage = current_user.role in ["reviewer", "examiner", "administrator"] %}
+{% set can_admin = current_user.role == "administrator" %}
+<section class="home-stage">
+    <div class="home-stage__copy">
+        <h2>Welcome, {{ display_name }}</h2>
+        <p>
+            Zertan is built for serious certification preparation: structured study, formal exam execution,
+            and clean operational control over question banks.
+        </p>
+    </div>
+    <div class="home-stage__rail" aria-hidden="true">
+        <span>Study mode</span>
+        <span>Exam mode</span>
+        <span>Analytics</span>
+        <span>Operations</span>
+    </div>
+</section>
+
+<section class="home-nav" aria-labelledby="home-nav-title">
+    <div class="home-nav__intro">
+        <p class="home-nav__eyebrow">Workspace</p>
+        <h2 id="home-nav-title">Direct access</h2>
+        <p>Open the area you need without passing through dashboard-style containers.</p>
+    </div>
+    <div class="home-nav__grid">
+        <a class="home-nav-card home-nav-card--stats home-nav-card--primary" href="/dashboard">
+            <span class="home-nav-card__index">01</span>
+            <strong>Dashboard</strong>
+            <p>Personal KPI view with recent attempts and official performance breakdowns.</p>
+        </a>
+        {% if feature_access.get("global_stats_page") %}
+        <a class="home-nav-card home-nav-card--stats" href="/global-stats">
+            <span class="home-nav-card__index">02</span>
+            <strong>Global Stats</strong>
+            <p>Compare users, difficult topics, tag trends, and workspace-wide evaluative results.</p>
+        </a>
+        {% endif %}
+        <a class="home-nav-card home-nav-card--exams" href="/catalog">
+            <span class="home-nav-card__index">{% if feature_access.get("global_stats_page") %}03{% else %}02{% endif %}</span>
+            <strong>Exam Catalog</strong>
+            <p>Browse certification banks, enter study mode, and launch formal exam builder flows.</p>
+        </a>
+        {% if feature_access.get("live_exams_page") %}
+        <a class="home-nav-card home-nav-card--exams" href="/live-exams">
+            <span class="home-nav-card__index">
+                {% if feature_access.get("global_stats_page") %}04{% else %}03{% endif %}
+            </span>
+            <strong>Live Exams</strong>
+            <p>Open assigned live sessions or supervise active formal exams when available.</p>
+        </a>
+        {% endif %}
+        {% if can_manage %}
+        <a class="home-nav-card home-nav-card--admin" href="/management/exams">
+            <span class="home-nav-card__index">
+                {% if feature_access.get("global_stats_page") and feature_access.get("live_exams_page") %}05{% elif feature_access.get("global_stats_page") or feature_access.get("live_exams_page") %}04{% else %}03{% endif %}
+            </span>
+            <strong>Exam Management</strong>
+            <p>Create exams, maintain question banks, and handle import and export workflows.</p>
+        </a>
+        {% endif %}
+        {% if can_admin %}
+        <a class="home-nav-card home-nav-card--admin" href="/admin">
+            <span class="home-nav-card__index">
+                {% if feature_access.get("global_stats_page") and feature_access.get("live_exams_page") and can_manage %}06{% elif (feature_access.get("global_stats_page") and feature_access.get("live_exams_page")) or ((feature_access.get("global_stats_page") or feature_access.get("live_exams_page")) and can_manage) %}05{% elif feature_access.get("global_stats_page") or feature_access.get("live_exams_page") or can_manage %}04{% else %}03{% endif %}
+            </span>
+            <strong>Admin Panel</strong>
+            <p>Manage users, groups, roles, and workspace-level feature availability.</p>
+        </a>
+        {% endif %}
+    </div>
+</section>
+
+<div class="home-divider" aria-hidden="true"></div>
+
+<section class="home-letter">
+    <p class="home-letter__eyebrow">Letter</p>
+    <h2>A note from Mike</h2>
+    <div class="home-letter__body">
+        <p>Hey there, Mike here.</p>
+        <p>Thanks for using Zertan. It genuinely means a lot to see this project being useful to others.</p>
+        <p>This is an open-source project, so feel free to share ideas, suggestions or improvements on the official GitHub repository.</p>
+        <p>If you find any issues, reporting them helps a lot to keep improving the platform.</p>
+        <p>Hope it helps you on your journey, and good luck with your certs.</p>
+        <p>- Mike</p>
+    </div>
+</section>
+
+<section class="home-socials" aria-labelledby="home-socials-title">
+    <div class="home-socials__header">
+        <p class="home-socials__eyebrow">Contact</p>
+        <h2 id="home-socials-title">Reach out</h2>
+    </div>
+    <div class="home-socials__grid">
+        <a class="home-social-card" href="https://www.linkedin.com/in/mikemaranon/" target="_blank" rel="noreferrer">
+            <span class="home-social-card__label">LinkedIn</span>
+            <strong>mikemaranon</strong>
+            <span class="home-social-card__meta">Professional profile and updates.</span>
+        </a>
+        <a class="home-social-card" href="https://github.com/Mikemaranon/Zertan" target="_blank" rel="noreferrer">
+            <span class="home-social-card__label">GitHub</span>
+            <strong>Zertan repository</strong>
+            <span class="home-social-card__meta">Source code, issues, and contributions.</span>
+        </a>
+        <a class="home-social-card" href="https://mikemaranon.github.io/Mike-portfolio" target="_blank" rel="noreferrer">
+            <span class="home-social-card__label">Website</span>
+            <strong>Mike portfolio</strong>
+            <span class="home-social-card__meta">Personal site and published work.</span>
+        </a>
+    </div>
+</section>
+{% endblock %}
