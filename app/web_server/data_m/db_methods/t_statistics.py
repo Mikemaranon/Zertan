@@ -146,9 +146,9 @@ class StatisticsTable:
             for row in rows
         ]
 
-    def hardest_topics(self, limit=5):
-        _, rows = self.db.execute(
-            """
+    def hardest_topics(self, limit=5, group_id=None):
+        params = []
+        query = """
             SELECT
                 tp.name AS topic,
                 AVG(COALESCE(ans.is_correct, 0)) * 100 AS success_rate,
@@ -159,14 +159,25 @@ class StatisticsTable:
             JOIN topics tp ON tp.id = qt.topic_id
             JOIN exam_attempts a ON a.id = ans.attempt_id
             WHERE a.status = 'submitted'
+        """
+        if group_id is not None:
+            query += """
+                AND EXISTS (
+                    SELECT 1
+                    FROM user_group_memberships gm
+                    WHERE gm.user_id = a.user_id
+                    AND gm.group_id = ?
+                )
+            """
+            params.append(group_id)
+        query += """
             GROUP BY tp.id
             HAVING COUNT(ans.id) > 0
             ORDER BY success_rate ASC, answers_count DESC
             LIMIT ?
-            """,
-            (limit,),
-            fetchall=True,
-        )
+        """
+        params.append(limit)
+        _, rows = self.db.execute(query, tuple(params), fetchall=True)
         return [
             {
                 "topic": row["topic"],
@@ -176,9 +187,9 @@ class StatisticsTable:
             for row in rows
         ]
 
-    def hardest_tags(self, limit=5):
-        _, rows = self.db.execute(
-            """
+    def hardest_tags(self, limit=5, group_id=None):
+        params = []
+        query = """
             SELECT
                 tg.name AS tag,
                 AVG(COALESCE(ans.is_correct, 0)) * 100 AS success_rate,
@@ -189,14 +200,25 @@ class StatisticsTable:
             JOIN tags tg ON tg.id = qt.tag_id
             JOIN exam_attempts a ON a.id = ans.attempt_id
             WHERE a.status = 'submitted'
+        """
+        if group_id is not None:
+            query += """
+                AND EXISTS (
+                    SELECT 1
+                    FROM user_group_memberships gm
+                    WHERE gm.user_id = a.user_id
+                    AND gm.group_id = ?
+                )
+            """
+            params.append(group_id)
+        query += """
             GROUP BY tg.id
             HAVING COUNT(ans.id) > 0
             ORDER BY success_rate ASC, answers_count DESC
             LIMIT ?
-            """,
-            (limit,),
-            fetchall=True,
-        )
+        """
+        params.append(limit)
+        _, rows = self.db.execute(query, tuple(params), fetchall=True)
         return [
             {
                 "tag": row["tag"],
@@ -206,18 +228,28 @@ class StatisticsTable:
             for row in rows
         ]
 
-    def platform_summary(self):
-        _, users = self.db.execute(
-            """
+    def platform_summary(self, group_id=None):
+        user_params = []
+        user_query = """
             SELECT
                 COUNT(*) AS total_users,
                 SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) AS active_users
             FROM users
-            """,
-            fetchone=True,
-        )
-        _, attempts = self.db.execute(
+        """
+        if group_id is not None:
+            user_query += """
+                WHERE EXISTS (
+                    SELECT 1
+                    FROM user_group_memberships gm
+                    WHERE gm.user_id = users.id
+                    AND gm.group_id = ?
+                )
             """
+            user_params.append(group_id)
+        _, users = self.db.execute(user_query, tuple(user_params), fetchone=True)
+
+        attempt_params = []
+        attempt_query = """
             SELECT
                 COUNT(*) AS submitted_attempts,
                 COALESCE(SUM(question_count), 0) AS total_questions_answered,
@@ -228,9 +260,18 @@ class StatisticsTable:
                 COALESCE(AVG(question_count), 0) AS average_questions_per_attempt
             FROM exam_attempts
             WHERE status = 'submitted'
-            """,
-            fetchone=True,
-        )
+        """
+        if group_id is not None:
+            attempt_query += """
+                AND EXISTS (
+                    SELECT 1
+                    FROM user_group_memberships gm
+                    WHERE gm.user_id = exam_attempts.user_id
+                    AND gm.group_id = ?
+                )
+            """
+            attempt_params.append(group_id)
+        _, attempts = self.db.execute(attempt_query, tuple(attempt_params), fetchone=True)
         total_questions = attempts["total_questions_answered"] or 0
         total_correct = attempts["total_correct"] or 0
         success_rate = round((total_correct * 100.0 / total_questions), 2) if total_questions else 0
@@ -304,9 +345,9 @@ class StatisticsTable:
             )
         return payload
 
-    def platform_success_by_exam(self):
-        _, rows = self.db.execute(
-            """
+    def platform_success_by_exam(self, group_id=None):
+        params = []
+        query = """
             SELECT
                 e.id,
                 e.code,
@@ -319,11 +360,22 @@ class StatisticsTable:
             LEFT JOIN exam_attempts a
                 ON a.exam_id = e.id
                 AND a.status = 'submitted'
+        """
+        if group_id is not None:
+            query += """
+                AND EXISTS (
+                    SELECT 1
+                    FROM user_group_memberships gm
+                    WHERE gm.user_id = a.user_id
+                    AND gm.group_id = ?
+                )
+            """
+            params.append(group_id)
+        query += """
             GROUP BY e.id
             ORDER BY attempts DESC, lower(e.code), lower(e.title)
-            """,
-            fetchall=True,
-        )
+        """
+        _, rows = self.db.execute(query, tuple(params), fetchall=True)
         return [
             {
                 "exam_id": row["id"],
@@ -337,9 +389,9 @@ class StatisticsTable:
             for row in rows
         ]
 
-    def platform_success_by_question_type(self):
-        _, rows = self.db.execute(
-            """
+    def platform_success_by_question_type(self, group_id=None):
+        params = []
+        query = """
             SELECT
                 aq_snapshot.type AS question_type,
                 COUNT(*) AS total_answers,
@@ -353,11 +405,22 @@ class StatisticsTable:
             JOIN exam_answers ans ON ans.attempt_question_id = aq_snapshot.id
             JOIN exam_attempts a ON a.id = ans.attempt_id
             WHERE a.status = 'submitted'
+        """
+        if group_id is not None:
+            query += """
+                AND EXISTS (
+                    SELECT 1
+                    FROM user_group_memberships gm
+                    WHERE gm.user_id = a.user_id
+                    AND gm.group_id = ?
+                )
+            """
+            params.append(group_id)
+        query += """
             GROUP BY aq_snapshot.type
             ORDER BY total_answers DESC, aq_snapshot.type
-            """,
-            fetchall=True,
-        )
+        """
+        _, rows = self.db.execute(query, tuple(params), fetchall=True)
         return [
             {
                 "question_type": row["question_type"],
@@ -367,22 +430,33 @@ class StatisticsTable:
             for row in rows
         ]
 
-    def platform_activity_by_week(self, limit=8):
-        _, rows = self.db.execute(
-            """
+    def platform_activity_by_week(self, limit=8, group_id=None):
+        params = []
+        query = """
             SELECT
                 date(submitted_at, 'weekday 0', '-6 days') AS week_start,
                 COUNT(*) AS attempts,
                 COUNT(DISTINCT user_id) AS active_users
             FROM exam_attempts
             WHERE status = 'submitted'
+        """
+        if group_id is not None:
+            query += """
+                AND EXISTS (
+                    SELECT 1
+                    FROM user_group_memberships gm
+                    WHERE gm.user_id = exam_attempts.user_id
+                    AND gm.group_id = ?
+                )
+            """
+            params.append(group_id)
+        query += """
             GROUP BY week_start
             ORDER BY week_start DESC
             LIMIT ?
-            """,
-            (limit,),
-            fetchall=True,
-        )
+        """
+        params.append(limit)
+        _, rows = self.db.execute(query, tuple(params), fetchall=True)
         payload = [
             {
                 "week_start": row["week_start"],
@@ -396,12 +470,12 @@ class StatisticsTable:
 
     def platform_overview(self, comparison_group_id=None):
         return {
-            "summary": self.platform_summary(),
+            "summary": self.platform_summary(comparison_group_id),
             "users": self.platform_user_comparison(comparison_group_id),
-            "by_exam": self.platform_success_by_exam(),
-            "by_question_type": self.platform_success_by_question_type(),
-            "activity_by_week": self.platform_activity_by_week(),
+            "by_exam": self.platform_success_by_exam(comparison_group_id),
+            "by_question_type": self.platform_success_by_question_type(comparison_group_id),
+            "activity_by_week": self.platform_activity_by_week(group_id=comparison_group_id),
             "hardest_questions": self.hardest_questions(),
-            "hardest_topics": self.hardest_topics(),
-            "hardest_tags": self.hardest_tags(),
+            "hardest_topics": self.hardest_topics(group_id=comparison_group_id),
+            "hardest_tags": self.hardest_tags(group_id=comparison_group_id),
         }

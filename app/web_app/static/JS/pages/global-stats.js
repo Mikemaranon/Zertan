@@ -45,25 +45,20 @@ const DEFAULT_ACTIVE_USER_KPIS = ["submitted_attempts", "success_rate"];
 export async function initGlobalStatsPage() {
     const kpiContainer = document.getElementById("global-stats-kpis");
     const usersContainer = document.getElementById("global-stats-users");
-    const activityContainer = document.getElementById("global-stats-activity");
     const examContainer = document.getElementById("global-stats-exams");
     const typeContainer = document.getElementById("global-stats-types");
     const topicContainer = document.getElementById("global-stats-topics");
     const tagContainer = document.getElementById("global-stats-tags");
 
     const data = await request("/api/statistics/platform");
-    const platform = data.platform || {};
-    const summary = platform.summary || {};
     const currentUser = getCurrentUser();
-
-    kpiContainer.innerHTML = [
-        kpiCard("Active users", `${Number(summary.active_users || 0)} / ${Number(summary.total_users || 0)}`),
-        kpiCard("Submitted attempts", Number(summary.submitted_attempts || 0)),
-        kpiCard("Questions answered", Number(summary.total_questions_answered || 0)),
-        kpiCard("Global success rate", formatPercent(summary.global_success_rate)),
-        kpiCard("Average completion time", formatDuration(summary.average_completion_time)),
-        kpiCard("Average questions per attempt", Number(summary.average_questions_per_attempt || 0).toFixed(1)),
-    ].join("");
+    const pageNodes = {
+        kpiContainer,
+        examContainer,
+        typeContainer,
+        topicContainer,
+        tagContainer,
+    };
 
     const userComparisonState = {
         activeMetricKeys: DEFAULT_ACTIVE_USER_KPIS.slice(),
@@ -71,7 +66,7 @@ export async function initGlobalStatsPage() {
         currentUserRole: String(data.current_user_role || currentUser.role || "user"),
         selectedGroupId: data.selected_group_id ? Number(data.selected_group_id) : null,
         availableGroups: data.comparison_groups || [],
-        users: filterComparableUsers(platform.users || []),
+        users: filterComparableUsers(data.platform?.users || []),
     };
     const comparisonControls = ensureUserComparisonControls(usersContainer);
 
@@ -81,6 +76,7 @@ export async function initGlobalStatsPage() {
         comparisonControls.groupSelect,
         comparisonControls.groupHint,
         userComparisonState,
+        pageNodes,
     );
     populateGroupSelect(
         comparisonControls.groupSelect,
@@ -89,16 +85,7 @@ export async function initGlobalStatsPage() {
         userComparisonState.availableGroups,
         userComparisonState.selectedGroupId,
     );
-    renderUserComparison(comparisonControls.usersContainer, comparisonControls.kpiTogglesContainer, userComparisonState);
-    renderWeeklyActivity(activityContainer, platform.activity_by_week || []);
-    renderExamPerformance(examContainer, platform.by_exam || []);
-    renderQuestionTypes(typeContainer, platform.by_question_type || []);
-    renderInsightList(topicContainer, platform.hardest_topics || [], {
-        labelKey: "topic",
-        countKey: "answers_count",
-        countLabel: "Answers",
-    });
-    renderTagCards(tagContainer, platform.hardest_tags || []);
+    renderPlatformPanels(pageNodes, data.platform || {}, comparisonControls.usersContainer, comparisonControls.kpiTogglesContainer, userComparisonState);
 }
 
 function ensureUserComparisonControls(usersContainer) {
@@ -124,7 +111,7 @@ function ensureUserComparisonControls(usersContainer) {
                     <select id="global-stats-group-select" aria-describedby="global-stats-group-hint"></select>
                 </label>
                 <div class="global-comparison-note">
-                    <p id="global-stats-group-hint" class="muted">User comparison currently includes every non-administrator user in the domain.</p>
+                    <p id="global-stats-group-hint" class="muted">Global stats currently include every available user in the domain.</p>
                     <p class="muted">Only non-administrator users are represented in the comparison chart.</p>
                 </div>
             </div>
@@ -147,7 +134,7 @@ function ensureUserComparisonControls(usersContainer) {
     };
 }
 
-async function bindUserComparisonEvents(chartContainer, togglesContainer, groupSelect, groupHint, state) {
+async function bindUserComparisonEvents(chartContainer, togglesContainer, groupSelect, groupHint, state, pageNodes) {
     if (togglesContainer && !togglesContainer.dataset.bound) {
         togglesContainer.addEventListener("click", (event) => {
             const button = event.target.closest("[data-kpi-key]");
@@ -186,7 +173,7 @@ async function bindUserComparisonEvents(chartContainer, togglesContainer, groupS
                 state.availableGroups = data.comparison_groups || state.availableGroups;
                 state.users = filterComparableUsers(data.platform?.users || []);
                 populateGroupSelect(groupSelect, groupHint, state.currentUserRole, state.availableGroups, state.selectedGroupId);
-                renderUserComparison(chartContainer, togglesContainer, state);
+                renderPlatformPanels(pageNodes, data.platform || {}, chartContainer, togglesContainer, state);
             } catch (error) {
                 populateGroupSelect(groupSelect, groupHint, state.currentUserRole, state.availableGroups, previousGroupId);
                 updateGroupHint(groupHint, state.currentUserRole, groupSelect, {
@@ -201,11 +188,28 @@ async function bindUserComparisonEvents(chartContainer, togglesContainer, groupS
     }
 }
 
+function renderPlatformPanels(pageNodes, platform, usersContainer, togglesContainer, userComparisonState) {
+    const summary = platform.summary || {};
+    pageNodes.kpiContainer.innerHTML = [
+        kpiCard("Active users", `${Number(summary.active_users || 0)} / ${Number(summary.total_users || 0)}`),
+        kpiCard("Submitted attempts", Number(summary.submitted_attempts || 0)),
+        kpiCard("Questions answered", Number(summary.total_questions_answered || 0)),
+        kpiCard("Global success rate", formatPercent(summary.global_success_rate)),
+        kpiCard("Average completion time", formatDuration(summary.average_completion_time)),
+        kpiCard("Average questions per attempt", Number(summary.average_questions_per_attempt || 0).toFixed(1)),
+    ].join("");
+    renderUserComparison(usersContainer, togglesContainer, userComparisonState);
+    renderExamPerformance(pageNodes.examContainer, platform.by_exam || []);
+    renderQuestionTypes(pageNodes.typeContainer, platform.by_question_type || []);
+    renderTopicCards(pageNodes.topicContainer, platform.hardest_topics || []);
+    renderTagCards(pageNodes.tagContainer, platform.hardest_tags || []);
+}
+
 function populateGroupSelect(select, hintNode, currentUserRole, groups, selectedGroupId) {
     if (!select || !hintNode) {
         return;
     }
-    const allLabel = currentUserRole === "administrator" ? "All non-administrator users" : "All visible users";
+    const allLabel = currentUserRole === "administrator" ? "All domain users" : "All visible users";
     const options = [{ value: "", label: allLabel }, ...(groups || []).map((group) => ({
         value: String(group.id),
         label: group.name,
@@ -232,10 +236,10 @@ function updateGroupHint(hintNode, currentUserRole, select, { tone = "default", 
     }
     const selectedLabel = select.options[select.selectedIndex]?.textContent || "Current selection";
     const scopeMessage = select.value
-        ? `User comparison is filtered to "${selectedLabel}".`
+        ? `Global stats are filtered to "${selectedLabel}".`
         : currentUserRole === "administrator"
-            ? "User comparison currently includes every non-administrator user in the domain."
-            : "User comparison currently includes every non-administrator user visible on this workspace.";
+            ? "Global stats currently include every available user in the domain."
+            : "Global stats currently include every available user visible on this workspace.";
     hintNode.textContent = scopeMessage;
     hintNode.dataset.tone = tone;
 }
@@ -252,8 +256,6 @@ function renderUserComparison(container, togglesContainer, state) {
     const orderingMetric = activeMetrics[0];
     const scales = buildMetricScales(state.users, activeMetrics);
     const orderedUsers = sortUsersByMetric(state.users, orderingMetric);
-    const chartMinWidth = orderedUsers.length * 92;
-
     container.innerHTML = `
         <div class="global-user-chart-card">
             <div class="global-user-chart-card__header">
@@ -267,7 +269,7 @@ function renderUserComparison(container, togglesContainer, state) {
                 ${activeMetrics.map((metric) => renderLegendItem(metric)).join("")}
             </div>
             <div class="global-user-chart-viewport">
-                <div class="global-user-chart-stage" style="min-width: max(100%, ${chartMinWidth}px); grid-template-columns: repeat(${orderedUsers.length}, minmax(72px, 1fr));">
+                <div class="global-user-chart-stage" style="grid-template-columns: repeat(${orderedUsers.length}, var(--user-column-width));">
                     ${orderedUsers
                         .map((user) => renderUserColumn(user, activeMetrics, scales, orderingMetric, state.currentUserId))
                         .join("")}
@@ -440,28 +442,6 @@ function formatDurationLabel(seconds) {
     return Number(seconds || 0) > 0 ? formatDuration(seconds) : "0s";
 }
 
-function renderWeeklyActivity(container, weeks) {
-    if (!weeks.length) {
-        container.innerHTML = `<div class="empty-state">No weekly activity is available yet.</div>`;
-        return;
-    }
-    const maxAttempts = Math.max(...weeks.map((week) => Number(week.attempts || 0)), 1);
-    container.innerHTML = weeks
-        .map((week) => {
-            const attempts = Number(week.attempts || 0);
-            const height = attempts <= 0 ? 12 : Math.max(24, Math.round((attempts / maxAttempts) * 160));
-            return `
-                <div class="global-week-bar">
-                    <div class="global-week-bar__value" style="height: ${height}px"></div>
-                    <strong>${attempts}</strong>
-                    <span class="muted">${escapeHtml(formatWeekLabel(week.week_start))}</span>
-                    <span class="muted">${Number(week.active_users || 0)} active users</span>
-                </div>
-            `;
-        })
-        .join("");
-}
-
 function renderExamPerformance(container, exams) {
     if (!exams.length) {
         container.innerHTML = `<div class="empty-state">No exam-level activity is available yet.</div>`;
@@ -508,22 +488,18 @@ function renderQuestionTypes(container, items) {
         .join("");
 }
 
-function renderInsightList(container, items, { labelKey, countKey, countLabel }) {
-    if (!items.length) {
+function renderTopicCards(container, topics) {
+    if (!topics.length) {
         container.innerHTML = `<div class="empty-state">No comparable data is available yet.</div>`;
         return;
     }
-    container.innerHTML = items
-        .map((item) => `
-            <article class="global-insight-card">
-                <div class="global-insight-card__header">
-                    <div>
-                        <h3>${escapeHtml(item[labelKey] || "")}</h3>
-                        <p class="muted">${countLabel}: ${Number(item[countKey] || 0)}</p>
-                    </div>
-                </div>
-                ${metricStrip("Success rate", item.success_rate, 100, formatPercent(item.success_rate))}
-            </article>
+    container.innerHTML = topics
+        .map((topic) => `
+            <div class="card global-tag-card">
+                <h3>${escapeHtml(topic.topic || "")}</h3>
+                <p class="muted">${Number(topic.answers_count || 0)} evaluated answers</p>
+                ${metricStrip("Success rate", topic.success_rate, 100, formatPercent(topic.success_rate))}
+            </div>
         `)
         .join("");
 }

@@ -1,7 +1,7 @@
 {% set page_id = "global-stats" %}
 {% extends "shared/base.html" %}
 {% block page_styles %}
-<link rel="stylesheet" href="/static/CSS/pages/home/global-stats.css">
+<link rel="stylesheet" href="/static/CSS/pages/home/global-stats.css?v={{ asset_version }}">
 {% endblock %}
 {% block content %}
 <section class="panel stack-gap">
@@ -29,7 +29,7 @@
                 <select id="global-stats-group-select" aria-describedby="global-stats-group-hint"></select>
             </label>
             <div class="global-comparison-note">
-                <p id="global-stats-group-hint" class="muted">User comparison currently includes every non-administrator user in the domain.</p>
+                <p id="global-stats-group-hint" class="muted">Global stats currently include every available user in the domain.</p>
                 <p class="muted">Only non-administrator users are represented in the comparison chart.</p>
             </div>
         </div>
@@ -48,11 +48,11 @@
     <div class="panel stack-gap">
         <div class="section-heading">
             <div>
-                <h2>Weekly activity</h2>
-                <p class="muted">Formal submissions and active users over the latest reporting weeks.</p>
+                <h2>By question type</h2>
+                <p class="muted">Where the domain performs well and where accuracy drops.</p>
             </div>
         </div>
-        <div id="global-stats-activity" class="global-stats-bars"></div>
+        <div id="global-stats-types" class="list-stack global-stats-scroll-panel"></div>
     </div>
     <div class="panel stack-gap">
         <div class="section-heading">
@@ -61,29 +61,18 @@
                 <p class="muted">Attempt volume, participating users, and average score by exam.</p>
             </div>
         </div>
-        <div id="global-stats-exams" class="list-stack"></div>
+        <div id="global-stats-exams" class="list-stack global-stats-scroll-panel"></div>
     </div>
 </section>
 
-<section class="grid grid--two">
-    <div class="panel stack-gap">
-        <div class="section-heading">
-            <div>
-                <h2>By question type</h2>
-                <p class="muted">Where the domain performs well and where accuracy drops.</p>
-            </div>
+<section class="panel stack-gap">
+    <div class="section-heading">
+        <div>
+            <h2>Hardest topics</h2>
+            <p class="muted">Topics with the lowest official accuracy across submitted attempts.</p>
         </div>
-        <div id="global-stats-types" class="list-stack"></div>
     </div>
-    <div class="panel stack-gap">
-        <div class="section-heading">
-            <div>
-                <h2>Hardest topics</h2>
-                <p class="muted">Topics with the lowest official accuracy across submitted attempts.</p>
-            </div>
-        </div>
-        <div id="global-stats-topics" class="list-stack"></div>
-    </div>
+    <div id="global-stats-topics" class="grid grid--cards global-stats-scroll-panel global-stats-scroll-panel--cards"></div>
 </section>
 
 <section class="panel stack-gap">
@@ -93,6 +82,6 @@
             <p class="muted">Tag-level friction points across the full question bank.</p>
         </div>
     </div>
-    <div id="global-stats-tags" class="grid grid--cards"></div>
+    <div id="global-stats-tags" class="grid grid--cards global-stats-scroll-panel global-stats-scroll-panel--cards"></div>
 </section>
 {% endblock %}

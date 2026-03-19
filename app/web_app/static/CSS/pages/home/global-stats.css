@@ -1,6 +1,7 @@
 .global-comparison-layout {
     display: grid;
     gap: 22px;
+    --user-column-width: 144px;
 }
 
 .global-comparison-toolbar,
@@ -13,6 +14,11 @@
 
 .global-comparison-field {
     width: min(360px, 100%);
+}
+
+.global-comparison-field > span {
+    display: inline-block;
+    margin-bottom: 8px;
 }
 
 .global-comparison-note {
@@ -96,7 +102,20 @@
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 14px;
+    gap: 24px;
+}
+
+.global-user-chart-card__header > :first-child {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: calc(100% - 124px);
+}
+
+.global-user-chart-card__header .badge {
+    min-width: 84px;
+    justify-content: center;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .global-user-chart-legend {
@@ -122,20 +141,23 @@
 
 .global-user-chart-viewport {
     overflow-x: auto;
-    overflow-y: hidden;
+    overflow-y: visible;
     padding-bottom: 8px;
+    padding-top: 8px;
 }
 
 .global-user-chart-stage {
     display: grid;
     gap: 12px;
     align-items: end;
+    width: max-content;
 }
 
 .global-user-column {
     display: grid;
     gap: 12px;
-    min-width: 0;
+    width: var(--user-column-width);
+    min-width: var(--user-column-width);
 }
 
 .global-user-column--current .global-user-column__meta {
@@ -145,8 +167,8 @@
 
 .global-user-column__plot {
     position: relative;
-    min-height: 272px;
-    padding: 18px 10px 0;
+    min-height: 312px;
+    padding: 54px 10px 0;
     border: 1px solid rgba(102, 168, 224, 0.14);
     border-radius: var(--radius-small);
     background:
@@ -173,7 +195,7 @@
     justify-content: center;
     align-items: end;
     gap: 6px;
-    min-height: 252px;
+    min-height: 240px;
 }
 
 .global-user-bar {
@@ -204,6 +226,7 @@
     left: 50%;
     bottom: calc(100% + 8px);
     transform: translateX(-50%);
+    z-index: 20;
     display: none;
     min-width: max-content;
     padding: 6px 8px;
@@ -251,6 +274,18 @@
     border: 1px solid var(--border);
     border-radius: var(--radius-small);
     background: var(--surface);
+}
+
+.global-stats-scroll-panel {
+    min-height: 360px;
+    max-height: 360px;
+    overflow-y: auto;
+    padding-right: 6px;
+    align-content: start;
+}
+
+.global-stats-scroll-panel--cards {
+    grid-auto-rows: max-content;
 }
 
 .global-user-card--current {
@@ -324,44 +359,8 @@
     background: linear-gradient(90deg, var(--primary) 0%, var(--primary-strong) 100%);
 }
 
-.global-stats-bars {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(82px, 1fr));
-    gap: 14px;
-    align-items: end;
-    min-height: 280px;
-}
-
-.global-week-bar {
-    display: grid;
-    gap: 8px;
-    align-content: end;
-    justify-items: center;
-    min-height: 260px;
-    padding: 16px 12px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-small);
-    background: linear-gradient(180deg, #fbfdff 0%, #f1f6fb 100%);
-    text-align: center;
-}
-
-.global-week-bar__value {
-    width: 100%;
-    max-width: 34px;
-    margin-top: auto;
-    border-radius: 999px 999px 10px 10px;
-    background: linear-gradient(180deg, var(--primary) 0%, var(--primary-strong) 100%);
-    min-height: 12px;
-}
-
 .global-tag-card {
     gap: 14px;
-}
-
-@media (max-width: 1024px) {
-    .global-stats-bars {
-        grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
-    }
 }
 
 @media (max-width: 820px) {
@@ -393,10 +392,10 @@
     }
 
     .global-user-column__plot {
-        min-height: 240px;
+        min-height: 280px;
     }
 
     .global-user-column__bars {
-        min-height: 220px;
+        min-height: 208px;
     }
 }

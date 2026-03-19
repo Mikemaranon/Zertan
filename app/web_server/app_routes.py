@@ -164,12 +164,17 @@ class AppRoutes:
                 current_user=user,
                 feature_access=feature_access,
             ), 403
+        page_context = {
+            **page_context,
+            "asset_version": self._asset_version(),
+        }
         return render_template(
             template_name,
             page_title=page_title,
             current_user=user,
             feature_access=feature_access,
             page_context=page_context,
+            asset_version=page_context["asset_version"],
         )
 
     def _get_safe_return_to(self):
@@ -177,3 +182,9 @@ class AppRoutes:
         if not return_to.startswith("/") or return_to.startswith("//"):
             return ""
         return return_to
+
+    def _asset_version(self):
+        app_bundle = Path(current_app.root_path).parent / "web_app" / "static" / "JS" / "app.js"
+        if not app_bundle.exists():
+            return "dev"
+        return str(int(app_bundle.stat().st_mtime))

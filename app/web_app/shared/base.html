@@ -4,20 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ page_title }} | Zertan</title>
-    <link rel="stylesheet" href="/static/CSS/core/tokens.css">
-    <link rel="stylesheet" href="/static/CSS/core/reset.css">
-    <link rel="stylesheet" href="/static/CSS/core/base.css">
-    <link rel="stylesheet" href="/static/CSS/layout/shell.css">
-    <link rel="stylesheet" href="/static/CSS/components/brand.css">
-    <link rel="stylesheet" href="/static/CSS/components/buttons.css">
-    <link rel="stylesheet" href="/static/CSS/components/cards.css">
-    <link rel="stylesheet" href="/static/CSS/components/badges.css">
-    <link rel="stylesheet" href="/static/CSS/components/forms.css">
-    <link rel="stylesheet" href="/static/CSS/components/meta.css">
-    <link rel="stylesheet" href="/static/CSS/components/pagination.css">
-    <link rel="stylesheet" href="/static/CSS/components/selection-field.css">
-    <link rel="stylesheet" href="/static/CSS/components/questions.css">
-    <link rel="stylesheet" href="/static/CSS/components/profile-modal.css">
+    <link rel="stylesheet" href="/static/CSS/core/tokens.css?v={{ asset_version }}">
+    <link rel="stylesheet" href="/static/CSS/core/reset.css?v={{ asset_version }}">
+    <link rel="stylesheet" href="/static/CSS/core/base.css?v={{ asset_version }}">
+    <link rel="stylesheet" href="/static/CSS/layout/shell.css?v={{ asset_version }}">
+    <link rel="stylesheet" href="/static/CSS/components/brand.css?v={{ asset_version }}">
+    <link rel="stylesheet" href="/static/CSS/components/buttons.css?v={{ asset_version }}">
+    <link rel="stylesheet" href="/static/CSS/components/cards.css?v={{ asset_version }}">
+    <link rel="stylesheet" href="/static/CSS/components/badges.css?v={{ asset_version }}">
+    <link rel="stylesheet" href="/static/CSS/components/forms.css?v={{ asset_version }}">
+    <link rel="stylesheet" href="/static/CSS/components/meta.css?v={{ asset_version }}">
+    <link rel="stylesheet" href="/static/CSS/components/pagination.css?v={{ asset_version }}">
+    <link rel="stylesheet" href="/static/CSS/components/selection-field.css?v={{ asset_version }}">
+    <link rel="stylesheet" href="/static/CSS/components/questions.css?v={{ asset_version }}">
+    <link rel="stylesheet" href="/static/CSS/components/profile-modal.css?v={{ asset_version }}">
     {% block page_styles %}{% endblock %}
 </head>
 <body data-page="{{ page_id }}">
@@ -177,6 +177,6 @@
 
     <script id="current-user-data" type="application/json">{{ current_user|tojson }}</script>
     <script id="page-context-data" type="application/json">{{ page_context|default({})|tojson }}</script>
-    <script type="module" src="/static/JS/app.js"></script>
+    <script type="module" src="/static/JS/app.js?v={{ asset_version }}"></script>
 </body>
 </html>
