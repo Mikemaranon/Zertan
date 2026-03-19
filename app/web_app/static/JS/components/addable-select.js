@@ -33,10 +33,16 @@ export function createAddableSelect(container, {
     container.innerHTML = `
         <div class="selection-field__top">
             <span class="selection-field__label">${escapeHtml(label)}</span>
-            <div class="selection-field__actions">
-                <button class="button button--secondary button--small" type="button" data-selection-mode="include">${escapeHtml(includeLabel)}</button>
-                <button class="button button--secondary button--small" type="button" data-selection-mode="exclude">${escapeHtml(excludeLabel)}</button>
-            </div>
+            ${
+                searchable
+                    ? ""
+                    : `
+                <div class="selection-field__actions">
+                    <button class="button button--secondary button--small" type="button" data-selection-mode="include">${escapeHtml(includeLabel)}</button>
+                    <button class="button button--secondary button--small" type="button" data-selection-mode="exclude">${escapeHtml(excludeLabel)}</button>
+                </div>
+            `
+            }
         </div>
         ${
             searchable
@@ -127,6 +133,9 @@ export function createAddableSelect(container, {
             exclude: excludeButton,
         };
         Object.entries(buttonMap).forEach(([mode, button]) => {
+            if (!button) {
+                return;
+            }
             const isActive = mode === activeMode;
             button.classList.toggle("button--primary", isActive);
             button.classList.toggle("button--secondary", !isActive);
@@ -227,28 +236,37 @@ export function createAddableSelect(container, {
             return;
         }
 
-        const oppositeMode = activeMode === "include" ? "exclude" : "include";
-        const activeModeLabel = activeMode === "include" ? includeLabel : excludeLabel;
-
         searchResults.innerHTML = matches
             .map((option) => {
                 const value = option.value;
-                const isInActiveMode = selectedValues[activeMode].includes(value);
-                const isInOppositeMode = selectedValues[oppositeMode].includes(value);
-                const actionLabel = isInActiveMode ? "Delete" : isInOppositeMode ? `Move to ${activeModeLabel}` : "Add";
+                const isIncluded = selectedValues.include.includes(value);
+                const isExcluded = selectedValues.exclude.includes(value);
 
                 return `
                     <div class="selection-field__result">
                         <div>
                             <strong>${escapeHtml(option.label)}</strong>
                         </div>
-                        <button
-                            class="button ${isInActiveMode ? "button--danger js-remove-search-value" : "button--secondary js-add-search-value"} button--small"
-                            type="button"
-                            data-value="${escapeHtml(value)}"
-                        >
-                            ${escapeHtml(actionLabel)}
-                        </button>
+                        <div class="selection-field__result-actions">
+                            <button
+                                class="button ${isIncluded ? "button--primary" : "button--secondary"} button--small"
+                                type="button"
+                                data-mode="include"
+                                data-value="${escapeHtml(value)}"
+                                aria-pressed="${isIncluded ? "true" : "false"}"
+                            >
+                                ${escapeHtml(includeLabel)}
+                            </button>
+                            <button
+                                class="button ${isExcluded ? "button--danger" : "button--secondary"} button--small"
+                                type="button"
+                                data-mode="exclude"
+                                data-value="${escapeHtml(value)}"
+                                aria-pressed="${isExcluded ? "true" : "false"}"
+                            >
+                                ${escapeHtml(excludeLabel)}
+                            </button>
+                        </div>
                     </div>
                 `;
             })
@@ -266,12 +284,24 @@ export function createAddableSelect(container, {
         if (!value || selectedValues[mode].includes(value)) {
             return;
         }
+        const previousSearchScrollTop = searchPopover?.isOpen() ? searchResults.scrollTop : null;
         const oppositeMode = mode === "include" ? "exclude" : "include";
         selectedValues[mode] = [...selectedValues[mode], value];
         selectedValues[oppositeMode] = selectedValues[oppositeMode].filter((item) => item !== value);
         renderChips();
         notifyChange();
-        searchPopover?.refresh();
+        restoreSearchResultsScroll(previousSearchScrollTop);
+    };
+
+    const removeValue = (mode, value) => {
+        if (!value || !selectedValues[mode].includes(value)) {
+            return;
+        }
+        const previousSearchScrollTop = searchPopover?.isOpen() ? searchResults.scrollTop : null;
+        selectedValues[mode] = selectedValues[mode].filter((item) => item !== value);
+        renderChips();
+        notifyChange();
+        restoreSearchResultsScroll(previousSearchScrollTop);
     };
 
     const addSelectedValue = (mode) => {
@@ -302,20 +332,23 @@ export function createAddableSelect(container, {
         notifyChange();
     };
 
-    includeButton.addEventListener("click", () => {
-        activeMode = "include";
-        if (searchable) {
-            renderChips();
+    const restoreSearchResultsScroll = (scrollTop) => {
+        if (scrollTop === null || scrollTop === undefined || !searchPopover?.isOpen()) {
+            searchPopover?.updatePosition();
             return;
         }
+        window.requestAnimationFrame(() => {
+            searchResults.scrollTop = scrollTop;
+            searchPopover.updatePosition();
+        });
+    };
+
+    includeButton?.addEventListener("click", () => {
+        activeMode = "include";
         addSelectedValue("include");
     });
-    excludeButton.addEventListener("click", () => {
+    excludeButton?.addEventListener("click", () => {
         activeMode = "exclude";
-        if (searchable) {
-            renderChips();
-            return;
-        }
         addSelectedValue("exclude");
     });
     if (select) {
@@ -334,7 +367,7 @@ export function createAddableSelect(container, {
             event.preventDefault();
             const firstMatch = getSearchMatches()[0];
             if (firstMatch) {
-                addValue(activeMode, firstMatch.value);
+                addValue("include", firstMatch.value);
             }
         });
         searchInput.addEventListener("blur", () => {
@@ -343,7 +376,7 @@ export function createAddableSelect(container, {
                 if (activeNode === searchInput || searchResults.contains(activeNode)) {
                     return;
                 }
-                closeSearchResults();
+                searchPopover?.close();
             }, 0);
         });
         searchResults.addEventListener("click", (event) => {
@@ -352,14 +385,15 @@ export function createAddableSelect(container, {
                 return;
             }
             const value = button.dataset.value;
-            if (selectedValues[activeMode].includes(value)) {
-                selectedValues[activeMode] = selectedValues[activeMode].filter((item) => item !== value);
-                renderChips();
-                notifyChange();
-                searchPopover?.refresh();
+            const mode = button.dataset.mode;
+            if (!value || !["include", "exclude"].includes(mode)) {
                 return;
             }
-            addValue(activeMode, value);
+            if (selectedValues[mode].includes(value)) {
+                removeValue(mode, value);
+                return;
+            }
+            addValue(mode, value);
         });
     }
 

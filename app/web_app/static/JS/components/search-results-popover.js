@@ -93,6 +93,15 @@ export function createSearchResultsPopover(anchorNode, panelNode, {
             close();
         }
     });
+    panelNode.addEventListener("pointerdown", (event) => {
+        const target = event.target;
+        if (!(target instanceof Element)) {
+            return;
+        }
+        if (target.closest("button, [role='button'], a")) {
+            event.preventDefault();
+        }
+    });
     anchorNode.addEventListener("blur", () => {
         window.setTimeout(() => {
             const activeNode = document.activeElement;

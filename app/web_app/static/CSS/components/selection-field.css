@@ -104,6 +104,13 @@
     background: rgba(255, 255, 255, 0.88);
 }
 
+.selection-field__result-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
 .admin-picker-result {
     display: flex;
     align-items: center;
@@ -323,6 +330,11 @@
     .selection-field__result {
         flex-direction: column;
         align-items: flex-start;
+    }
+
+    .selection-field__result-actions {
+        width: 100%;
+        justify-content: flex-start;
     }
 
     .selection-field__mode-grid {

@@ -211,8 +211,7 @@ function bindLiveExamModal({ availableExams, availableUsers, availableGroups, on
     const clearExcludeButton = document.getElementById("live-exam-filters-exclude-clear");
     let isClosing = false;
     let sourceRequestId = 0;
-    let topicsField = null;
-    let tagsField = null;
+    let contentField = null;
     let typesField = null;
 
     if (!modal || !form || !sourceSelect) {
@@ -237,21 +236,18 @@ function bindLiveExamModal({ availableExams, availableUsers, availableGroups, on
         : `<option value="">No eligible exams available</option>`;
 
     const syncClearButtons = () => {
-        const topics = topicsField?.getValues() || { include: [], exclude: [] };
-        const tags = tagsField?.getValues() || { include: [], exclude: [] };
+        const content = contentField?.getValues() || { include: [], exclude: [] };
         const types = typesField?.getValues() || { include: [], exclude: [] };
-        clearIncludeButton.disabled = !topics.include.length && !tags.include.length && !types.include.length;
-        clearExcludeButton.disabled = !topics.exclude.length && !tags.exclude.length && !types.exclude.length;
+        clearIncludeButton.disabled = !content.include.length && !types.include.length;
+        clearExcludeButton.disabled = !content.exclude.length && !types.exclude.length;
     };
 
     clearIncludeButton?.addEventListener("click", () => {
-        topicsField?.setModeValues("include", []);
-        tagsField?.setModeValues("include", []);
+        contentField?.setModeValues("include", []);
         typesField?.setModeValues("include", []);
     });
     clearExcludeButton?.addEventListener("click", () => {
-        topicsField?.setModeValues("exclude", []);
-        tagsField?.setModeValues("exclude", []);
+        contentField?.setModeValues("exclude", []);
         typesField?.setModeValues("exclude", []);
     });
 
@@ -275,33 +271,28 @@ function bindLiveExamModal({ availableExams, availableUsers, availableGroups, on
                 return;
             }
             const meta = response.builder_meta || {};
-            topicsField = createAddableSelect(document.getElementById("live-exam-topics-field"), {
-                id: "live-exam-topics",
-                label: "Topics",
-                options: meta.topics || [],
-                placeholder: "Select a topic",
+            contentField = createAddableSelect(document.getElementById("live-exam-content-field"), {
+                id: "live-exam-content",
+                label: "Content filters",
+                options: buildContentFilterOptions(meta),
+                searchable: true,
+                searchPlaceholder: "Search tags or topics",
+                emptySearchMessage: "Type to search available tags and topics.",
+                noResultsMessage: "No tags or topics match the current search.",
                 sharedChipsContainers,
-                sharedChipGroup: "topic",
-                sharedChipGroupLabel: "Topic",
-                sharedChipLabel: (value) => value,
-                onChange: syncClearButtons,
-            });
-            tagsField = createAddableSelect(document.getElementById("live-exam-tags-field"), {
-                id: "live-exam-tags",
-                label: "Tags",
-                options: meta.tags || [],
-                placeholder: "Select a tag",
-                sharedChipsContainers,
-                sharedChipGroup: "tag",
-                sharedChipGroupLabel: "Tag",
-                sharedChipLabel: (value) => value,
+                sharedChipGroup: (_value, option) => option.group,
+                sharedChipGroupLabel: (_value, option) => option.groupLabel,
+                sharedChipLabel: (_value, option) => option.label.replace(/^(Tag|Topic)\s+\u00b7\s+/u, ""),
                 onChange: syncClearButtons,
             });
             typesField = createAddableSelect(document.getElementById("live-exam-types-field"), {
                 id: "live-exam-types",
                 label: "Question types",
                 options: meta.question_types || [],
-                placeholder: "Select a question type",
+                searchable: true,
+                searchPlaceholder: "Search question types",
+                emptySearchMessage: "Type to search available question types.",
+                noResultsMessage: "No question types match the current search.",
                 formatLabel: (value) => value.replaceAll("_", " "),
                 sharedChipsContainers,
                 sharedChipGroup: "type",
@@ -318,12 +309,13 @@ function bindLiveExamModal({ availableExams, availableUsers, availableGroups, on
     form.addEventListener("submit", async (event) => {
         event.preventDefault();
         errorNode.textContent = "";
+        const selectedContent = splitContentFilterValues(contentField?.getValues() || { include: [], exclude: [] });
 
         const payload = {
             title: document.getElementById("live-exam-title").value.trim(),
             exam_id: Number(sourceSelect.value),
-            topics: topicsField?.getValues() || { include: [], exclude: [] },
-            tags: tagsField?.getValues() || { include: [], exclude: [] },
+            topics: selectedContent.topics,
+            tags: selectedContent.tags,
             question_types: typesField?.getValues() || { include: [], exclude: [] },
             difficulty: difficultySelect.value || "",
             question_count: Number(questionCountInput.value),
@@ -352,8 +344,7 @@ function bindLiveExamModal({ availableExams, availableUsers, availableGroups, on
     });
 
     function resetBuilderFields() {
-        document.getElementById("live-exam-topics-field").innerHTML = "";
-        document.getElementById("live-exam-tags-field").innerHTML = "";
+        document.getElementById("live-exam-content-field").innerHTML = "";
         document.getElementById("live-exam-types-field").innerHTML = "";
         if (sharedChipsContainers.includeContainer.__selectionChipStore) {
             sharedChipsContainers.includeContainer.__selectionChipStore.clear();
@@ -365,8 +356,7 @@ function bindLiveExamModal({ availableExams, availableUsers, availableGroups, on
         } else {
             sharedChipsContainers.excludeContainer.innerHTML = `<button class="selection-chip selection-chip--empty" type="button" tabindex="-1">No excluded filters</button>`;
         }
-        topicsField = null;
-        tagsField = null;
+        contentField = null;
         typesField = null;
         syncClearButtons();
     }
@@ -419,6 +409,38 @@ function bindLiveExamModal({ availableExams, availableUsers, availableGroups, on
                     modal.dataset.state = "open";
                 });
             });
+        },
+    };
+}
+
+function buildContentFilterOptions(builderMeta) {
+    return [
+        ...(builderMeta.tags || []).map((value) => ({
+            value: `tag:${value}`,
+            label: `Tag · ${value}`,
+            group: "tag",
+            groupLabel: "Tag",
+            searchTerms: [value, "tag"],
+        })),
+        ...(builderMeta.topics || []).map((value) => ({
+            value: `topic:${value}`,
+            label: `Topic · ${value}`,
+            group: "topic",
+            groupLabel: "Topic",
+            searchTerms: [value, "topic"],
+        })),
+    ];
+}
+
+function splitContentFilterValues(values) {
+    return {
+        tags: {
+            include: (values.include || []).filter((value) => value.startsWith("tag:")).map((value) => value.slice(4)),
+            exclude: (values.exclude || []).filter((value) => value.startsWith("tag:")).map((value) => value.slice(4)),
+        },
+        topics: {
+            include: (values.include || []).filter((value) => value.startsWith("topic:")).map((value) => value.slice(6)),
+            exclude: (values.exclude || []).filter((value) => value.startsWith("topic:")).map((value) => value.slice(6)),
         },
     };
 }
