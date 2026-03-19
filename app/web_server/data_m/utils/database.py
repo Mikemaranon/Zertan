@@ -21,9 +21,9 @@ SCHEMA_VERSION = 8
 
 
 class Database:
-    def __init__(self):
-        self.connector = DBConnector()
-        self.runtime_config = get_runtime_config()
+    def __init__(self, *, connector=None, runtime_config=None):
+        self.runtime_config = dict(runtime_config or get_runtime_config())
+        self.connector = connector or DBConnector(db_path=self.runtime_config["db_path"])
         self.project_root = self.runtime_config["app_root"]
         self.upload_root = self.runtime_config["media_root"]
         self.init_lock_path = self._build_init_lock_path(self.runtime_config["db_path"])

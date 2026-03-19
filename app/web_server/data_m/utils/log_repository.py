@@ -1,10 +1,12 @@
 # log_repository.py
 import json
+
 from .database import Database
 
+
 class LogRepository:
-    def __init__(self):
-        self.db = Database()
+    def __init__(self, db=None):
+        self.db = db or Database()
 
     def log(self, level, source, message, payload=None):
         payload_str = json.dumps(payload) if payload else None

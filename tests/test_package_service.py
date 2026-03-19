@@ -27,10 +27,34 @@ class _FakeExamsTable:
             "tags": [str(tag).strip() for tag in payload.get("tags", []) if str(tag).strip()],
         }
 
+    def _normalize_group_ids(self, group_ids):
+        normalized = []
+        for value in group_ids or []:
+            try:
+                normalized_value = int(value)
+            except (TypeError, ValueError):
+                continue
+            if normalized_value > 0:
+                normalized.append(normalized_value)
+        return normalized
+
 
 class _FakeDbManager:
-    def __init__(self):
+    def __init__(self, group_rows=None):
         self.exams = _FakeExamsTable()
+        self._group_rows = list(group_rows or [])
+
+    def execute(self, query, params=(), *, fetchone=False, fetchall=False):
+        lowered = " ".join(query.lower().split())
+        if "from user_groups" in lowered:
+            requested_codes = {str(value).lower() for value in params}
+            rows = [
+                {"id": row["id"], "code": row["code"]}
+                for row in self._group_rows
+                if row["code"].lower() in requested_codes
+            ]
+            return rows if fetchall else (rows[0] if rows else None)
+        raise AssertionError(f"Unexpected query in test double: {query}")
 
 
 class PackageServiceValidationTests(unittest.TestCase):
@@ -91,6 +115,64 @@ class PackageServiceValidationTests(unittest.TestCase):
 
         with zipfile.ZipFile(archive, "r") as zip_archive:
             with self.assertRaisesRegex(ValueError, r"questions/\*\.json"):
+                self.service._validate_package_archive(zip_archive)
+
+    def test_resolve_import_group_ids_returns_explicit_groups_for_group_scope(self):
+        resolved = self.service._resolve_import_group_ids(
+            self._exam_payload(),
+            explicit_group_ids=["10", "11"],
+            explicit_scope_mode="groups",
+        )
+
+        self.assertEqual(resolved, [10, 11])
+
+    def test_resolve_import_group_ids_maps_package_group_codes(self):
+        service = PackageService(
+            _FakeDbManager(
+                group_rows=[
+                    {"id": 3, "code": "ai-team"},
+                    {"id": 5, "code": "sec-team"},
+                ]
+            ),
+            ROOT / "app",
+        )
+
+        resolved = service._resolve_import_group_ids(
+            {
+                **self._exam_payload(),
+                "group_codes": ["SEC-TEAM", "ai-team"],
+            },
+        )
+
+        self.assertEqual(resolved, [5, 3])
+
+    def test_resolve_import_group_ids_rejects_missing_package_group_codes(self):
+        service = PackageService(
+            _FakeDbManager(group_rows=[{"id": 3, "code": "ai-team"}]),
+            ROOT / "app",
+        )
+
+        with self.assertRaisesRegex(ValueError, "references groups that do not exist"):
+            service._resolve_import_group_ids(
+                {
+                    **self._exam_payload(),
+                    "group_codes": ["ai-team", "missing-team"],
+                },
+            )
+
+    def test_validate_package_archive_rejects_missing_question_assets(self):
+        archive = self._build_archive(
+            {
+                f"{self.root_name}/exam.json": self._exam_payload(),
+                f"{self.root_name}/questions/q_0001.json": {
+                    **self._question_payload(),
+                    "assets": [{"file_path": "assets/missing-image.png"}],
+                },
+            }
+        )
+
+        with zipfile.ZipFile(archive, "r") as zip_archive:
+            with self.assertRaisesRegex(ValueError, "references a missing asset"):
                 self.service._validate_package_archive(zip_archive)
 
     def _build_archive(self, entries):

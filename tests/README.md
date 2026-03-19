@@ -21,6 +21,30 @@ Verifies live exam assignment behavior, especially how users are resolved from d
 
 Verifies exam package validation rules, including required package structure and tolerance for irrelevant extra files.
 
+### `test_question_logic.py`
+
+Verifies question normalization and evaluation behavior across supported question types, including answer visibility rules.
+
+### `test_question_payload_parser.py`
+
+Verifies question payload parsing and asset upload handling, including multipart uploads and hot spot image validation.
+
+### `test_user_manager.py`
+
+Verifies authentication, role hierarchy, session lifecycle, and profile update validation in the user manager.
+
+### `test_app_routes.py`
+
+Verifies protected page routing behavior, including login redirects, feature gating, role gating, and safe return path handling.
+
+### `test_api_manager.py`
+
+Verifies API bootstrap behavior, including domain discovery and registration of core and domain routes.
+
+### `test_infrastructure_lifecycle.py`
+
+Verifies the infrastructure lifecycle wiring after the singleton removal, including explicit instance creation and shared database usage for logging.
+
 ## Manual test data utilities
 
 ### `generate_synthetic_exam.py`

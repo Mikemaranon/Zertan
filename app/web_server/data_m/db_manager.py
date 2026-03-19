@@ -16,19 +16,9 @@ from .utils import Database, LogRepository
 
 
 class DBManager:
-    _instance = None
-
-    def __new__(cls, *args, **kwargs):
-        if not cls._instance:
-            cls._instance = super().__new__(cls)
-        return cls._instance
-
-    def __init__(self):
-        if hasattr(self, "initialized") and self.initialized:
-            return
-
-        self.db = Database()
-        self.logger = LogRepository()
+    def __init__(self, *, db=None, logger=None, runtime_config=None):
+        self.db = db or Database(runtime_config=runtime_config)
+        self.logger = logger or LogRepository(self.db)
 
         self.users = UsersTable(self.db)
         self.groups = GroupsTable(self.db)
@@ -40,8 +30,6 @@ class DBManager:
         self.site_features = SiteFeaturesTable(self.db)
         self.statistics = StatisticsTable(self.db)
         self.agent_logs = AgentLogsTable(self.db)
-
-        self.initialized = True
 
     def execute(self, query, params=(), *, fetchone=False, fetchall=False):
         op, data = self.db.execute(query, params, fetchone=fetchone, fetchall=fetchall)

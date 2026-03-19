@@ -1,7 +1,6 @@
 # web_server/user_m/user_manager.py
 
 import datetime
-import threading
 
 import jwt
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -11,8 +10,6 @@ from runtime_config import get_runtime_config
 
 
 class UserManager:
-    _instance = None
-    _lock = threading.Lock()
     ROLE_ORDER = {
         "user": 0,
         "reviewer": 1,
@@ -20,21 +17,11 @@ class UserManager:
         "administrator": 3,
     }
 
-    def __new__(cls, *args, **kwargs):
-        if cls._instance is None:
-            with cls._lock:
-                if cls._instance is None:
-                    cls._instance = super(UserManager, cls).__new__(cls)
-        return cls._instance
-
-    def __init__(self, secret_key="zertan-development-secret-key-2026-32b", db_manager=None):
-        if hasattr(self, "initialized") and self.initialized:
-            return
-
+    def __init__(self, secret_key=None, db_manager=None, runtime_config=None):
+        config = dict(runtime_config or get_runtime_config())
         self.db = db_manager or DBManager()
-        self.secret_key = secret_key
-        self.jwt_lifetime_hours = get_runtime_config()["jwt_lifetime_hours"]
-        self.initialized = True
+        self.secret_key = secret_key or config["secret_key"]
+        self.jwt_lifetime_hours = config["jwt_lifetime_hours"]
 
     def normalize_role(self, role):
         aliases = {"admin": "administrator"}
@@ -171,7 +158,7 @@ class UserManager:
         return self.public_user(user)
 
     def generate_token(self, user):
-        expiration_time = datetime.datetime.utcnow() + datetime.timedelta(hours=self.jwt_lifetime_hours)
+        expiration_time = datetime.datetime.now(datetime.UTC) + datetime.timedelta(hours=self.jwt_lifetime_hours)
         payload = {
             "user_id": user["id"],
             "login_name": user["login_name"],

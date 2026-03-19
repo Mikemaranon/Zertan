@@ -44,10 +44,14 @@ class Server:
         )
 
     def ini_DBManager(self):
-        return DBManager()
+        return DBManager(runtime_config=self.runtime_config)
 
     def ini_user_manager(self):
-        return UserManager(secret_key=self.secret_key, db_manager=self.DBManager)
+        return UserManager(
+            secret_key=self.secret_key,
+            db_manager=self.DBManager,
+            runtime_config=self.runtime_config,
+        )
 
     def ini_app_routes(self):
         return AppRoutes(self.app, self.user_manager, self.DBManager)

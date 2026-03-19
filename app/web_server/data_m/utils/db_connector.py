@@ -6,8 +6,8 @@ from runtime_config import get_runtime_config
 
 
 class DBConnector:
-    def __init__(self):
-        self.db_path = get_runtime_config()["db_path"]
+    def __init__(self, db_path=None):
+        self.db_path = db_path or get_runtime_config()["db_path"]
 
     def connect(self):
         connection = sqlite3.connect(self.db_path)

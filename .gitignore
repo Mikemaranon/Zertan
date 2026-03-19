@@ -2,6 +2,7 @@ __pycache__
 .venv
 AGENTS.md
 .env
+.DS_store
 deploy/docker/.env
 app/web_server/data_m/assets/
 app/web_server/data_m/utils/*.db

@@ -2,44 +2,50 @@
 
 from pathlib import Path
 
-from flask import abort, current_app, make_response, redirect, render_template, request, send_from_directory, url_for
+from flask import abort, current_app, redirect, render_template, request, send_from_directory, url_for
 
-from data_m import DBManager
-from user_m import UserManager
+from app_route_support import ProtectedPageRenderer
+
+
+ROUTE_DEFINITIONS = (
+    ("/", "home", "get_home", ["GET"]),
+    ("/home", "home_page", "get_home_page", ["GET"]),
+    ("/dashboard", "dashboard", "get_dashboard", ["GET"]),
+    ("/global-stats", "global_stats", "get_global_stats", ["GET"]),
+    ("/catalog", "catalog", "get_catalog", ["GET"]),
+    ("/live-exams", "live_exams", "get_live_exams", ["GET"]),
+    ("/login", "login", "get_login", ["GET"]),
+    ("/logout", "logout", "get_logout", ["GET", "POST"]),
+    ("/exams/<int:exam_id>", "exam_detail", "get_exam_detail", ["GET"]),
+    ("/exams/<int:exam_id>/builder", "exam_builder", "get_exam_builder", ["GET"]),
+    ("/attempts/<int:attempt_id>/run", "exam_runner", "get_exam_runner", ["GET"]),
+    ("/attempts/<int:attempt_id>/results", "attempt_results", "get_attempt_results", ["GET"]),
+    ("/profile", "profile", "get_profile", ["GET"]),
+    ("/management/exams", "exam_management", "get_exam_management", ["GET"]),
+    (
+        "/management/exams/<int:exam_id>/questions",
+        "exam_question_management",
+        "get_exam_question_management",
+        ["GET"],
+    ),
+    ("/exams/<int:exam_id>/questions/new", "question_create", "get_question_create", ["GET"]),
+    ("/questions/<int:question_id>/edit", "question_edit", "get_question_edit", ["GET"]),
+    ("/admin", "admin", "get_admin", ["GET"]),
+    ("/media/<path:asset_path>", "media_asset", "get_media_asset", ["GET"]),
+)
 
 
 class AppRoutes:
-    def __init__(self, app, user_manager: UserManager, DBManager: DBManager):
+    def __init__(self, app, user_manager, db_manager):
         self.app = app
         self.user_manager = user_manager
-        self.DBManager = DBManager
+        self.db_manager = db_manager
+        self.page_renderer = ProtectedPageRenderer(user_manager, db_manager)
         self._register_routes()
 
     def _register_routes(self):
-        self.app.add_url_rule("/", "home", self.get_home, methods=["GET"])
-        self.app.add_url_rule("/home", "home_page", self.get_home_page, methods=["GET"])
-        self.app.add_url_rule("/dashboard", "dashboard", self.get_dashboard, methods=["GET"])
-        self.app.add_url_rule("/global-stats", "global_stats", self.get_global_stats, methods=["GET"])
-        self.app.add_url_rule("/catalog", "catalog", self.get_catalog, methods=["GET"])
-        self.app.add_url_rule("/live-exams", "live_exams", self.get_live_exams, methods=["GET"])
-        self.app.add_url_rule("/login", "login", self.get_login, methods=["GET"])
-        self.app.add_url_rule("/logout", "logout", self.get_logout, methods=["GET", "POST"])
-        self.app.add_url_rule("/exams/<int:exam_id>", "exam_detail", self.get_exam_detail, methods=["GET"])
-        self.app.add_url_rule("/exams/<int:exam_id>/builder", "exam_builder", self.get_exam_builder, methods=["GET"])
-        self.app.add_url_rule("/attempts/<int:attempt_id>/run", "exam_runner", self.get_exam_runner, methods=["GET"])
-        self.app.add_url_rule("/attempts/<int:attempt_id>/results", "attempt_results", self.get_attempt_results, methods=["GET"])
-        self.app.add_url_rule("/profile", "profile", self.get_profile, methods=["GET"])
-        self.app.add_url_rule("/management/exams", "exam_management", self.get_exam_management, methods=["GET"])
-        self.app.add_url_rule(
-            "/management/exams/<int:exam_id>/questions",
-            "exam_question_management",
-            self.get_exam_question_management,
-            methods=["GET"],
-        )
-        self.app.add_url_rule("/exams/<int:exam_id>/questions/new", "question_create", self.get_question_create, methods=["GET"])
-        self.app.add_url_rule("/questions/<int:question_id>/edit", "question_edit", self.get_question_edit, methods=["GET"])
-        self.app.add_url_rule("/admin", "admin", self.get_admin, methods=["GET"])
-        self.app.add_url_rule("/media/<path:asset_path>", "media_asset", self.get_media_asset, methods=["GET"])
+        for rule, endpoint, handler_name, methods in ROUTE_DEFINITIONS:
+            self.app.add_url_rule(rule, endpoint, getattr(self, handler_name), methods=methods)
 
     def get_home(self):
         user = self.user_manager.check_user(request)
@@ -58,17 +64,7 @@ class AppRoutes:
 
     def get_logout(self):
         token = self.user_manager.get_token_from_cookie(request)
-        self.user_manager.logout(token)
-        response = make_response(redirect(url_for("login")))
-        response.delete_cookie(
-            "token",
-            secure=bool(current_app.config.get("COOKIE_SECURE", False)),
-            samesite=current_app.config.get("COOKIE_SAMESITE", "Lax"),
-        )
-        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-        response.headers["Pragma"] = "no-cache"
-        response.headers["Expires"] = "0"
-        return response
+        return self.page_renderer.build_logout_response(token)
 
     def get_dashboard(self):
         return self._render_auth_page("home/dashboard.html", "Dashboard")
@@ -148,37 +144,13 @@ class AppRoutes:
         return response
 
     def _render_auth_page(self, template_name, page_title, min_role=None, required_feature=None, **page_context):
-        user = self.user_manager.check_user(request)
-        if not user:
-            return redirect(url_for("login"))
-        feature_access = self.DBManager.site_features.enabled_map()
-        if required_feature and not feature_access.get(required_feature, False):
-            return render_template(
-                "shared/forbidden.html",
-                page_title="Unavailable",
-                current_user=user,
-                feature_access=feature_access,
-                forbidden_title="Workspace unavailable",
-                forbidden_message="This workspace is currently disabled by an administrator.",
-            ), 403
-        if min_role and not self.user_manager.user_has_role(user, min_role):
-            return render_template(
-                "shared/forbidden.html",
-                page_title="Forbidden",
-                current_user=user,
-                feature_access=feature_access,
-            ), 403
-        page_context = {
-            **page_context,
-            "asset_version": self._asset_version(),
-        }
-        return render_template(
+        return self.page_renderer.render(
+            request,
             template_name,
-            page_title=page_title,
-            current_user=user,
-            feature_access=feature_access,
-            page_context=page_context,
-            asset_version=page_context["asset_version"],
+            page_title,
+            min_role=min_role,
+            required_feature=required_feature,
+            **page_context,
         )
 
     def _get_safe_return_to(self):
@@ -186,9 +158,3 @@ class AppRoutes:
         if not return_to.startswith("/") or return_to.startswith("//"):
             return ""
         return return_to
-
-    def _asset_version(self):
-        app_bundle = Path(current_app.root_path).parent / "web_app" / "static" / "JS" / "app.js"
-        if not app_bundle.exists():
-            return "dev"
-        return str(int(app_bundle.stat().st_mtime))
