@@ -37,6 +37,18 @@
                     <option value="archived">Archived</option>
                 </select>
             </label>
+            <label>
+                <span>Availability</span>
+                <select id="exam-scope-mode">
+                    <option value="global">Entire domain</option>
+                    <option value="groups">Specific groups</option>
+                </select>
+            </label>
+            <div id="exam-groups-field" hidden>
+                <span>Groups</span>
+                <div id="exam-group-picker"></div>
+            </div>
+            <p id="exam-scope-hint" class="muted">Administrators can publish to the whole domain or restrict availability to selected groups.</p>
             <label><span>Tags</span><input id="exam-tags" type="text" placeholder="azure-ai, search, fundamentals"></label>
             <div id="exam-form-error" class="error-message"></div>
             <div class="button-row">
@@ -54,6 +66,18 @@
                 </div>
             </div>
             <label><span>Package</span><input id="import-package" type="file" accept=".zip" required></label>
+            <label>
+                <span>Imported exam availability</span>
+                <select id="import-scope-mode">
+                    <option value="global">Entire domain</option>
+                    <option value="groups">Specific groups</option>
+                </select>
+            </label>
+            <div id="import-groups-field" hidden>
+                <span>Groups</span>
+                <div id="import-group-picker"></div>
+            </div>
+            <p id="import-scope-hint" class="muted">Choose where the imported exam should be available after creation.</p>
             <div id="import-error" class="error-message"></div>
             <button class="button button--secondary" type="submit">Import exam package</button>
             <div class="package-guide">

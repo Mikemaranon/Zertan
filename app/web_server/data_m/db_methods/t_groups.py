@@ -55,6 +55,19 @@ class GroupsTable:
             for group in groups
         ]
 
+    def list_ids_for_user(self, user_id):
+        _, rows = self.db.execute(
+            """
+            SELECT group_id
+            FROM user_group_memberships
+            WHERE user_id = ?
+            ORDER BY group_id
+            """,
+            (user_id,),
+            fetchall=True,
+        )
+        return [row["group_id"] for row in rows]
+
     def create(self, name, description="", user_ids=None):
         normalized_name = self._normalize_name(name)
         if not normalized_name:

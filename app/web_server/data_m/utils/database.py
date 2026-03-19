@@ -17,7 +17,7 @@ from storage_paths import build_media_path
 from .db_connector import DBConnector
 
 
-SCHEMA_VERSION = 7
+SCHEMA_VERSION = 8
 
 
 class Database:
@@ -183,6 +183,15 @@ class Database:
                 FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
             );
 
+            CREATE TABLE IF NOT EXISTS exam_group_assignments (
+                exam_id INTEGER NOT NULL,
+                group_id INTEGER NOT NULL,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (exam_id, group_id),
+                FOREIGN KEY (exam_id) REFERENCES exams(id) ON DELETE CASCADE,
+                FOREIGN KEY (group_id) REFERENCES user_groups(id) ON DELETE CASCADE
+            );
+
             CREATE TABLE IF NOT EXISTS questions (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 exam_id INTEGER NOT NULL,
@@ -346,6 +355,7 @@ class Database:
             CREATE INDEX IF NOT EXISTS idx_attempts_exam_id ON exam_attempts(exam_id);
             CREATE INDEX IF NOT EXISTS idx_answers_attempt_id ON exam_answers(attempt_id);
             CREATE INDEX IF NOT EXISTS idx_user_group_memberships_user_id ON user_group_memberships(user_id);
+            CREATE INDEX IF NOT EXISTS idx_exam_group_assignments_group_id ON exam_group_assignments(group_id);
             CREATE INDEX IF NOT EXISTS idx_live_exam_assignments_user_id ON live_exam_assignments(user_id);
             CREATE INDEX IF NOT EXISTS idx_live_exam_assignments_live_exam_id ON live_exam_assignments(live_exam_id);
             """

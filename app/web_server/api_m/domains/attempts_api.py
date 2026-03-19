@@ -36,7 +36,7 @@ class AttemptsAPI(BaseAPI):
         payload = service.get_attempt_payload(attempt_id, page_number=request.args.get("page", type=int))
         if not payload:
             return self.error("Attempt not found.", 404)
-        if not self._can_access_attempt(user, payload["attempt"]["user_id"]):
+        if not self._can_access_attempt(user, payload["attempt"]["user_id"], payload["attempt"]["exam_id"]):
             return self.error("Forbidden", 403)
         return self.ok(payload)
 
@@ -48,7 +48,7 @@ class AttemptsAPI(BaseAPI):
         payload = service.get_attempt_payload(attempt_id)
         if not payload:
             return self.error("Attempt not found.", 404)
-        if not self._can_access_attempt(user, payload["attempt"]["user_id"]):
+        if not self._can_access_attempt(user, payload["attempt"]["user_id"], payload["attempt"]["exam_id"]):
             return self.error("Forbidden", 403)
         if payload["attempt"]["status"] != "in_progress":
             return self.error("Attempt is already submitted.", 400)
@@ -64,7 +64,7 @@ class AttemptsAPI(BaseAPI):
         payload = service.get_attempt_payload(attempt_id)
         if not payload:
             return self.error("Attempt not found.", 404)
-        if not self._can_access_attempt(user, payload["attempt"]["user_id"]):
+        if not self._can_access_attempt(user, payload["attempt"]["user_id"], payload["attempt"]["exam_id"]):
             return self.error("Forbidden", 403)
         answers = (request.get_json() or {}).get("answers", [])
         if answers:
@@ -81,9 +81,14 @@ class AttemptsAPI(BaseAPI):
         result = service.get_result_payload(attempt_id)
         if not result:
             return self.error("Attempt not found.", 404)
-        if not self._can_access_attempt(user, result["attempt"]["user_id"]):
+        if not self._can_access_attempt(user, result["attempt"]["user_id"], result["attempt"]["exam_id"]):
             return self.error("Forbidden", 403)
         return self.ok(result)
 
-    def _can_access_attempt(self, user, owner_id):
-        return owner_id == user["id"] or self.user_manager.user_has_role(user, "examiner")
+    def _can_access_attempt(self, user, owner_id, exam_id):
+        if owner_id == user["id"]:
+            return True
+        if not self.user_manager.user_has_role(user, "examiner"):
+            return False
+        exam = self.db.exams.get(exam_id)
+        return self.user_can_manage_exam(user, exam)

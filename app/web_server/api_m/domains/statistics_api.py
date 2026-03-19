@@ -56,9 +56,9 @@ class StatisticsAPI(BaseAPI):
         user, error = self.auth_user(request)
         if error:
             return error
-        exam = self.db.exams.get(exam_id)
-        if not exam:
-            return self.error("Exam not found.", 404)
+        exam, exam_error = self.get_accessible_exam(user, exam_id)
+        if exam_error:
+            return exam_error
         return self.ok({"exam": exam, "statistics": self.db.statistics.exam_overview(exam_id)})
 
     def platform_statistics(self):

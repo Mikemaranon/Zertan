@@ -53,9 +53,11 @@ class QuestionsAPI(BaseAPI):
         user, error = self.auth_user(request, min_role="reviewer")
         if error:
             return error
-        exam = self.db.exams.get(exam_id)
-        if not exam:
-            return self.error("Exam not found.", 404)
+        exam, exam_error = self.get_accessible_exam(user, exam_id)
+        if exam_error:
+            return exam_error
+        if not self.user_can_manage_exam(user, exam):
+            return self.error("Forbidden", 403)
 
         questions = self.db.questions.list_for_exam(exam_id, include_answers=False, include_archived=True)
         items = [self._serialize_question_summary(question, user) for question in questions]
@@ -63,8 +65,8 @@ class QuestionsAPI(BaseAPI):
             {
                 "exam": {
                     **exam,
-                    "can_edit_questions": self.user_manager.user_has_role(user, "reviewer"),
-                    "can_delete_questions": self.user_manager.user_has_role(user, "examiner"),
+                    "can_edit_questions": self.user_manager.user_has_role(user, "reviewer") and self.user_can_manage_exam(user, exam),
+                    "can_delete_questions": self.user_manager.user_has_role(user, "examiner") and self.user_can_manage_exam(user, exam),
                 },
                 "questions": items,
             }
@@ -80,6 +82,8 @@ class QuestionsAPI(BaseAPI):
         )
         if not question:
             return self.error("Question not found.", 404)
+        if not self.user_can_access_exam(user, question["exam_id"]):
+            return self.error("Forbidden", 403)
         if not self.user_manager.user_has_role(user, "reviewer"):
             question = build_public_question(question, include_solution=False)
         return self.ok({"question": question})
@@ -88,9 +92,12 @@ class QuestionsAPI(BaseAPI):
         user, error = self.auth_user(request, min_role="reviewer")
         if error:
             return error
+        _, exam_error = self.get_accessible_exam(user, exam_id)
+        if exam_error:
+            return exam_error
         exam = self.db.exams.get(exam_id)
-        if not exam:
-            return self.error("Exam not found.", 404)
+        if not self.user_can_manage_exam(user, exam):
+            return self.error("Forbidden", 403)
         try:
             payload = self._parse_question_payload(exam_id)
             question_id = self.db.questions.create(exam_id, payload)
@@ -105,6 +112,11 @@ class QuestionsAPI(BaseAPI):
         current_question = self.db.questions.get(question_id, include_answers=True)
         if not current_question:
             return self.error("Question not found.", 404)
+        if not self.user_can_access_exam(user, current_question["exam_id"]):
+            return self.error("Forbidden", 403)
+        exam = self.db.exams.get(current_question["exam_id"])
+        if not self.user_can_manage_exam(user, exam):
+            return self.error("Forbidden", 403)
         try:
             payload = self._parse_question_payload(current_question["exam_id"], current_question=current_question)
             self.db.questions.update(question_id, payload)
@@ -119,6 +131,11 @@ class QuestionsAPI(BaseAPI):
         question = self.db.questions.get(question_id, include_answers=True)
         if not question:
             return self.error("Question not found.", 404)
+        if not self.user_can_access_exam(user, question["exam_id"]):
+            return self.error("Forbidden", 403)
+        exam = self.db.exams.get(question["exam_id"])
+        if not self.user_can_manage_exam(user, exam):
+            return self.error("Forbidden", 403)
         self.db.questions.delete(question_id)
         return self.ok({"status": "deleted"})
 
@@ -129,6 +146,11 @@ class QuestionsAPI(BaseAPI):
         question = self.db.questions.get(question_id, include_answers=True)
         if not question:
             return self.error("Question not found.", 404)
+        if not self.user_can_access_exam(user, question["exam_id"]):
+            return self.error("Forbidden", 403)
+        exam = self.db.exams.get(question["exam_id"])
+        if not self.user_can_manage_exam(user, exam):
+            return self.error("Forbidden", 403)
         self.db.questions.archive(question_id)
         return self.ok({"status": "archived"})
 
@@ -139,6 +161,8 @@ class QuestionsAPI(BaseAPI):
         question = self.db.questions.get(question_id, include_answers=True)
         if not question:
             return self.error("Question not found.", 404)
+        if not self.user_can_access_exam(user, question["exam_id"]):
+            return self.error("Forbidden", 403)
         response_payload = (request.get_json() or {}).get("response") or {}
         evaluation = evaluate_question_response(question, response_payload)
         return self.ok(

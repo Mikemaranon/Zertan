@@ -41,13 +41,25 @@ class ExamsAPI(BaseAPI):
         if error:
             return error
         exams = []
-        for exam in self.db.exams.list_all():
+        scope_options = self.list_exam_scope_options_for_user(user)
+        allow_global_scope = self.user_is_administrator(user)
+        for exam in self.db.exams.list_all(user_id=user["id"], is_administrator=self.user_is_administrator(user)):
             enriched_exam = dict(exam)
-            enriched_exam["can_manage"] = self.user_manager.user_has_role(user, "examiner")
-            enriched_exam["can_edit_questions"] = self.user_manager.user_has_role(user, "reviewer")
-            enriched_exam["can_export_package"] = self.user_manager.user_has_role(user, "reviewer")
+            enriched_exam["can_manage"] = self.user_manager.user_has_role(user, "examiner") and self.user_can_manage_exam(user, exam)
+            enriched_exam["can_edit_questions"] = self.user_manager.user_has_role(user, "reviewer") and self.user_can_manage_exam(user, exam)
+            enriched_exam["can_export_package"] = self.user_manager.user_has_role(user, "examiner") and self.user_can_manage_exam(user, exam)
             exams.append(enriched_exam)
-        return self.ok({"exams": exams, "user": user})
+        return self.ok(
+            {
+                "exams": exams,
+                "user": user,
+                "scope_options": scope_options,
+                "scope_permissions": {
+                    "allow_global": allow_global_scope,
+                    "allow_groups": bool(scope_options),
+                },
+            }
+        )
 
     def create_exam(self):
         user, error = self.auth_user(request, min_role="examiner")
@@ -58,7 +70,12 @@ class ExamsAPI(BaseAPI):
         if any(not str(payload.get(field, "")).strip() for field in required):
             return self.error("Code, title, and provider are required.", 400)
         try:
-            exam_id = self.db.exams.create(payload, user["id"])
+            exam_id = self.db.exams.create(
+                payload,
+                user["id"],
+                allowed_group_ids=[group["id"] for group in self.list_exam_scope_options_for_user(user)],
+                allow_global=self.user_is_administrator(user),
+            )
         except ValueError as exc:
             return self.error(str(exc), 400)
         return self.ok({"exam": self.db.exams.get(exam_id)}, 201)
@@ -67,28 +84,35 @@ class ExamsAPI(BaseAPI):
         user, error = self.auth_user(request)
         if error:
             return error
-        exam = self.db.exams.get(exam_id)
-        if not exam:
-            return self.error("Exam not found.", 404)
+        exam, exam_error = self.get_accessible_exam(user, exam_id)
+        if exam_error:
+            return exam_error
         exam["builder_meta"] = self.db.exams.list_builder_metadata(exam_id)
-        exam["can_manage"] = self.user_manager.user_has_role(user, "examiner")
-        exam["can_edit_questions"] = self.user_manager.user_has_role(user, "reviewer")
-        exam["can_export_package"] = self.user_manager.user_has_role(user, "reviewer")
+        exam["can_manage"] = self.user_manager.user_has_role(user, "examiner") and self.user_can_manage_exam(user, exam)
+        exam["can_edit_questions"] = self.user_manager.user_has_role(user, "reviewer") and self.user_can_manage_exam(user, exam)
+        exam["can_export_package"] = self.user_manager.user_has_role(user, "examiner") and self.user_can_manage_exam(user, exam)
         return self.ok({"exam": exam})
 
     def update_exam(self, exam_id):
         user, error = self.auth_user(request, min_role="examiner")
         if error:
             return error
-        exam = self.db.exams.get(exam_id)
-        if not exam:
-            return self.error("Exam not found.", 404)
+        exam, exam_error = self.get_accessible_exam(user, exam_id)
+        if exam_error:
+            return exam_error
+        if not self.user_can_manage_exam(user, exam):
+            return self.error("Forbidden", 403)
         payload = request.get_json() or {}
         required = ["code", "title", "provider"]
         if any(not str(payload.get(field, "")).strip() for field in required):
             return self.error("Code, title, and provider are required.", 400)
         try:
-            self.db.exams.update(exam_id, payload)
+            self.db.exams.update(
+                exam_id,
+                payload,
+                allowed_group_ids=[group["id"] for group in self.list_exam_scope_options_for_user(user)],
+                allow_global=self.user_is_administrator(user),
+            )
         except ValueError as exc:
             return self.error(str(exc), 400)
         return self.ok({"exam": self.db.exams.get(exam_id)})
@@ -97,9 +121,11 @@ class ExamsAPI(BaseAPI):
         user, error = self.auth_user(request, min_role="examiner")
         if error:
             return error
-        exam = self.db.exams.get(exam_id)
-        if not exam:
-            return self.error("Exam not found.", 404)
+        exam, exam_error = self.get_accessible_exam(user, exam_id)
+        if exam_error:
+            return exam_error
+        if not self.user_can_manage_exam(user, exam):
+            return self.error("Forbidden", 403)
 
         questions = self.db.questions.list_for_exam(exam_id, include_answers=True, include_archived=True)
         self.db.exams.delete(exam_id)
@@ -110,35 +136,35 @@ class ExamsAPI(BaseAPI):
         user, error = self.auth_user(request)
         if error:
             return error
-        exam = self.db.exams.get(exam_id)
-        if not exam:
-            return self.error("Exam not found.", 404)
+        exam, exam_error = self.get_accessible_exam(user, exam_id)
+        if exam_error:
+            return exam_error
         questions = [
             build_public_question(question, include_solution=False)
             for question in self.db.questions.list_for_exam(exam_id, include_answers=False)
         ]
         exam["builder_meta"] = self.db.exams.list_builder_metadata(exam_id)
-        exam["can_manage"] = self.user_manager.user_has_role(user, "examiner")
-        exam["can_edit_questions"] = self.user_manager.user_has_role(user, "reviewer")
-        exam["can_export_package"] = self.user_manager.user_has_role(user, "reviewer")
+        exam["can_manage"] = self.user_manager.user_has_role(user, "examiner") and self.user_can_manage_exam(user, exam)
+        exam["can_edit_questions"] = self.user_manager.user_has_role(user, "reviewer") and self.user_can_manage_exam(user, exam)
+        exam["can_export_package"] = self.user_manager.user_has_role(user, "examiner") and self.user_can_manage_exam(user, exam)
         return self.ok({"exam": exam, "questions": questions})
 
     def get_builder_meta(self, exam_id):
         user, error = self.auth_user(request)
         if error:
             return error
-        exam = self.db.exams.get(exam_id)
-        if not exam:
-            return self.error("Exam not found.", 404)
+        exam, exam_error = self.get_accessible_exam(user, exam_id)
+        if exam_error:
+            return exam_error
         return self.ok({"builder_meta": self.db.exams.list_builder_metadata(exam_id), "exam": exam})
 
     def build_attempt(self, exam_id):
         user, error = self.auth_user(request)
         if error:
             return error
-        exam = self.db.exams.get(exam_id)
-        if not exam:
-            return self.error("Exam not found.", 404)
+        _, exam_error = self.get_accessible_exam(user, exam_id)
+        if exam_error:
+            return exam_error
         criteria = request.get_json() or {}
         try:
             attempt_id = AttemptService(self.db).create_attempt(exam_id, user["id"], criteria)

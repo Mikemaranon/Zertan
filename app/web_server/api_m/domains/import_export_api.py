@@ -34,18 +34,28 @@ class ImportExportAPI(BaseAPI):
         try:
             app_root = Path(current_app.config["APP_ROOT"]).resolve()
             media_root = Path(current_app.config["MEDIA_ROOT"]).resolve()
-            exam_id = PackageService(self.db, app_root, media_root=media_root).import_exam(uploaded_file, user["id"])
+            scope_group_ids = request.form.getlist("group_ids")
+            exam_id = PackageService(self.db, app_root, media_root=media_root).import_exam(
+                uploaded_file,
+                user["id"],
+                group_ids=scope_group_ids,
+                scope_mode=request.form.get("scope_mode"),
+                allowed_group_ids=[group["id"] for group in self.list_exam_scope_options_for_user(user)],
+                allow_global=self.user_is_administrator(user),
+            )
         except ValueError as exc:
             return self.error(str(exc), 400)
         return self.ok({"exam": self.db.exams.get(exam_id)}, 201)
 
     def export_exam(self, exam_id):
-        _, error = self.auth_user(request, min_role="reviewer")
+        user, error = self.auth_user(request, min_role="examiner")
         if error:
             return error
-        exam = self.db.exams.get(exam_id)
-        if not exam:
-            return self.error("Exam not found.", 404)
+        exam, exam_error = self.get_accessible_exam(user, exam_id)
+        if exam_error:
+            return exam_error
+        if not self.user_can_manage_exam(user, exam):
+            return self.error("Forbidden", 403)
         app_root = Path(current_app.config["APP_ROOT"]).resolve()
         media_root = Path(current_app.config["MEDIA_ROOT"]).resolve()
         zip_path, temp_dir = PackageService(self.db, app_root, media_root=media_root).export_exam(exam_id)

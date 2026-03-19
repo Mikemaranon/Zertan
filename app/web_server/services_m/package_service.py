@@ -70,6 +70,8 @@ class PackageService:
             "difficulty": exam["difficulty"],
             "status": exam["status"],
             "tags": exam["tags"],
+            "scope_mode": exam.get("scope_mode", "global"),
+            "group_codes": [group["code"] for group in exam.get("scope_groups", [])],
         }
         (package_root / "exam.json").write_text(json.dumps(exam_document, indent=2), encoding="utf-8")
 
@@ -79,7 +81,7 @@ class PackageService:
                 archive.write(path, path.relative_to(temp_dir))
         return zip_path, temp_dir
 
-    def import_exam(self, uploaded_file, created_by):
+    def import_exam(self, uploaded_file, created_by, group_ids=None, scope_mode=None, allowed_group_ids=None, allow_global=True):
         temp_dir = Path(tempfile.mkdtemp(prefix="zertan-import-"))
         exam_id = None
         target_dir = None
@@ -96,11 +98,24 @@ class PackageService:
                 raise ValueError("Upload a valid .zip exam package.") from exc
 
             exam_payload = package_data["exam_payload"]
+            resolved_group_ids = self._resolve_import_group_ids(
+                exam_payload,
+                explicit_group_ids=group_ids,
+                explicit_scope_mode=scope_mode,
+                allowed_group_ids=allowed_group_ids,
+                allow_global=allow_global,
+            )
+            exam_payload["group_ids"] = resolved_group_ids
             existing_exams = self.db.exams.list_all()
             if any(existing["code"].lower() == exam_payload["code"].lower() for existing in existing_exams):
                 raise ValueError("An exam with this code already exists.")
 
-            exam_id = self.db.exams.create(exam_payload, created_by)
+            exam_id = self.db.exams.create(
+                exam_payload,
+                created_by,
+                allowed_group_ids=allowed_group_ids,
+                allow_global=allow_global,
+            )
 
             target_dir = self.upload_root / "imports" / exam_payload["code"].lower()
             shutil.rmtree(target_dir, ignore_errors=True)
@@ -122,6 +137,53 @@ class PackageService:
             raise
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
+
+    def _resolve_import_group_ids(
+        self,
+        exam_payload,
+        explicit_group_ids=None,
+        explicit_scope_mode=None,
+        allowed_group_ids=None,
+        allow_global=True,
+    ):
+        normalized_explicit_group_ids = self.db.exams._normalize_group_ids(explicit_group_ids)
+        normalized_scope_mode = str(explicit_scope_mode or "").strip().lower()
+        if normalized_scope_mode == "global":
+            return []
+        if normalized_scope_mode == "groups":
+            if normalized_explicit_group_ids:
+                return normalized_explicit_group_ids
+            raise ValueError("Select at least one group for this imported exam.")
+        if normalized_explicit_group_ids:
+            return normalized_explicit_group_ids
+
+        package_group_codes = [
+            str(value).strip()
+            for value in exam_payload.get("group_codes", [])
+            if str(value).strip()
+        ]
+        if package_group_codes:
+            placeholders = ",".join("?" for _ in package_group_codes)
+            rows = self.db.execute(
+                f"""
+                SELECT id, code
+                FROM user_groups
+                WHERE lower(code) IN ({placeholders})
+                ORDER BY id
+                """,
+                tuple(code.lower() for code in package_group_codes),
+                fetchall=True,
+            )
+            code_to_id = {row["code"].lower(): row["id"] for row in rows}
+            missing_codes = [code for code in package_group_codes if code.lower() not in code_to_id]
+            if missing_codes:
+                raise ValueError("The imported package references groups that do not exist in this domain.")
+            return [code_to_id[code.lower()] for code in package_group_codes]
+
+        if exam_payload.get("scope_mode") == "groups" and not allow_global:
+            raise ValueError("Select at least one group for this imported exam.")
+
+        return []
 
     def _validate_package_archive(self, archive):
         members = [info for info in archive.infolist() if info.filename and info.filename != "/"]
@@ -333,6 +395,12 @@ class PackageService:
         for field in ("code", "title", "provider"):
             if not normalized[field]:
                 raise ValueError(f"exam.json requires a non-empty '{field}' field.")
+        normalized["scope_mode"] = str(payload.get("scope_mode", "global") or "global").strip().lower()
+        normalized["group_codes"] = [
+            str(value).strip()
+            for value in payload.get("group_codes", [])
+            if str(value).strip()
+        ]
         return normalized
 
     def _normalize_import_question(self, payload, archive_path):
