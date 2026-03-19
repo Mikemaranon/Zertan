@@ -6,6 +6,78 @@
     flex-wrap: wrap;
 }
 
+.live-exam-card {
+    gap: 0;
+}
+
+.live-exam-card__summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.live-exam-card__identity {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.live-exam-card__identity h2 {
+    margin: 0;
+}
+
+.live-exam-card__description {
+    margin: 10px 0 0;
+}
+
+.live-exam-card__summary-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.live-exam-card__button-row {
+    justify-content: flex-end;
+}
+
+.live-exam-card__toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--surface-soft);
+    color: var(--text);
+    cursor: pointer;
+    flex: 0 0 auto;
+}
+
+.live-exam-card__toggle span {
+    font-size: 1rem;
+    line-height: 1;
+    transition: transform 160ms ease;
+}
+
+.live-exam-card__details {
+    display: none;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    gap: 16px;
+}
+
+.live-exam-card.is-expanded .live-exam-card__details {
+    display: grid;
+}
+
+.live-exam-card.is-expanded .live-exam-card__toggle span {
+    transform: rotate(180deg);
+}
+
 .live-exam-card__metrics {
     display: grid;
     gap: 12px;
@@ -124,6 +196,15 @@
 }
 
 @media (max-width: 1024px) {
+    .live-exam-card__summary {
+        flex-direction: column;
+    }
+
+    .live-exam-card__summary-actions,
+    .live-exam-card__button-row {
+        justify-content: flex-start;
+    }
+
     .live-exam-assignment-row {
         flex-direction: column;
     }
@@ -138,6 +219,10 @@
 }
 
 @media (max-width: 720px) {
+    .live-exam-card__summary-actions {
+        width: 100%;
+    }
+
     .live-exam-modal__body {
         max-height: calc(100dvh - 52px);
         padding: 24px 20px;

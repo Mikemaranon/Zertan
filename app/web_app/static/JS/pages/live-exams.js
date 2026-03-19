@@ -85,57 +85,18 @@ function renderAdministratorList(container, liveExams) {
 
     container.innerHTML = liveExams.length
         ? liveExams
-            .map(
-                (liveExam) => `
-            <article class="card">
-                <div class="section-heading">
-                    <div>
-                        <p class="eyebrow">${escapeHtml(liveExam.exam_code)}</p>
-                        <h2>${escapeHtml(liveExam.title)}</h2>
-                    </div>
-                    <span class="badge badge--active">Active</span>
-                </div>
-                <p class="muted">${escapeHtml(liveExam.description || "")}</p>
-                ${liveExam.instructions ? `<div class="live-exam-note"><strong>Instructions</strong><p class="muted">${escapeHtml(liveExam.instructions)}</p></div>` : ""}
-                <div class="live-exam-card__metrics">
-                    ${renderMetric("Source exam", escapeHtml(liveExam.exam_code))}
-                    ${renderMetric("Assigned", liveExam.counts.assigned)}
-                    ${renderMetric("Pending", liveExam.counts.pending)}
-                    ${renderMetric("In progress", liveExam.counts.in_progress)}
-                    ${renderMetric("Completed", liveExam.counts.completed)}
-                    ${renderMetric("Questions", liveExam.question_count)}
-                    ${renderMetric("Time limit", liveExam.time_limit_minutes ? `${liveExam.time_limit_minutes} min` : "Not set")}
-                </div>
-                <div class="button-row">
-                    <button class="button button--secondary button--small js-live-exam-close" data-live-exam-id="${liveExam.id}" type="button">Close exam</button>
-                    <button class="button button--danger button--small js-live-exam-delete" data-live-exam-id="${liveExam.id}" type="button">Delete exam</button>
-                </div>
-                <div class="live-exam-assignment-list">
-                    ${(liveExam.assignments || []).length
-                        ? liveExam.assignments
-                            .map(
-                                (assignment) => `
-                            <div class="live-exam-assignment-row">
-                                <div class="live-exam-assignment-row__identity">
-                                    <strong>${escapeHtml(assignment.display_name)}</strong>
-                                    <span class="muted">@${escapeHtml(assignment.login_name)}</span>
-                                </div>
-                                <div class="live-exam-assignment-row__actions">
-                                    ${renderStatusBadge(assignment.assignment_status)}
-                                    ${assignment.score_percent !== null && assignment.score_percent !== undefined ? `<span class="badge">${formatPercent(assignment.score_percent)}</span>` : ""}
-                                    ${renderAdminAttemptLink(assignment)}
-                                </div>
-                            </div>
-                        `
-                            )
-                            .join("")
-                        : `<div class="empty-state">No users are assigned to this live exam.</div>`}
-                </div>
-            </article>
-        `
-            )
+            .map((liveExam) => renderAdminCard(liveExam))
             .join("")
         : `<div class="empty-state">No live exams have been created yet.</div>`;
+
+    container.querySelectorAll(".js-live-exam-toggle").forEach((button) => {
+        button.addEventListener("click", (event) => {
+            const card = event.currentTarget.closest(".js-live-exam-card");
+            const isExpanded = card?.classList.toggle("is-expanded");
+            event.currentTarget.setAttribute("aria-expanded", isExpanded ? "true" : "false");
+            event.currentTarget.setAttribute("aria-label", isExpanded ? "Collapse live exam details" : "Expand live exam details");
+        });
+    });
 
     container.querySelectorAll(".js-live-exam-close").forEach((button) => {
         button.addEventListener("click", async (event) => {
@@ -166,6 +127,62 @@ function renderAdministratorList(container, liveExams) {
             renderAdministratorList(container, refreshed.live_exams || []);
         });
     });
+}
+
+function renderAdminCard(liveExam) {
+    return `
+        <article class="card live-exam-card js-live-exam-card">
+            <div class="live-exam-card__summary">
+                <div class="live-exam-card__identity">
+                    <p class="eyebrow">${escapeHtml(liveExam.exam_code)}</p>
+                    <h2>${escapeHtml(liveExam.title)}</h2>
+                    ${liveExam.description ? `<p class="muted live-exam-card__description">${escapeHtml(liveExam.description)}</p>` : ""}
+                </div>
+                <div class="live-exam-card__summary-actions">
+                    <div class="button-row live-exam-card__button-row">
+                        <button class="button button--secondary button--small js-live-exam-close" data-live-exam-id="${liveExam.id}" type="button">Close exam</button>
+                        <button class="button button--danger button--small js-live-exam-delete" data-live-exam-id="${liveExam.id}" type="button">Delete exam</button>
+                    </div>
+                    <button class="live-exam-card__toggle js-live-exam-toggle" type="button" aria-expanded="false" aria-label="Expand live exam details">
+                        <span aria-hidden="true">▾</span>
+                    </button>
+                </div>
+            </div>
+            <div class="live-exam-card__details">
+                ${liveExam.instructions ? `<div class="live-exam-note"><strong>Instructions</strong><p class="muted">${escapeHtml(liveExam.instructions)}</p></div>` : ""}
+                <div class="live-exam-card__metrics">
+                    ${renderMetric("Source exam", escapeHtml(liveExam.exam_code))}
+                    ${renderMetric("Assigned", liveExam.counts.assigned)}
+                    ${renderMetric("Pending", liveExam.counts.pending)}
+                    ${renderMetric("In progress", liveExam.counts.in_progress)}
+                    ${renderMetric("Completed", liveExam.counts.completed)}
+                    ${renderMetric("Questions", liveExam.question_count)}
+                    ${renderMetric("Time limit", liveExam.time_limit_minutes ? `${liveExam.time_limit_minutes} min` : "Not set")}
+                </div>
+                <div class="live-exam-assignment-list">
+                    ${(liveExam.assignments || []).length
+                        ? liveExam.assignments
+                            .map(
+                                (assignment) => `
+                            <div class="live-exam-assignment-row">
+                                <div class="live-exam-assignment-row__identity">
+                                    <strong>${escapeHtml(assignment.display_name)}</strong>
+                                    <span class="muted">@${escapeHtml(assignment.login_name)}</span>
+                                </div>
+                                <div class="live-exam-assignment-row__actions">
+                                    ${renderStatusBadge(assignment.assignment_status)}
+                                    ${assignment.score_percent !== null && assignment.score_percent !== undefined ? `<span class="badge">${formatPercent(assignment.score_percent)}</span>` : ""}
+                                    ${renderAdminAttemptLink(assignment)}
+                                </div>
+                            </div>
+                        `
+                            )
+                            .join("")
+                        : `<div class="empty-state">No users are assigned to this live exam.</div>`}
+                </div>
+            </div>
+        </article>
+    `;
 }
 
 function bindLiveExamModal({ availableExams, availableUsers, onCreated }) {
