@@ -67,7 +67,29 @@ class StatisticsAPI(BaseAPI):
             return error
         if not self.feature_enabled("global_stats_page"):
             return self.error("Global Stats is currently disabled by an administrator.", 403)
-        return self.ok({"platform": self.db.statistics.platform_overview(), "current_user_id": user["id"]})
+        allowed_groups = self.db.groups.list_scope_options_for_user(
+            None if self.user_manager.user_has_role(user, "administrator") else user["id"]
+        )
+        requested_group_id = request.args.get("group_id", "").strip()
+        comparison_group_id = None
+        if requested_group_id:
+            try:
+                comparison_group_id = int(requested_group_id)
+            except ValueError:
+                return self.error("Group id must be a valid integer.", 400)
+            allowed_group_ids = {group["id"] for group in allowed_groups}
+            if comparison_group_id not in allowed_group_ids:
+                return self.error("Selected group is not available for this user.", 403)
+
+        return self.ok(
+            {
+                "platform": self.db.statistics.platform_overview(comparison_group_id),
+                "current_user_id": user["id"],
+                "current_user_role": user["role"],
+                "comparison_groups": allowed_groups,
+                "selected_group_id": comparison_group_id,
+            }
+        )
 
     def _build_dashboard_payload(self, user_id):
         kpis = self.db.statistics.user_overview(user_id)

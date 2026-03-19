@@ -247,9 +247,9 @@ class StatisticsTable:
             "average_questions_per_attempt": round(attempts["average_questions_per_attempt"] or 0, 1),
         }
 
-    def platform_user_comparison(self):
-        _, rows = self.db.execute(
-            """
+    def platform_user_comparison(self, group_id=None):
+        params = []
+        query = """
             SELECT
                 u.id,
                 u.display_name,
@@ -264,14 +264,23 @@ class StatisticsTable:
                 COALESCE(AVG(a.score_percent), 0) AS average_score,
                 COALESCE(AVG(a.duration_seconds), 0) AS average_completion_time
             FROM users u
+        """
+        if group_id is not None:
+            query += """
+                JOIN user_group_memberships gm
+                    ON gm.user_id = u.id
+                    AND gm.group_id = ?
+            """
+            params.append(group_id)
+        query += """
             LEFT JOIN exam_attempts a
                 ON a.user_id = u.id
                 AND a.status = 'submitted'
+            WHERE lower(COALESCE(u.role, 'user')) != 'administrator'
             GROUP BY u.id
             ORDER BY submitted_attempts DESC, average_score DESC, lower(u.display_name), lower(u.login_name)
-            """,
-            fetchall=True,
-        )
+        """
+        _, rows = self.db.execute(query, tuple(params), fetchall=True)
         payload = []
         for row in rows:
             answered = row["questions_answered"] or 0
@@ -385,10 +394,10 @@ class StatisticsTable:
         payload.reverse()
         return payload
 
-    def platform_overview(self):
+    def platform_overview(self, comparison_group_id=None):
         return {
             "summary": self.platform_summary(),
-            "users": self.platform_user_comparison(),
+            "users": self.platform_user_comparison(comparison_group_id),
             "by_exam": self.platform_success_by_exam(),
             "by_question_type": self.platform_success_by_question_type(),
             "activity_by_week": self.platform_activity_by_week(),

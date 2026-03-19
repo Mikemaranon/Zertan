@@ -4,6 +4,7 @@ from .db_methods import (
     AgentLogsTable,
     AttemptsTable,
     ExamsTable,
+    GroupsTable,
     LiveExamsTable,
     QuestionsTable,
     SessionsTable,
@@ -30,6 +31,7 @@ class DBManager:
         self.logger = LogRepository()
 
         self.users = UsersTable(self.db)
+        self.groups = GroupsTable(self.db)
         self.sessions = SessionsTable(self.db)
         self.exams = ExamsTable(self.db)
         self.questions = QuestionsTable(self.db)

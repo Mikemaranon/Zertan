@@ -18,11 +18,30 @@
 <section class="panel stack-gap">
     <div class="section-heading">
         <div>
-            <h2>User comparison</h2>
-            <p class="muted">Submitted attempts, answered volume, and official success rate for every user in the domain.</p>
+            <h2>Global user comparison</h2>
+            <p class="muted">Compare non-administrator users through grouped KPI bars, and narrow the comparison to specific user groups when needed.</p>
         </div>
     </div>
-    <div id="global-stats-users" class="list-stack"></div>
+    <div class="global-comparison-layout">
+        <div class="global-comparison-toolbar">
+            <label class="global-comparison-field" for="global-stats-group-select">
+                <span>Group scope</span>
+                <select id="global-stats-group-select" aria-describedby="global-stats-group-hint"></select>
+            </label>
+            <div class="global-comparison-note">
+                <p id="global-stats-group-hint" class="muted">User comparison currently includes every non-administrator user in the domain.</p>
+                <p class="muted">Only non-administrator users are represented in the comparison chart.</p>
+            </div>
+        </div>
+        <div id="global-stats-users" class="global-user-chart-shell"></div>
+        <div class="global-comparison-footer">
+            <div>
+                <h3>KPI selection</h3>
+                <p class="muted">The first active KPI defines descending user order. Additional KPIs only add grouped columns.</p>
+            </div>
+            <div id="global-stats-kpi-toggles" class="global-kpi-toggles" aria-label="Toggle KPIs"></div>
+        </div>
+    </div>
 </section>
 
 <section class="grid grid--two">

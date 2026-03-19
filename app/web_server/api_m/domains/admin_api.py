@@ -11,6 +11,20 @@ class AdminAPI(BaseAPI):
         self.app.add_url_rule("/api/admin/users", endpoint="api_admin_users_create", view_func=self.create_user, methods=["POST"])
         self.app.add_url_rule("/api/admin/users/<int:user_id>", endpoint="api_admin_users_update", view_func=self.update_user, methods=["PUT"])
         self.app.add_url_rule("/api/admin/users/<int:user_id>", endpoint="api_admin_users_delete", view_func=self.delete_user, methods=["DELETE"])
+        self.app.add_url_rule("/api/admin/user-groups", endpoint="api_admin_groups_list", view_func=self.list_groups, methods=["GET"])
+        self.app.add_url_rule("/api/admin/user-groups", endpoint="api_admin_groups_create", view_func=self.create_group, methods=["POST"])
+        self.app.add_url_rule(
+            "/api/admin/user-groups/<int:group_id>",
+            endpoint="api_admin_groups_update",
+            view_func=self.update_group,
+            methods=["PUT"],
+        )
+        self.app.add_url_rule(
+            "/api/admin/user-groups/<int:group_id>",
+            endpoint="api_admin_groups_delete",
+            view_func=self.delete_group,
+            methods=["DELETE"],
+        )
         self.app.add_url_rule("/api/admin/features", endpoint="api_admin_features_list", view_func=self.list_features, methods=["GET"])
         self.app.add_url_rule(
             "/api/admin/features/<feature_key>",
@@ -72,6 +86,58 @@ class AdminAPI(BaseAPI):
         if not existing:
             return self.error("User not found.", 404)
         self.db.users.delete(user_id)
+        return self.ok({"status": "deleted"})
+
+    def list_groups(self):
+        _, error = self.auth_user(request, min_role="administrator")
+        if error:
+            return error
+        return self.ok({"groups": self.db.groups.all()})
+
+    def create_group(self):
+        _, error = self.auth_user(request, min_role="administrator")
+        if error:
+            return error
+        payload = request.get_json() or {}
+        if not str(payload.get("name", "")).strip():
+            return self.error("Group name is required.", 400)
+        try:
+            group = self.db.groups.create(
+                name=payload.get("name"),
+                description=payload.get("description", ""),
+                user_ids=payload.get("user_ids", []),
+            )
+        except ValueError as exc:
+            return self.error(str(exc), 400)
+        return self.ok({"group": group}, 201)
+
+    def update_group(self, group_id):
+        _, error = self.auth_user(request, min_role="administrator")
+        if error:
+            return error
+        existing = self.db.groups.get(group_id)
+        if not existing:
+            return self.error("Group not found.", 404)
+        payload = request.get_json() or {}
+        try:
+            group = self.db.groups.update(
+                group_id=group_id,
+                name=payload.get("name", existing["name"]),
+                description=payload.get("description", existing["description"]),
+                user_ids=payload.get("user_ids", [member["id"] for member in existing["members"]]),
+            )
+        except ValueError as exc:
+            return self.error(str(exc), 400)
+        return self.ok({"group": group})
+
+    def delete_group(self, group_id):
+        _, error = self.auth_user(request, min_role="administrator")
+        if error:
+            return error
+        existing = self.db.groups.get(group_id)
+        if not existing:
+            return self.error("Group not found.", 404)
+        self.db.groups.delete(group_id)
         return self.ok({"status": "deleted"})
 
     def list_features(self):

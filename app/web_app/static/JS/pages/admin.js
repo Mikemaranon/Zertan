@@ -2,120 +2,125 @@ import { renderDashboardLoadingState, renderDashboardView } from "../components/
 import { assetPathToUrl, escapeHtml, request } from "../core/api.js";
 
 export async function initAdminPage() {
-    const list = document.getElementById("admin-users-list");
-    const scrollContainer = document.getElementById("admin-users-scroll");
-    const searchInput = document.getElementById("admin-user-search");
-    const form = document.getElementById("admin-user-form");
-    const errorNode = document.getElementById("admin-error");
-    const featureContainer = document.getElementById("admin-feature-toggles");
-    const featureErrorNode = document.getElementById("admin-feature-error");
+    ensureAdminDom();
+
+    const state = {
+        users: [],
+        groups: [],
+        features: [],
+        selectedGroupMemberIds: [],
+    };
+
+    const nodes = {
+        userList: document.getElementById("admin-users-list"),
+        userScroll: document.getElementById("admin-users-scroll"),
+        userSearchInput: document.getElementById("admin-user-search"),
+        groupList: document.getElementById("admin-groups-list"),
+        groupScroll: document.getElementById("admin-groups-scroll"),
+        groupSearchInput: document.getElementById("admin-group-search"),
+        userCreateButton: document.getElementById("admin-user-create"),
+        groupCreateButton: document.getElementById("admin-group-create"),
+        userForm: document.getElementById("admin-user-form"),
+        userErrorNode: document.getElementById("admin-error"),
+        userModalTitle: document.getElementById("admin-user-modal-title"),
+        groupForm: document.getElementById("admin-group-form"),
+        groupErrorNode: document.getElementById("admin-group-error"),
+        groupModalTitle: document.getElementById("admin-group-modal-title"),
+        groupMemberSearchInput: document.getElementById("admin-group-user-search"),
+        groupMemberResults: document.getElementById("admin-group-user-results"),
+        groupMembersContainer: document.getElementById("admin-group-members"),
+        groupViewTitle: document.getElementById("admin-group-view-title"),
+        groupViewSubtitle: document.getElementById("admin-group-view-subtitle"),
+        groupViewMembers: document.getElementById("admin-group-view-members"),
+        featureContainer: document.getElementById("admin-feature-toggles"),
+        featureErrorNode: document.getElementById("admin-feature-error"),
+    };
+
+    const userModal = bindManagedModal({
+        modalId: "admin-user-modal",
+        backdropId: "admin-user-modal-backdrop",
+        closeButtonId: "admin-user-modal-close",
+        cancelButtonId: "admin-user-form-cancel",
+        onClose: () => resetUserForm(nodes),
+    });
+    const groupModal = bindManagedModal({
+        modalId: "admin-group-modal",
+        backdropId: "admin-group-modal-backdrop",
+        closeButtonId: "admin-group-modal-close",
+        cancelButtonId: "admin-group-form-cancel",
+        onClose: () => resetGroupForm(nodes, state),
+    });
+    const groupViewModal = bindManagedModal({
+        modalId: "admin-group-view-modal",
+        backdropId: "admin-group-view-modal-backdrop",
+        closeButtonId: "admin-group-view-modal-close",
+    });
     const dashboardModal = bindAdminDashboardModal();
-    let users = [];
-    let features = [];
+
+    if (
+        !nodes.userList ||
+        !nodes.userScroll ||
+        !nodes.userSearchInput ||
+        !nodes.groupList ||
+        !nodes.groupScroll ||
+        !nodes.groupSearchInput ||
+        !nodes.userCreateButton ||
+        !nodes.groupCreateButton ||
+        !nodes.userForm ||
+        !nodes.groupForm ||
+        !nodes.groupMemberSearchInput ||
+        !nodes.groupMemberResults ||
+        !nodes.groupMembersContainer ||
+        !nodes.groupViewTitle ||
+        !nodes.groupViewSubtitle ||
+        !nodes.groupViewMembers ||
+        !nodes.featureContainer
+    ) {
+        throw new Error("Admin workspace markup is incomplete. Reload the page and try again.");
+    }
 
     function renderUsers() {
-        const query = searchInput.value.trim().toLowerCase();
-        const filteredUsers = users.filter((user) => {
+        const groupsByUserId = buildGroupsByUserId(state.groups);
+        const query = nodes.userSearchInput.value.trim().toLowerCase();
+        const filteredUsers = state.users.filter((user) => {
             if (!query) {
                 return true;
             }
-            return [user.display_name, user.login_name, user.role, user.status].some((value) =>
-                String(value).toLowerCase().includes(query)
+            const groupNames = (groupsByUserId.get(user.id) || []).map((group) => group.name);
+            return [user.display_name, user.login_name, user.role, user.status, ...groupNames].some((value) =>
+                String(value || "").toLowerCase().includes(query)
             );
         });
 
-        list.innerHTML = filteredUsers.length
-            ? filteredUsers
-            .map(
-                (user) => `
-            <div class="card" data-user-id="${user.id}">
-                <div class="section-heading">
-                    <div>
-                        <h3>${escapeHtml(user.display_name)}</h3>
-                        <p class="muted">${escapeHtml(user.login_name)}</p>
-                    </div>
-                    <span class="badge">${escapeHtml(user.role)}</span>
-                </div>
-                <p class="muted">Status: ${escapeHtml(user.status)}</p>
-                <div class="button-row">
-                    <button class="button button--secondary button--small js-view-user" type="button">View</button>
-                    <button class="button button--secondary button--small js-edit-user" type="button">Edit</button>
-                    <button class="button button--secondary button--small js-delete-user" type="button">Delete</button>
-                </div>
-            </div>
-        `
-            )
-            .join("")
+        nodes.userList.innerHTML = filteredUsers.length
+            ? filteredUsers.map((user) => renderUserCard(user, groupsByUserId.get(user.id) || [])).join("")
             : `<div class="empty-state">No users match the current search.</div>`;
 
-        list.querySelectorAll(".js-edit-user").forEach((button) => {
-            button.addEventListener("click", (event) => {
-                const card = event.currentTarget.closest("[data-user-id]");
-                const user = users.find((item) => String(item.id) === card.dataset.userId);
-                fillUserForm(user);
-            });
-        });
-
-        list.querySelectorAll(".js-view-user").forEach((button) => {
-            button.addEventListener("click", (event) => {
-                const card = event.currentTarget.closest("[data-user-id]");
-                const user = users.find((item) => String(item.id) === card.dataset.userId);
-                dashboardModal.open(user);
-            });
-        });
-
-        list.querySelectorAll(".js-delete-user").forEach((button) => {
-            button.addEventListener("click", async (event) => {
-                const card = event.currentTarget.closest("[data-user-id]");
-                await request(`/api/admin/users/${card.dataset.userId}`, { method: "DELETE" });
-                await loadUsers();
-            });
-        });
-
-        updateDirectoryHeight();
+        updateDirectoryHeight(nodes.userList, nodes.userScroll);
     }
 
-    function updateDirectoryHeight() {
-        const cards = [...list.querySelectorAll(".card")];
-        if (!cards.length) {
-            scrollContainer.style.maxHeight = "";
-            return;
-        }
-        const grid = scrollContainer.closest(".grid--two");
-        const gridTemplateColumns = grid ? window.getComputedStyle(grid).gridTemplateColumns : "";
-        const isVerticalLayout = !gridTemplateColumns || !gridTemplateColumns.includes(" ");
-        const styles = window.getComputedStyle(list);
-        const gap = Number.parseFloat(styles.rowGap || styles.gap || "0") || 0;
-        const panel = scrollContainer.closest(".panel");
-        const panelStyles = panel ? window.getComputedStyle(panel) : null;
-        const panelBottomPadding = Number.parseFloat(panelStyles?.paddingBottom || "0") || 0;
-        const maxVisibleCards = isVerticalLayout ? 3 : 4;
-        const totalHeight =
-            cards.reduce((total, card) => total + card.offsetHeight, 0) + gap * Math.max(cards.length - 1, 0);
-        const targetCardHeight =
-            cards.slice(0, maxVisibleCards).reduce((total, card) => total + card.offsetHeight, 0) +
-            gap * Math.max(Math.min(cards.length, maxVisibleCards) - 1, 0);
-        const viewportSafetyOffset = 27;
-        const availableViewportHeight = Math.max(
-            220,
-            window.innerHeight - scrollContainer.getBoundingClientRect().top - panelBottomPadding - viewportSafetyOffset
-        );
-        const desiredHeight = isVerticalLayout
-            ? (cards.length > maxVisibleCards ? targetCardHeight : totalHeight)
-            : (cards.length > maxVisibleCards ? Math.min(targetCardHeight, availableViewportHeight) : Math.min(totalHeight, availableViewportHeight));
-        const constrainedHeight = totalHeight > desiredHeight ? Math.ceil(desiredHeight) : null;
-        scrollContainer.style.maxHeight = constrainedHeight ? `${constrainedHeight}px` : "";
-    }
+    function renderGroups() {
+        const query = nodes.groupSearchInput.value.trim().toLowerCase();
+        const filteredGroups = state.groups.filter((group) => {
+            if (!query) {
+                return true;
+            }
+            const memberTerms = (group.members || []).flatMap((member) => [member.login_name, member.display_name]);
+            return [group.name, group.description, group.code, ...memberTerms].some((value) =>
+                String(value || "").toLowerCase().includes(query)
+            );
+        });
 
-    async function loadUsers() {
-        const data = await request("/api/admin/users");
-        users = data.users;
-        renderUsers();
+        nodes.groupList.innerHTML = filteredGroups.length
+            ? filteredGroups.map((group) => renderGroupCard(group)).join("")
+            : `<div class="empty-state">No groups match the current search.</div>`;
+
+        updateDirectoryHeight(nodes.groupList, nodes.groupScroll);
     }
 
     function renderFeatureToggles() {
-        featureContainer.innerHTML = features.length
-            ? features
+        nodes.featureContainer.innerHTML = state.features.length
+            ? state.features
                 .map(
                     (feature) => `
                 <label class="feature-toggle-row" data-feature-key="${feature.feature_key}">
@@ -128,49 +133,101 @@ export async function initAdminPage() {
                         <span class="feature-toggle__track" aria-hidden="true"></span>
                     </span>
                 </label>
-            `
+            `,
                 )
                 .join("")
             : `<div class="empty-state">No feature toggles are configured yet.</div>`;
+    }
 
-        featureContainer.querySelectorAll(".js-feature-toggle").forEach((input) => {
-            input.addEventListener("change", async (event) => {
-                const row = event.currentTarget.closest("[data-feature-key]");
-                const featureKey = row?.dataset.featureKey;
-                const enabled = event.currentTarget.checked;
-                const previousValue = !enabled;
-                featureErrorNode.textContent = "";
-                event.currentTarget.disabled = true;
+    function renderSelectedGroupMembers() {
+        const selectedUsers = state.selectedGroupMemberIds
+            .map((userId) => state.users.find((user) => Number(user.id) === Number(userId)))
+            .filter(Boolean);
 
-                try {
-                    const payload = await request(`/api/admin/features/${featureKey}`, {
-                        method: "PUT",
-                        body: { enabled },
-                    });
-                    features = features.map((feature) =>
-                        feature.feature_key === featureKey ? payload.feature : feature
-                    );
-                    syncFeatureNavigation(payload.feature);
-                    renderFeatureToggles();
-                } catch (error) {
-                    event.currentTarget.checked = previousValue;
-                    event.currentTarget.disabled = false;
-                    featureErrorNode.textContent = error.message;
-                }
-            });
-        });
+        if (!selectedUsers.length) {
+            nodes.groupMembersContainer.innerHTML = `
+                <button class="selection-chip selection-chip--empty" type="button" tabindex="-1">
+                    No users added yet
+                </button>
+            `;
+            return;
+        }
+
+        nodes.groupMembersContainer.innerHTML = selectedUsers
+            .map(
+                (user) => `
+                <button class="selection-chip" type="button" data-user-id="${user.id}" data-group="user">
+                    <span class="selection-chip__group">${escapeHtml(user.login_name)}</span>
+                    <span class="selection-chip__value">${escapeHtml(user.display_name)}</span>
+                </button>
+            `,
+            )
+            .join("");
+    }
+
+    function renderGroupMemberSearchResults() {
+        const query = nodes.groupMemberSearchInput.value.trim().toLowerCase();
+        if (!query) {
+            nodes.groupMemberResults.innerHTML = `<div class="empty-state">Type a login name to search available users.</div>`;
+            return;
+        }
+
+        const matches = state.users.filter((user) =>
+            String(user.login_name || "").toLowerCase().includes(query)
+        );
+
+        if (!matches.length) {
+            nodes.groupMemberResults.innerHTML = `<div class="empty-state">No users match the current login search.</div>`;
+            return;
+        }
+
+        nodes.groupMemberResults.innerHTML = matches
+            .map((user) => {
+                const isAdded = state.selectedGroupMemberIds.includes(Number(user.id));
+                return `
+                    <div class="admin-picker-result">
+                        <div>
+                            <strong>${escapeHtml(user.login_name)}</strong>
+                            <p class="muted">${escapeHtml(user.display_name)} · ${escapeHtml(user.role)}</p>
+                        </div>
+                        <button
+                            class="button ${isAdded ? "button--danger js-remove-group-member" : "button--secondary js-add-group-member"} button--small"
+                            type="button"
+                            data-user-id="${user.id}"
+                        >
+                            ${isAdded ? "Delete" : "Add"}
+                        </button>
+                    </div>
+                `;
+            })
+            .join("");
+    }
+
+    async function loadUsers() {
+        const data = await request("/api/admin/users");
+        state.users = data.users || [];
+        renderUsers();
+        renderGroupMemberSearchResults();
+        renderSelectedGroupMembers();
+    }
+
+    async function loadGroups() {
+        const data = await request("/api/admin/user-groups");
+        state.groups = data.groups || [];
+        renderGroups();
+        renderUsers();
     }
 
     async function loadFeatures() {
         const data = await request("/api/admin/features");
-        features = data.features;
-        features.forEach(syncFeatureNavigation);
+        state.features = data.features || [];
+        state.features.forEach(syncFeatureNavigation);
         renderFeatureToggles();
     }
 
-    form.addEventListener("submit", async (event) => {
+    async function handleUserSubmit(event) {
         event.preventDefault();
-        errorNode.textContent = "";
+        nodes.userErrorNode.textContent = "";
         const userId = document.getElementById("admin-user-id").value;
         const payload = {
             display_name: document.getElementById("admin-display-name").value.trim(),
@@ -179,51 +236,629 @@ export async function initAdminPage() {
             role: document.getElementById("admin-role").value,
             status: document.getElementById("admin-status").value,
         };
+
         try {
             await request(userId ? `/api/admin/users/${userId}` : "/api/admin/users", {
                 method: userId ? "PUT" : "POST",
                 body: payload,
             });
-            resetForm();
-            await loadUsers();
+            userModal.close();
+            await Promise.all([loadUsers(), loadGroups()]);
         } catch (error) {
-            errorNode.textContent = error.message;
+            nodes.userErrorNode.textContent = error.message;
+        }
+    }
+
+    async function handleGroupSubmit(event) {
+        event.preventDefault();
+        nodes.groupErrorNode.textContent = "";
+        const groupId = document.getElementById("admin-group-id").value;
+        const payload = {
+            name: document.getElementById("admin-group-name").value.trim(),
+            description: document.getElementById("admin-group-description").value.trim(),
+            user_ids: [...state.selectedGroupMemberIds],
+        };
+
+        try {
+            await request(groupId ? `/api/admin/user-groups/${groupId}` : "/api/admin/user-groups", {
+                method: groupId ? "PUT" : "POST",
+                body: payload,
+            });
+            groupModal.close();
+            await loadGroups();
+        } catch (error) {
+            nodes.groupErrorNode.textContent = error.message;
+        }
+    }
+
+    async function handleFeatureToggleChange(event) {
+        const input = event.target.closest(".js-feature-toggle");
+        if (!input) {
+            return;
+        }
+
+        const row = input.closest("[data-feature-key]");
+        const featureKey = row?.dataset.featureKey;
+        const enabled = input.checked;
+        const previousValue = !enabled;
+        nodes.featureErrorNode.textContent = "";
+        input.disabled = true;
+
+        try {
+            const payload = await request(`/api/admin/features/${featureKey}`, {
+                method: "PUT",
+                body: { enabled },
+            });
+            state.features = state.features.map((feature) =>
+                feature.feature_key === featureKey ? payload.feature : feature
+            );
+            syncFeatureNavigation(payload.feature);
+            renderFeatureToggles();
+        } catch (error) {
+            input.checked = previousValue;
+            input.disabled = false;
+            nodes.featureErrorNode.textContent = error.message;
+        }
+    }
+
+    nodes.userCreateButton.addEventListener("click", () => openUserCreateModal(nodes, userModal));
+    nodes.groupCreateButton.addEventListener("click", () => openGroupCreateModal(nodes, state, groupModal));
+    nodes.userSearchInput.addEventListener("input", renderUsers);
+    nodes.groupSearchInput.addEventListener("input", renderGroups);
+    nodes.groupMemberSearchInput.addEventListener("input", renderGroupMemberSearchResults);
+    nodes.userForm.addEventListener("submit", handleUserSubmit);
+    nodes.groupForm.addEventListener("submit", handleGroupSubmit);
+    nodes.featureContainer.addEventListener("change", handleFeatureToggleChange);
+
+    nodes.userList.addEventListener("click", async (event) => {
+        const card = event.target.closest("[data-user-id]");
+        if (!card) {
+            return;
+        }
+        const user = state.users.find((entry) => String(entry.id) === card.dataset.userId);
+        if (!user) {
+            return;
+        }
+
+        if (event.target.closest(".js-view-user")) {
+            dashboardModal.open(user);
+            return;
+        }
+
+        if (event.target.closest(".js-edit-user")) {
+            openUserEditModal(nodes, userModal, user);
+            return;
+        }
+
+        if (event.target.closest(".js-delete-user")) {
+            if (!window.confirm(`Delete user ${user.login_name}?`)) {
+                return;
+            }
+            await request(`/api/admin/users/${user.id}`, { method: "DELETE" });
+            await Promise.all([loadUsers(), loadGroups()]);
         }
     });
 
-    document.getElementById("admin-form-reset").addEventListener("click", resetForm);
-    searchInput.addEventListener("input", renderUsers);
-    window.addEventListener("resize", updateDirectoryHeight);
-    await Promise.all([loadUsers(), loadFeatures()]);
+    nodes.groupList.addEventListener("click", async (event) => {
+        const card = event.target.closest("[data-group-id]");
+        if (!card) {
+            return;
+        }
+        const group = state.groups.find((entry) => String(entry.id) === card.dataset.groupId);
+        if (!group) {
+            return;
+        }
+
+        if (event.target.closest(".js-edit-group")) {
+            openGroupEditModal(nodes, state, groupModal, group);
+            return;
+        }
+
+        if (event.target.closest(".js-view-group")) {
+            openGroupViewModal(nodes, groupViewModal, group);
+            return;
+        }
+
+        if (event.target.closest(".js-delete-group")) {
+            if (!window.confirm(`Delete group ${group.name}?`)) {
+                return;
+            }
+            await request(`/api/admin/user-groups/${group.id}`, { method: "DELETE" });
+            await loadGroups();
+        }
+    });
+
+    nodes.groupMemberResults.addEventListener("click", (event) => {
+        const addButton = event.target.closest(".js-add-group-member");
+        if (addButton) {
+            const userId = Number(addButton.dataset.userId);
+            if (!state.selectedGroupMemberIds.includes(userId)) {
+                state.selectedGroupMemberIds = [...state.selectedGroupMemberIds, userId];
+                renderSelectedGroupMembers();
+                renderGroupMemberSearchResults();
+            }
+            return;
+        }
+
+        const removeButton = event.target.closest(".js-remove-group-member");
+        if (removeButton) {
+            const userId = Number(removeButton.dataset.userId);
+            state.selectedGroupMemberIds = state.selectedGroupMemberIds.filter((value) => value !== userId);
+            renderSelectedGroupMembers();
+            renderGroupMemberSearchResults();
+        }
+    });
+
+    nodes.groupMembersContainer.addEventListener("click", (event) => {
+        const chip = event.target.closest("[data-user-id]");
+        if (!chip) {
+            return;
+        }
+        state.selectedGroupMemberIds = state.selectedGroupMemberIds.filter(
+            (userId) => Number(userId) !== Number(chip.dataset.userId)
+        );
+        renderSelectedGroupMembers();
+        renderGroupMemberSearchResults();
+    });
+
+    window.addEventListener("resize", () => {
+        updateDirectoryHeight(nodes.userList, nodes.userScroll);
+        updateDirectoryHeight(nodes.groupList, nodes.groupScroll);
+    });
+
+    await Promise.all([loadUsers(), loadGroups(), loadFeatures()]);
 }
 
-function fillUserForm(user) {
-    const form = document.getElementById("admin-user-form");
-    const nameInput = document.getElementById("admin-display-name");
+function ensureAdminDom() {
+    ensurePrimaryAdminLayout();
+    ensureAdminUserModal();
+    ensureAdminGroupModal();
+    ensureAdminGroupViewModal();
+}
+
+function ensurePrimaryAdminLayout() {
+    const hasNewLayout =
+        document.getElementById("admin-user-create") &&
+        document.getElementById("admin-group-create") &&
+        document.getElementById("admin-groups-list");
+    if (hasNewLayout) {
+        return;
+    }
+
+    const grid = document.querySelector(".content-body > .grid.grid--two");
+    if (!grid) {
+        return;
+    }
+
+    grid.innerHTML = `
+        <div class="panel">
+            <div class="section-heading">
+                <div>
+                    <h2>User directory</h2>
+                    <p class="muted">Manage platform access, edit user records, and inspect personal dashboards.</p>
+                </div>
+                <button id="admin-user-create" class="button button--primary" type="button" aria-label="Create user">+</button>
+            </div>
+            <div class="admin-directory-tools">
+                <label class="admin-directory-search">
+                    <span>Search users</span>
+                    <input id="admin-user-search" type="search" placeholder="Search by name, login name, role, or status">
+                </label>
+            </div>
+            <div id="admin-users-scroll" class="admin-users-scroll">
+                <div id="admin-users-list" class="list-stack"></div>
+            </div>
+        </div>
+        <div class="panel">
+            <div class="section-heading">
+                <div>
+                    <h2>User groups</h2>
+                    <p class="muted">Create reusable user scopes and manage memberships from the admin workspace.</p>
+                </div>
+                <button id="admin-group-create" class="button button--primary" type="button" aria-label="Create group">+</button>
+            </div>
+            <div class="admin-directory-tools">
+                <label class="admin-directory-search">
+                    <span>Search groups</span>
+                    <input id="admin-group-search" type="search" placeholder="Search by name, description, or member">
+                </label>
+            </div>
+            <div id="admin-groups-scroll" class="admin-users-scroll">
+                <div id="admin-groups-list" class="list-stack"></div>
+            </div>
+        </div>
+    `;
+}
+
+function ensureAdminUserModal() {
+    if (document.getElementById("admin-user-modal")) {
+        return;
+    }
+    document.body.insertAdjacentHTML(
+        "beforeend",
+        `
+        <div id="admin-user-modal" class="profile-modal admin-form-modal" hidden>
+            <div id="admin-user-modal-backdrop" class="profile-modal__backdrop"></div>
+            <div class="profile-modal__dialog admin-form-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="admin-user-modal-title">
+                <button id="admin-user-modal-close" class="profile-modal__close" type="button" aria-label="Close user form">Close</button>
+                <div class="admin-form-modal__body">
+                    <form id="admin-user-form" class="form-stack">
+                        <div class="section-heading">
+                            <div>
+                                <h2 id="admin-user-modal-title">Create user</h2>
+                                <p class="muted">Manage platform access and role assignments.</p>
+                            </div>
+                        </div>
+                        <input id="admin-user-id" type="hidden">
+                        <label><span>Name</span><input id="admin-display-name" type="text" required></label>
+                        <label><span>Login name</span><input id="admin-login-name" type="text" required></label>
+                        <label><span>Password</span><input id="admin-password" type="password"></label>
+                        <label>
+                            <span>Role</span>
+                            <select id="admin-role">
+                                <option value="user">User</option>
+                                <option value="reviewer">Reviewer</option>
+                                <option value="examiner">Examiner</option>
+                                <option value="administrator">Administrator</option>
+                            </select>
+                        </label>
+                        <label>
+                            <span>Status</span>
+                            <select id="admin-status">
+                                <option value="active">Active</option>
+                                <option value="disabled">Disabled</option>
+                            </select>
+                        </label>
+                        <div id="admin-error" class="error-message"></div>
+                        <div class="button-row">
+                            <button class="button button--primary" type="submit">Save user</button>
+                            <button id="admin-user-form-cancel" class="button button--secondary" type="button">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        `,
+    );
+}
+
+function ensureAdminGroupModal() {
+    if (document.getElementById("admin-group-modal")) {
+        return;
+    }
+    document.body.insertAdjacentHTML(
+        "beforeend",
+        `
+        <div id="admin-group-modal" class="profile-modal admin-form-modal" hidden>
+            <div id="admin-group-modal-backdrop" class="profile-modal__backdrop"></div>
+            <div class="profile-modal__dialog admin-form-modal__dialog admin-form-modal__dialog--wide" role="dialog" aria-modal="true" aria-labelledby="admin-group-modal-title">
+                <button id="admin-group-modal-close" class="profile-modal__close" type="button" aria-label="Close group form">Close</button>
+                <div class="admin-form-modal__body">
+                    <form id="admin-group-form" class="form-stack">
+                        <div class="section-heading">
+                            <div>
+                                <h2 id="admin-group-modal-title">Create group</h2>
+                                <p class="muted">Use login-based search to add members and maintain group definitions.</p>
+                            </div>
+                        </div>
+                        <input id="admin-group-id" type="hidden">
+                        <label><span>Group name</span><input id="admin-group-name" type="text" required></label>
+                        <label><span>Description</span><textarea id="admin-group-description" rows="3" placeholder="Optional description"></textarea></label>
+                        <div class="admin-group-picker">
+                            <label>
+                                <span>Find users by login name</span>
+                                <input id="admin-group-user-search" type="search" placeholder="Search users by login name">
+                            </label>
+                            <div id="admin-group-user-results" class="admin-picker-results"></div>
+                        </div>
+                        <div class="selection-field admin-group-members-field">
+                            <div class="selection-field__top">
+                                <span class="selection-field__label">Selected users</span>
+                            </div>
+                            <div id="admin-group-members" class="selection-field__chips"></div>
+                        </div>
+                        <div id="admin-group-error" class="error-message"></div>
+                        <div class="button-row">
+                            <button class="button button--primary" type="submit">Save group</button>
+                            <button id="admin-group-form-cancel" class="button button--secondary" type="button">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        `,
+    );
+}
+
+function ensureAdminGroupViewModal() {
+    if (document.getElementById("admin-group-view-modal")) {
+        return;
+    }
+    document.body.insertAdjacentHTML(
+        "beforeend",
+        `
+        <div id="admin-group-view-modal" class="profile-modal admin-form-modal" hidden>
+            <div id="admin-group-view-modal-backdrop" class="profile-modal__backdrop"></div>
+            <div class="profile-modal__dialog admin-form-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="admin-group-view-title">
+                <button id="admin-group-view-modal-close" class="profile-modal__close" type="button" aria-label="Close group members">Close</button>
+                <div class="admin-form-modal__body">
+                    <section class="form-stack">
+                        <div class="section-heading">
+                            <div>
+                                <h2 id="admin-group-view-title">Group members</h2>
+                                <p id="admin-group-view-subtitle" class="muted">Members assigned to this group.</p>
+                            </div>
+                        </div>
+                        <div id="admin-group-view-members" class="admin-group-view-list list-stack"></div>
+                    </section>
+                </div>
+            </div>
+        </div>
+        `,
+    );
+}
+
+function renderUserCard(user, groups) {
+    const groupsLabel = groups.length
+        ? groups.map((group) => group.name).join(", ")
+        : "No groups assigned";
+    return `
+        <div class="card admin-directory-card" data-user-id="${user.id}">
+            <div class="section-heading">
+                <div>
+                    <h3>${escapeHtml(user.display_name)}</h3>
+                    <p class="muted">${escapeHtml(user.login_name)}</p>
+                </div>
+                <span class="badge">${escapeHtml(user.role)}</span>
+            </div>
+            <div class="admin-directory-card__meta">
+                <span>Status: <strong>${escapeHtml(user.status)}</strong></span>
+                <span title="${escapeHtml(groupsLabel)}">Groups: <strong>${groups.length}</strong></span>
+            </div>
+            <div class="button-row">
+                <button class="button button--secondary button--small js-view-user" type="button">View</button>
+                <button class="button button--secondary button--small js-edit-user" type="button">Edit</button>
+                <button class="button button--secondary button--small js-delete-user" type="button">Delete</button>
+            </div>
+        </div>
+    `;
+}
+
+function renderGroupCard(group) {
+    return `
+        <div class="card admin-directory-card" data-group-id="${group.id}">
+            <div class="section-heading">
+                <div>
+                    <h3>${escapeHtml(group.name)}</h3>
+                    <p class="muted">${escapeHtml(group.code)}</p>
+                </div>
+                <span class="badge">${group.member_count} users</span>
+            </div>
+            <p class="muted">${escapeHtml(group.description || "No description provided.")}</p>
+            <div class="button-row">
+                <button class="button button--secondary button--small js-view-group" type="button">View</button>
+                <button class="button button--secondary button--small js-edit-group" type="button">Edit</button>
+                <button class="button button--secondary button--small js-delete-group" type="button">Delete</button>
+            </div>
+        </div>
+    `;
+}
+
+function openUserCreateModal(nodes, modal) {
+    resetUserForm(nodes);
+    nodes.userModalTitle.textContent = "Create user";
+    modal.open();
+    focusField("admin-display-name");
+}
+
+function openUserEditModal(nodes, modal, user) {
+    resetUserForm(nodes);
+    nodes.userModalTitle.textContent = "Edit user";
     document.getElementById("admin-user-id").value = user.id;
-    nameInput.value = user.display_name;
+    document.getElementById("admin-display-name").value = user.display_name;
     document.getElementById("admin-login-name").value = user.login_name;
     document.getElementById("admin-password").value = "";
     document.getElementById("admin-role").value = user.role;
     document.getElementById("admin-status").value = user.status;
-    const mobileHeaderHeight = Number.parseFloat(
-        getComputedStyle(document.documentElement).getPropertyValue("--mobile-header-height") || "0"
-    ) || 0;
-    const viewportPadding = window.innerWidth <= 720 ? 16 : 24;
-    const topOffset = window.innerWidth <= 1024 ? mobileHeaderHeight + viewportPadding + 23 : 55;
-    const targetTop = Math.max(0, window.scrollY + form.getBoundingClientRect().top - topOffset);
-    window.scrollTo({ top: targetTop, behavior: "smooth" });
-    window.setTimeout(() => {
-        nameInput.focus({ preventScroll: true });
-        nameInput.select();
-    }, 220);
+    modal.open();
+    focusField("admin-display-name");
 }
 
-function resetForm() {
+function openGroupCreateModal(nodes, state, modal) {
+    resetGroupForm(nodes, state);
+    nodes.groupModalTitle.textContent = "Create group";
+    modal.open();
+    focusField("admin-group-name");
+}
+
+function openGroupEditModal(nodes, state, modal, group) {
+    resetGroupForm(nodes, state);
+    nodes.groupModalTitle.textContent = "Edit group";
+    document.getElementById("admin-group-id").value = group.id;
+    document.getElementById("admin-group-name").value = group.name;
+    document.getElementById("admin-group-description").value = group.description || "";
+    state.selectedGroupMemberIds = (group.members || []).map((member) => Number(member.id));
+    nodes.groupMemberSearchInput.value = "";
+    nodes.groupMemberResults.innerHTML = `<div class="empty-state">Type a login name to search available users.</div>`;
+    nodes.groupErrorNode.textContent = "";
+    modal.open();
+    focusField("admin-group-name");
+    renderSelectedMembersLater(nodes, state);
+}
+
+function openGroupViewModal(nodes, modal, group) {
+    const members = group.members || [];
+    nodes.groupViewTitle.textContent = group.name || "Group members";
+    nodes.groupViewSubtitle.textContent = `${members.length} member${members.length === 1 ? "" : "s"} assigned to ${group.name}.`;
+    nodes.groupViewMembers.innerHTML = members.length
+        ? members
+            .map(
+                (member) => `
+                    <article class="card admin-group-view-card">
+                        <div class="section-heading">
+                            <div>
+                                <h3>${escapeHtml(member.display_name)}</h3>
+                                <p class="muted">${escapeHtml(member.login_name)}</p>
+                            </div>
+                            <span class="badge">${escapeHtml(member.role)}</span>
+                        </div>
+                        <p class="muted">Status: ${escapeHtml(member.status)}</p>
+                    </article>
+                `,
+            )
+            .join("")
+        : `<div class="empty-state">No users are assigned to this group yet.</div>`;
+    modal.open();
+}
+
+function renderSelectedMembersLater(nodes, state) {
+    window.requestAnimationFrame(() => {
+        const selectedUsers = state.selectedGroupMemberIds
+            .map((userId) => state.users.find((user) => Number(user.id) === Number(userId)))
+            .filter(Boolean);
+        nodes.groupMembersContainer.innerHTML = selectedUsers.length
+            ? selectedUsers
+                .map(
+                    (user) => `
+                        <button class="selection-chip" type="button" data-user-id="${user.id}" data-group="user">
+                            <span class="selection-chip__group">${escapeHtml(user.login_name)}</span>
+                            <span class="selection-chip__value">${escapeHtml(user.display_name)}</span>
+                        </button>
+                    `,
+                )
+                .join("")
+            : `<button class="selection-chip selection-chip--empty" type="button" tabindex="-1">No users added yet</button>`;
+    });
+}
+
+function resetUserForm(nodes) {
     document.getElementById("admin-user-id").value = "";
-    document.getElementById("admin-user-form").reset();
+    nodes.userForm.reset();
     document.getElementById("admin-role").value = "user";
     document.getElementById("admin-status").value = "active";
+    nodes.userModalTitle.textContent = "Create user";
+    nodes.userErrorNode.textContent = "";
+}
+
+function resetGroupForm(nodes, state) {
+    document.getElementById("admin-group-id").value = "";
+    nodes.groupForm.reset();
+    nodes.groupModalTitle.textContent = "Create group";
+    nodes.groupErrorNode.textContent = "";
+    state.selectedGroupMemberIds = [];
+    nodes.groupMemberResults.innerHTML = `<div class="empty-state">Type a login name to search available users.</div>`;
+    nodes.groupMembersContainer.innerHTML = `
+        <button class="selection-chip selection-chip--empty" type="button" tabindex="-1">
+            No users added yet
+        </button>
+    `;
+}
+
+function buildGroupsByUserId(groups) {
+    const groupsByUserId = new Map();
+    groups.forEach((group) => {
+        (group.members || []).forEach((member) => {
+            const existing = groupsByUserId.get(member.id) || [];
+            existing.push({ id: group.id, name: group.name });
+            groupsByUserId.set(member.id, existing);
+        });
+    });
+    return groupsByUserId;
+}
+
+function updateDirectoryHeight(list, scrollContainer) {
+    const cards = [...list.querySelectorAll(".card")];
+    if (!cards.length) {
+        scrollContainer.style.maxHeight = "";
+        return;
+    }
+    const grid = scrollContainer.closest(".grid--two");
+    const gridTemplateColumns = grid ? window.getComputedStyle(grid).gridTemplateColumns : "";
+    const isVerticalLayout = !gridTemplateColumns || !gridTemplateColumns.includes(" ");
+    const styles = window.getComputedStyle(list);
+    const gap = Number.parseFloat(styles.rowGap || styles.gap || "0") || 0;
+    const panel = scrollContainer.closest(".panel");
+    const panelStyles = panel ? window.getComputedStyle(panel) : null;
+    const panelBottomPadding = Number.parseFloat(panelStyles?.paddingBottom || "0") || 0;
+    const maxVisibleCards = isVerticalLayout ? 3 : 4;
+    const totalHeight = cards.reduce((total, card) => total + card.offsetHeight, 0) + gap * Math.max(cards.length - 1, 0);
+    const targetCardHeight =
+        cards.slice(0, maxVisibleCards).reduce((total, card) => total + card.offsetHeight, 0) +
+        gap * Math.max(Math.min(cards.length, maxVisibleCards) - 1, 0);
+    const viewportSafetyOffset = 27;
+    const availableViewportHeight = Math.max(
+        220,
+        window.innerHeight - scrollContainer.getBoundingClientRect().top - panelBottomPadding - viewportSafetyOffset,
+    );
+    const desiredHeight = isVerticalLayout
+        ? (cards.length > maxVisibleCards ? targetCardHeight : totalHeight)
+        : (cards.length > maxVisibleCards ? Math.min(targetCardHeight, availableViewportHeight) : Math.min(totalHeight, availableViewportHeight));
+    const constrainedHeight = totalHeight > desiredHeight ? Math.ceil(desiredHeight) : null;
+    scrollContainer.style.maxHeight = constrainedHeight ? `${constrainedHeight}px` : "";
+}
+
+function bindManagedModal({ modalId, backdropId, closeButtonId, cancelButtonId, onClose }) {
+    const modal = document.getElementById(modalId);
+    const backdrop = document.getElementById(backdropId);
+    const closeButton = document.getElementById(closeButtonId);
+    const cancelButton = cancelButtonId ? document.getElementById(cancelButtonId) : null;
+    if (!modal || !backdrop || !closeButton) {
+        return { open() {}, close() {} };
+    }
+
+    let isClosing = false;
+
+    function open() {
+        if (!modal.hidden && modal.dataset.state === "open") {
+            return;
+        }
+        isClosing = false;
+        modal.hidden = false;
+        modal.dataset.state = "closed";
+        document.body.classList.add("modal-open");
+        window.requestAnimationFrame(() => {
+            window.requestAnimationFrame(() => {
+                modal.dataset.state = "open";
+            });
+        });
+    }
+
+    function close() {
+        if (modal.hidden || isClosing) {
+            return;
+        }
+        isClosing = true;
+        modal.dataset.state = "closing";
+        document.body.classList.remove("modal-open");
+        window.setTimeout(() => {
+            modal.hidden = true;
+            modal.dataset.state = "closed";
+            isClosing = false;
+            if (typeof onClose === "function") {
+                onClose();
+            }
+        }, 300);
+    }
+
+    closeButton.addEventListener("click", close);
+    backdrop.addEventListener("click", close);
+    cancelButton?.addEventListener("click", close);
+
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && !modal.hidden) {
+            close();
+        }
+    });
+
+    return { open, close };
+}
+
+function focusField(id) {
+    window.setTimeout(() => {
+        const field = document.getElementById(id);
+        field?.focus({ preventScroll: true });
+        field?.select?.();
+    }, 140);
 }
 
 function syncFeatureNavigation(feature) {
@@ -332,7 +967,6 @@ function bindAdminDashboardModal() {
         isClosing = true;
         modal.dataset.state = "closing";
         document.body.classList.remove("modal-open");
-
         window.setTimeout(() => {
             modal.hidden = true;
             modal.dataset.state = "closed";
