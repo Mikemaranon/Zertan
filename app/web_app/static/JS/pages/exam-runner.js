@@ -5,11 +5,18 @@ import { applyResponse, attachQuestionConfig, collectResponse, renderQuestionCar
 export async function initExamRunnerPage(pageContext) {
     const summary = document.getElementById("attempt-summary");
     const questionContainer = document.getElementById("runner-questions");
-    const currentPage = Number(new URLSearchParams(window.location.search).get("page") || 1);
-    const data = await request(`/api/attempts/${pageContext.attempt_id}`);
+    const requestedPage = Math.max(1, Number(new URLSearchParams(window.location.search).get("page") || 1) || 1);
+    const data = await request(`/api/attempts/${pageContext.attempt_id}?page=${requestedPage}`);
     const attempt = data.attempt;
     const questions = data.questions;
+    const currentPage = data.current_page;
     const totalPages = data.total_pages;
+
+    if (currentPage !== requestedPage) {
+        const url = new URL(window.location.href);
+        url.searchParams.set("page", String(currentPage));
+        window.history.replaceState({}, "", url);
+    }
 
     summary.innerHTML = `
         <div>
@@ -25,9 +32,8 @@ export async function initExamRunnerPage(pageContext) {
     `;
 
     const renderPage = () => {
-        const pageQuestions = questions.filter((question) => question.page_number === currentPage);
         questionContainer.innerHTML = "";
-        pageQuestions.forEach((entry) => {
+        questions.forEach((entry) => {
             const card = renderQuestionCard(entry.question, {
                 mode: "exam",
                 index: entry.question_order,

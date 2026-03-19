@@ -5,6 +5,9 @@ import random
 from .question_logic import build_public_question, evaluate_question_response
 
 
+QUESTIONS_PER_PAGE = 5
+
+
 class AttemptService:
     def __init__(self, db_manager):
         self.db = db_manager
@@ -51,11 +54,13 @@ class AttemptService:
         self.db.attempts.add_questions(attempt_id, snapshots)
         return attempt_id
 
-    def get_attempt_payload(self, attempt_id):
+    def get_attempt_payload(self, attempt_id, page_number=None):
         attempt = self.db.attempts.get_attempt(attempt_id)
         if not attempt:
             return None
-        questions = self.db.attempts.get_attempt_questions(attempt_id)
+        total_pages = max(1, (int(attempt["question_count"] or 0) + QUESTIONS_PER_PAGE - 1) // QUESTIONS_PER_PAGE)
+        current_page = min(max(int(page_number or 1), 1), total_pages)
+        questions = self.db.attempts.get_attempt_questions(attempt_id, page_number=current_page)
         public_questions = []
         for item in questions:
             question = item["snapshot"]
@@ -97,10 +102,11 @@ class AttemptService:
                     "omitted": item["omitted"],
                 }
             )
-        total_pages = (len(public_questions) + 4) // 5
         return {
             "attempt": attempt,
             "questions": public_questions,
+            "current_page": current_page,
+            "page_size": QUESTIONS_PER_PAGE,
             "total_pages": total_pages,
         }
 

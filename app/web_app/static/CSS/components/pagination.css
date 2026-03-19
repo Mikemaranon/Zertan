@@ -1,11 +1,16 @@
 .pagination {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 8px;
     align-items: center;
+    justify-content: center;
+    overflow-x: auto;
+    white-space: nowrap;
+    scrollbar-width: thin;
 }
 
 .pagination .page-link {
+    flex: 0 0 auto;
     padding: 10px 14px;
     border-radius: 999px;
     border: 1px solid var(--border);
@@ -17,4 +22,20 @@
     background: var(--primary);
     color: white;
     border-color: var(--primary);
+}
+
+.pagination .muted,
+.pagination-ellipsis {
+    flex: 0 0 auto;
+}
+
+.pagination-ellipsis {
+    color: var(--text-muted, #6b7a90);
+    padding: 0 2px;
+}
+
+@media (max-width: 720px) {
+    .pagination {
+        justify-content: flex-start;
+    }
 }

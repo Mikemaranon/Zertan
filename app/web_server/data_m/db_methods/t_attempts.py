@@ -124,9 +124,8 @@ class AttemptsTable:
             "exam_title": row["exam_title"],
         }
 
-    def get_attempt_questions(self, attempt_id):
-        _, rows = self.db.execute(
-            """
+    def get_attempt_questions(self, attempt_id, page_number=None):
+        query = """
             SELECT
                 aq.id,
                 aq.question_id,
@@ -141,9 +140,16 @@ class AttemptsTable:
             FROM exam_attempt_questions aq
             LEFT JOIN exam_answers ans ON ans.attempt_question_id = aq.id
             WHERE aq.attempt_id = ?
-            ORDER BY aq.question_order
-            """,
-            (attempt_id,),
+        """
+        params = [attempt_id]
+        if page_number is not None:
+            query += " AND aq.page_number = ?"
+            params.append(page_number)
+        query += " ORDER BY aq.question_order"
+
+        _, rows = self.db.execute(
+            query,
+            tuple(params),
             fetchall=True,
         )
         payload = []

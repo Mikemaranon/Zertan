@@ -1,5 +1,6 @@
 import { escapeHtml, request } from "../core/api.js";
 import { createAddableSelect } from "../components/addable-select.js";
+import { renderPagination } from "../components/pagination.js";
 import {
     attachQuestionConfig,
     collectResponse,
@@ -8,14 +9,19 @@ import {
     showFeedback,
 } from "../components/questions.js";
 
+const QUESTIONS_PER_PAGE = 5;
+
 export async function initExamDetailPage(pageContext) {
     const header = document.getElementById("exam-detail-header");
     const filters = document.getElementById("study-filters");
     const questionContainer = document.getElementById("study-questions");
+    const paginationTop = document.getElementById("study-pagination-top");
+    const paginationBottom = document.getElementById("study-pagination-bottom");
     const data = await request(`/api/exams/${pageContext.exam_id}/study`);
 
     const exam = data.exam;
     const questions = data.questions;
+    let currentPage = Math.max(1, Number(new URLSearchParams(window.location.search).get("page") || 1) || 1);
     const officialLink = exam.official_url
         ? `
             <div class="exam-reference">
@@ -90,7 +96,7 @@ export async function initExamDetailPage(pageContext) {
         sharedChipGroup: "tag",
         sharedChipGroupLabel: "Tag",
         sharedChipLabel: (value) => value,
-        onChange: renderQuestions,
+        onChange: handleFiltersChanged,
     });
     topicFilter = createAddableSelect(document.getElementById("filter-topics-field"), {
         id: "filter-topic",
@@ -101,7 +107,7 @@ export async function initExamDetailPage(pageContext) {
         sharedChipGroup: "topic",
         sharedChipGroupLabel: "Topic",
         sharedChipLabel: (value) => value,
-        onChange: renderQuestions,
+        onChange: handleFiltersChanged,
     });
     typeFilter = createAddableSelect(document.getElementById("filter-types-field"), {
         id: "filter-type",
@@ -113,7 +119,7 @@ export async function initExamDetailPage(pageContext) {
         sharedChipGroup: "type",
         sharedChipGroupLabel: "Type",
         sharedChipLabel: (type) => type.replaceAll("_", " "),
-        onChange: renderQuestions,
+        onChange: handleFiltersChanged,
     });
 
     clearIncludeButton.addEventListener("click", () => {
@@ -148,13 +154,23 @@ export async function initExamDetailPage(pageContext) {
             return tagMatch && topicMatch && typeMatch;
         });
 
+        const totalPages = Math.max(1, Math.ceil(visible.length / QUESTIONS_PER_PAGE));
+        if (currentPage > totalPages) {
+            currentPage = totalPages;
+            syncPageInUrl();
+        }
+
         questionContainer.innerHTML = "";
         if (!visible.length) {
+            paginationTop.innerHTML = "";
+            paginationBottom.innerHTML = "";
             questionContainer.innerHTML = `<div class="empty-state">No questions match the selected filters.</div>`;
             return;
         }
-        visible.forEach((question, index) => {
-            const card = renderQuestionCard(question, { mode: "study", index: index + 1 });
+        const pageStart = (currentPage - 1) * QUESTIONS_PER_PAGE;
+        const pageQuestions = visible.slice(pageStart, pageStart + QUESTIONS_PER_PAGE);
+        pageQuestions.forEach((question, index) => {
+            const card = renderQuestionCard(question, { mode: "study", index: pageStart + index + 1 });
             attachQuestionConfig(card, question);
             card.querySelector(".js-check-question").addEventListener("click", async () => {
                 try {
@@ -177,6 +193,27 @@ export async function initExamDetailPage(pageContext) {
             });
             questionContainer.appendChild(card);
         });
+
+        renderPagination(paginationTop, currentPage, totalPages, navigateToPage);
+        renderPagination(paginationBottom, currentPage, totalPages, navigateToPage);
+    }
+
+    function handleFiltersChanged() {
+        currentPage = 1;
+        syncPageInUrl();
+        renderQuestions();
+    }
+
+    function navigateToPage(page) {
+        currentPage = page;
+        syncPageInUrl();
+        renderQuestions();
+    }
+
+    function syncPageInUrl() {
+        const url = new URL(window.location.href);
+        url.searchParams.set("page", String(currentPage));
+        window.history.replaceState({}, "", url);
     }
 
     renderQuestions();

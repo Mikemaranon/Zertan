@@ -33,7 +33,7 @@ class AttemptsAPI(BaseAPI):
         if error:
             return error
         service = AttemptService(self.db)
-        payload = service.get_attempt_payload(attempt_id)
+        payload = service.get_attempt_payload(attempt_id, page_number=request.args.get("page", type=int))
         if not payload:
             return self.error("Attempt not found.", 404)
         if not self._can_access_attempt(user, payload["attempt"]["user_id"]):
