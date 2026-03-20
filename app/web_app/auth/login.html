@@ -29,6 +29,7 @@
                 <button class="button button--primary" type="submit">Sign in</button>
             </form>
         </section>
+        {% if show_seeded_accounts %}
         <section class="auth-card auth-card--secondary">
             <div class="auth-brand">
                 <a class="brand auth-brand__signature" href="/login" aria-label="Zertan login">
@@ -64,6 +65,7 @@
                 <li><strong>user</strong>: <code>candidate</code> / <code>candidate123</code></li>
             </ul>
         </section>
+        {% endif %}
     </main>
 
     <script type="module" src="/static/JS/app.js"></script>

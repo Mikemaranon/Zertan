@@ -112,6 +112,10 @@ Important variables:
 - `ZERTAN_DATA_DIR`
 - `ZERTAN_DB_PATH`
 - `ZERTAN_MEDIA_ROOT`
+- `ZERTAN_SEED_DEMO_CONTENT`
+- `ZERTAN_BOOTSTRAP_ADMIN_USERNAME`
+- `ZERTAN_BOOTSTRAP_ADMIN_PASSWORD`
+- `ZERTAN_BOOTSTRAP_ADMIN_EMAIL`
 - `ZERTAN_COOKIE_SECURE`
 - `ZERTAN_COOKIE_SAMESITE`
 - `ZERTAN_JWT_HOURS`
@@ -192,7 +196,7 @@ Operational behavior:
 
 ## Seed Data
 
-On first boot, the app seeds:
+When `ZERTAN_DEBUG=1` or `ZERTAN_SEED_DEMO_CONTENT=1`, the app seeds:
 
 - one administrator user
 - one mock exam named `ZT-100`
@@ -201,6 +205,12 @@ On first boot, the app seeds:
 Seeded credentials:
 
 - `admin` / `admin123`
+
+The bootstrap user can still be overridden with:
+
+- `ZERTAN_BOOTSTRAP_ADMIN_USERNAME`
+- `ZERTAN_BOOTSTRAP_ADMIN_PASSWORD`
+- `ZERTAN_BOOTSTRAP_ADMIN_EMAIL`
 
 ## Server Routes
 

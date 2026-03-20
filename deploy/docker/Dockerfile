@@ -23,4 +23,7 @@ USER zertan
 
 EXPOSE 5050
 
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+    CMD python -c "import os, urllib.request; urllib.request.urlopen(f'http://127.0.0.1:{os.environ.get(\"PORT\", \"5050\")}/healthz', timeout=3)"
+
 CMD ["sh", "-c", "gunicorn --chdir app/web_server --bind 0.0.0.0:${PORT:-5050} --workers ${GUNICORN_WORKERS:-2} --threads ${GUNICORN_THREADS:-4} --timeout ${GUNICORN_TIMEOUT:-120} wsgi:app"]

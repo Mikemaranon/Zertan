@@ -588,8 +588,22 @@ class Database:
             ],
         )
 
+        admin_username = self.runtime_config.get("bootstrap_admin_username") or "admin"
+
         _, count_row = self.execute("SELECT COUNT(*) AS total FROM users", fetchone=True)
         if count_row["total"] == 0:
+            admin_email = self.runtime_config.get("bootstrap_admin_email") or "admin@zertan.local"
+            admin_password = self.runtime_config.get("bootstrap_admin_password") or ""
+            seed_demo_content = bool(self.runtime_config.get("seed_demo_content"))
+
+            if not seed_demo_content and not admin_password:
+                raise RuntimeError(
+                    "First startup requires ZERTAN_BOOTSTRAP_ADMIN_PASSWORD when ZERTAN_SEED_DEMO_CONTENT is disabled."
+                )
+
+            if seed_demo_content and not admin_password:
+                admin_password = "admin123"
+
             self.executemany(
                 """
                 INSERT INTO users (username, email, login_name, display_name, password_hash, role, status)
@@ -597,11 +611,11 @@ class Database:
                 """,
                 [
                     (
-                        "admin",
-                        "admin@zertan.local",
-                        "admin",
+                        admin_username,
+                        admin_email,
+                        admin_username,
                         "Admin",
-                        generate_password_hash("admin123"),
+                        generate_password_hash(admin_password),
                         "administrator",
                         "active",
                     ),
@@ -609,12 +623,12 @@ class Database:
             )
 
         _, exams_row = self.execute("SELECT COUNT(*) AS total FROM exams", fetchone=True)
-        if exams_row["total"] > 0:
+        if exams_row["total"] > 0 or not self.runtime_config.get("seed_demo_content"):
             return
 
         admin_id = self.execute(
             "SELECT id FROM users WHERE username = ?",
-            ("admin",),
+            (admin_username,),
             fetchone=True,
         )[1]["id"]
 

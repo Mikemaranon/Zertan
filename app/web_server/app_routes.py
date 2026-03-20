@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from flask import abort, current_app, redirect, render_template, request, send_from_directory, url_for
+from flask import abort, current_app, jsonify, redirect, render_template, request, send_from_directory, url_for
 
 from app_route_support import ProtectedPageRenderer
 
@@ -15,6 +15,7 @@ ROUTE_DEFINITIONS = (
     ("/catalog", "catalog", "get_catalog", ["GET"]),
     ("/live-exams", "live_exams", "get_live_exams", ["GET"]),
     ("/login", "login", "get_login", ["GET"]),
+    ("/healthz", "healthz", "get_healthz", ["GET"]),
     ("/logout", "logout", "get_logout", ["GET", "POST"]),
     ("/exams/<int:exam_id>", "exam_detail", "get_exam_detail", ["GET"]),
     ("/exams/<int:exam_id>/builder", "exam_builder", "get_exam_builder", ["GET"]),
@@ -57,7 +58,14 @@ class AppRoutes:
         user = self.user_manager.check_user(request)
         if user:
             return redirect(url_for("home_page"))
-        return render_template("auth/login.html", page_title="Login")
+        return render_template(
+            "auth/login.html",
+            page_title="Login",
+            show_seeded_accounts=bool(current_app.config.get("SEED_DEMO_CONTENT")),
+        )
+
+    def get_healthz(self):
+        return jsonify({"status": "ok"}), 200
 
     def get_home_page(self):
         return self._render_auth_page("home/home.html", "Home")

@@ -27,6 +27,7 @@ class Server:
         self.app.config["COOKIE_SECURE"] = self.runtime_config["cookie_secure"]
         self.app.config["COOKIE_SAMESITE"] = self.runtime_config["cookie_samesite"]
         self.app.config["DEBUG"] = self.runtime_config["debug"]
+        self.app.config["SEED_DEMO_CONTENT"] = self.runtime_config["seed_demo_content"]
 
         self.DBManager = self.ini_DBManager()
         self.user_manager = self.ini_user_manager()

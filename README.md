@@ -42,11 +42,11 @@ By default, the application starts on `http://127.0.0.1:5050`.
 
 Technical documentation lives in [`app/README.md`](app/README.md).
 
-On first boot, the app seeds one administrator account:
+By default, the app seeds one administrator account:
 
 - `admin` / `admin123`
 
-The default catalog contains a single mock exam:
+The default catalog also includes a single mock exam:
 
 - `ZT-100`
 
@@ -75,6 +75,21 @@ Runtime data is stored in the named volume `zertan_data` and mounted at `/data` 
 - the SQLite database
 - uploaded assets
 - imported exam package assets
+
+Default container seed:
+
+- `admin` / `admin123`
+- mock exam `ZT-100`
+
+For public deployments, whoever operates the stack can override:
+
+- `ZERTAN_BOOTSTRAP_ADMIN_USERNAME`
+- `ZERTAN_BOOTSTRAP_ADMIN_PASSWORD`
+- `ZERTAN_SEED_DEMO_CONTENT`
+
+`SECRET_KEY` still has to be set to a non-default value.
+
+The container now exposes `GET /healthz` for health probes.
 
 To deploy a published image instead of building locally, set `ZERTAN_IMAGE` in `.env`, for example:
 
@@ -116,6 +131,10 @@ The deployment-oriented environment variables are:
 - `SECRET_KEY`
 - `HOST_PORT`
 - `ZERTAN_IMAGE`
+- `ZERTAN_SEED_DEMO_CONTENT`
+- `ZERTAN_BOOTSTRAP_ADMIN_USERNAME`
+- `ZERTAN_BOOTSTRAP_ADMIN_PASSWORD`
+- `ZERTAN_BOOTSTRAP_ADMIN_EMAIL`
 - `ZERTAN_COOKIE_SECURE`
 - `ZERTAN_COOKIE_SAMESITE`
 - `ZERTAN_JWT_HOURS`
