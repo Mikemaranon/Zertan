@@ -388,6 +388,11 @@ class Database:
         if current_version < 4:
             self._migrate_static_uploads_to_data_assets()
 
+
+    # FOLLOWING METHODS WILL BE REMOVED OR REFACTORED INTO A SEPARATE MIGRATION UTILITY IN THE FUTURE. 
+    # THEY ARE ONLY HERE TO SUPPORT THE INITIAL TRANSITION OF EXISTING INSTALLATIONS TO THE NEWER 
+    # SCHEMA VERSIONS AND SHOULD NOT BE CONSIDERED STABLE OR LONG-TERM.
+
     def _rename_legacy_live_exam_tables(self):
         assignment_columns = set(self._table_columns("live_exam_assignments"))
         if "session_id" not in assignment_columns or "live_exam_id" in assignment_columns:
@@ -637,7 +642,7 @@ class Database:
             "title": "Zertan Platform Mock Exam",
             "provider": "Zertan",
             "description": "Mock certification bank covering the supported interactive question types and exam behaviors of the platform.",
-            "official_url": "https://zertan.local/exams/zt-100",
+            "official_url": "https://github.com/Mikemaranon/Zertan",
             "difficulty": "intermediate",
             "status": "published",
             "tags": ["mock", "platform", "zt-100"],
@@ -806,7 +811,7 @@ class Database:
 
     def _seed_exam_links(self):
         seeded_links = {
-            "ZT-100": "https://zertan.local/exams/zt-100",
+            "ZT-100": "https://github.com/Mikemaranon/Zertan",
         }
         for code, official_url in seeded_links.items():
             self.execute(

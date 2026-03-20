@@ -1,0 +1,21 @@
+- Decompose [database.py](app/web_server/data_m/utils/database.py)
+- extract [database.py](app/web_server/data_m/utils/database.py) into its father module
+- create [database/](app/web_server/data_m/database/) and inlude:
+    - `database.py`
+    - `zertan.db`
+- create more utilities in [utils](app/web_server/data_m/utils/) directory, such as:
+    - migration: every database method dedicated to this
+    - integrity: ensurement, x_exist, etc.
+    - seeding_data: seeding exams, users, etc.
+- `db_manager.py` has to orchestate both [utils](app/web_server/data_m/utils/) and [db_methods](app/web_server/data_m/db_methods/)
+
+- try to decompose [services_m](app/web_server/services_m/) into directories
+    - QUESTION_LOGIC_SV
+        - create `services_m/question_logic_service/__init__.py`
+        - divide [question_logic](app/web_server/services_m/question_logic.py) service into smaller files
+    - PACKAGE_SV
+        - create `services_m/package_service/__init__.py`
+        - `package_service.py` and `package_import.py` should be reorganized into new directory
+    - ATTEMPT_EXAM_SV
+        - create `services_m/exam_attempt_service/__init__.py`
+        - `attempt_service.py` and `live_exam_service.py` should be reorganized into new directory
