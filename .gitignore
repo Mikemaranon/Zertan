@@ -3,6 +3,7 @@ __pycache__
 AGENTS.md
 .env
 .DS_store
+opencode.json
 deploy/docker/.env
 app/web_server/data_m/assets/
 app/web_server/data_m/utils/*.db
