@@ -8,8 +8,7 @@ DEFAULT_DB_PATH = DEFAULT_DATA_ROOT / "utils" / "zertan.db"
 DEFAULT_MEDIA_ROOT = DEFAULT_DATA_ROOT / "assets"
 INSECURE_SECRET_KEYS = {
     "",
-    "change-this-before-production",
-    "zertan-development-secret-key-2026-32b",
+    "change-this-before-production"
 }
 
 
