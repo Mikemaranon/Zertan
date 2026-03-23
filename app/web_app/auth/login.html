@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | Zertan</title>
+    <link rel="stylesheet" href="/static/CSS/core/tokens.css">
+    <link rel="stylesheet" href="/static/CSS/core/reset.css">
+    <link rel="stylesheet" href="/static/CSS/core/base.css">
+    <link rel="stylesheet" href="/static/CSS/layout/auth.css">
+    <link rel="stylesheet" href="/static/CSS/components/brand.css">
+    <link rel="stylesheet" href="/static/CSS/components/buttons.css">
+    <link rel="stylesheet" href="/static/CSS/components/forms.css">
+    <link rel="stylesheet" href="/static/CSS/components/auth-card.css">
+    <link rel="stylesheet" href="/static/CSS/pages/auth/login.css">
+</head>
+<body class="auth-body" data-page="login">
+    <main class="auth-layout">
+        <section class="auth-card">
+            <p class="eyebrow">Zertan platform</p>
+            <h1>Certification exam preparation</h1>
+            <p class="muted">
+                Serious study and exam preparation for structured certification banks.
+            </p>
+            <form id="login-form" class="form-stack">
+                <label><span>Login name</span><input type="text" id="login-name" required></label>
+                <label><span>Password</span><input type="password" id="password" required></label>
+                <div id="error-message" class="error-message" hidden></div>
+                <button class="button button--primary" type="submit">Sign in</button>
+            </form>
+        </section>
+        <section class="auth-card auth-card--secondary">
+            <div class="auth-brand">
+                <a class="brand auth-brand__signature" href="/login" aria-label="Zertan login">
+                    <img class="brand__logo" src="/static/assets/Zertan.png" alt="Zertan">
+                    <span class="brand__divider" aria-hidden="true"></span>
+                    <span class="brand-copy" aria-label="Certification preparation workspace">
+                        <span>Certification</span>
+                        <span>Preparation</span>
+                        <span>Workspace</span>
+                    </span>
+                </a>
+            </div>
+            <div class="section-heading section-heading--compact">
+                <div>
+                    <p class="eyebrow">Seeded accounts</p>
+                    <p class="muted">Use the bundled roles only when reviewing the local platform.</p>
+                </div>
+                <button
+                    id="seeded-accounts-toggle"
+                    class="seeded-accounts-toggle"
+                    type="button"
+                    aria-expanded="false"
+                    aria-controls="seeded-accounts-list"
+                    aria-label="Show seeded accounts"
+                >
+                    <span class="seeded-accounts-toggle__icon" aria-hidden="true">^</span>
+                </button>
+            </div>
+            <ul id="seeded-accounts-list" class="credential-list" hidden>
+                <li><strong>administrator</strong>: <code>admin</code> / <code>admin123</code></li>
+                <li><strong>examiner</strong>: <code>examiner</code> / <code>examiner123</code></li>
+                <li><strong>reviewer</strong>: <code>reviewer</code> / <code>reviewer123</code></li>
+                <li><strong>user</strong>: <code>candidate</code> / <code>candidate123</code></li>
+            </ul>
+        </section>
+    </main>
+
+    <script type="module" src="/static/JS/app.js"></script>
+</body>
+</html>

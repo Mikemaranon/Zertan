@@ -1,0 +1,882 @@
+import { createAddableSelect } from "../components/addable-select.js";
+import { createSearchResultsPopover } from "../components/search-results-popover.js";
+import { escapeHtml, formatPercent, request } from "../core/api.js";
+
+export async function initLiveExamsPage() {
+    const payload = await request("/api/live-exams");
+
+    if (payload.mode === "administrator") {
+        initAdministratorView(payload);
+        return;
+    }
+
+    initUserView(payload.assignments || []);
+}
+
+function initAdministratorView(payload) {
+    const openModalButton = document.getElementById("live-exam-open-modal");
+    const list = document.getElementById("live-exams-admin-list");
+    const canCreate =
+        (payload.available_exams || []).length > 0 &&
+        ((payload.available_users || []).length > 0 || (payload.available_groups || []).length > 0);
+    const modal = bindLiveExamModal({
+        availableExams: payload.available_exams || [],
+        availableUsers: payload.available_users || [],
+        availableGroups: payload.available_groups || [],
+        onCreated: async () => {
+            const refreshed = await request("/api/live-exams");
+            renderAdministratorList(list, refreshed.live_exams || []);
+        },
+    });
+
+    renderAdministratorList(list, payload.live_exams || []);
+    if (openModalButton) {
+        openModalButton.disabled = !canCreate;
+    }
+    openModalButton?.addEventListener("click", () => modal.open());
+}
+
+function initUserView(assignments) {
+    const list = document.getElementById("live-exams-user-list");
+    if (!list) {
+        return;
+    }
+
+    list.innerHTML = assignments.length
+        ? assignments
+            .map(
+                (assignment) => `
+            <article class="card">
+                <div class="section-heading">
+                    <div>
+                        <p class="eyebrow">${escapeHtml(assignment.exam_code)}</p>
+                        <h2>${escapeHtml(assignment.live_exam_title || assignment.exam_title)}</h2>
+                    </div>
+                    ${renderStatusBadge(assignment.assignment_status)}
+                </div>
+                <p class="muted">${escapeHtml(assignment.live_exam_description || "")}</p>
+                ${assignment.live_exam_instructions ? `<div class="live-exam-note"><strong>Instructions</strong><p class="muted">${escapeHtml(assignment.live_exam_instructions)}</p></div>` : ""}
+                <div class="live-exam-card__metrics">
+                    ${renderMetric("Source exam", escapeHtml(assignment.exam_code))}
+                    ${renderMetric("Provider", escapeHtml(assignment.exam_provider))}
+                    ${renderMetric("Questions", assignment.question_count)}
+                    ${renderMetric("Time limit", assignment.time_limit_minutes ? `${assignment.time_limit_minutes} min` : "Not set")}
+                </div>
+                <div class="button-row">
+                    ${renderUserActionButton(assignment)}
+                </div>
+            </article>
+        `
+            )
+            .join("")
+        : `<div class="empty-state">No live exams have been assigned to you.</div>`;
+
+    list.querySelectorAll(".js-live-exam-start").forEach((button) => {
+        button.addEventListener("click", async (event) => {
+            const assignmentId = event.currentTarget.dataset.assignmentId;
+            const response = await request(`/api/live-exams/assignments/${assignmentId}/start`, {
+                method: "POST",
+            });
+            window.location.href = `/attempts/${response.attempt_id}/run`;
+        });
+    });
+}
+
+function renderAdministratorList(container, liveExams) {
+    if (!container) {
+        return;
+    }
+
+    container.innerHTML = liveExams.length
+        ? liveExams
+            .map((liveExam) => renderAdminCard(liveExam))
+            .join("")
+        : `<div class="empty-state">No live exams have been created yet.</div>`;
+
+    container.querySelectorAll(".js-live-exam-toggle").forEach((button) => {
+        button.addEventListener("click", (event) => {
+            const card = event.currentTarget.closest(".js-live-exam-card");
+            const isExpanded = card?.classList.toggle("is-expanded");
+            event.currentTarget.setAttribute("aria-expanded", isExpanded ? "true" : "false");
+            event.currentTarget.setAttribute("aria-label", isExpanded ? "Collapse live exam details" : "Expand live exam details");
+        });
+    });
+
+    container.querySelectorAll(".js-live-exam-close").forEach((button) => {
+        button.addEventListener("click", async (event) => {
+            const liveExamId = event.currentTarget.dataset.liveExamId;
+            const card = event.currentTarget.closest(".card");
+            const title = card?.querySelector("h2")?.textContent?.trim() || "this live exam";
+            const confirmed = window.confirm(`Close ${title}? It will disappear from Live Exams but all recorded data will remain available.`);
+            if (!confirmed) {
+                return;
+            }
+            await request(`/api/live-exams/${liveExamId}/close`, { method: "POST" });
+            const refreshed = await request("/api/live-exams");
+            renderAdministratorList(container, refreshed.live_exams || []);
+        });
+    });
+
+    container.querySelectorAll(".js-live-exam-delete").forEach((button) => {
+        button.addEventListener("click", async (event) => {
+            const liveExamId = event.currentTarget.dataset.liveExamId;
+            const card = event.currentTarget.closest(".card");
+            const title = card?.querySelector("h2")?.textContent?.trim() || "this live exam";
+            const confirmed = window.confirm(`Delete ${title}? This removes the live exam, its assignments, and all attempts created from it.`);
+            if (!confirmed) {
+                return;
+            }
+            await request(`/api/live-exams/${liveExamId}`, { method: "DELETE" });
+            const refreshed = await request("/api/live-exams");
+            renderAdministratorList(container, refreshed.live_exams || []);
+        });
+    });
+}
+
+function renderAdminCard(liveExam) {
+    return `
+        <article class="card live-exam-card js-live-exam-card">
+            <div class="live-exam-card__summary">
+                <div class="live-exam-card__identity">
+                    <p class="eyebrow">${escapeHtml(liveExam.exam_code)}</p>
+                    <h2>${escapeHtml(liveExam.title)}</h2>
+                    ${liveExam.description ? `<p class="muted live-exam-card__description">${escapeHtml(liveExam.description)}</p>` : ""}
+                </div>
+                <div class="live-exam-card__summary-actions">
+                    <div class="button-row live-exam-card__button-row">
+                        <button class="button button--secondary button--small js-live-exam-close" data-live-exam-id="${liveExam.id}" type="button">Close exam</button>
+                        <button class="button button--danger button--small js-live-exam-delete" data-live-exam-id="${liveExam.id}" type="button">Delete exam</button>
+                    </div>
+                    <button class="live-exam-card__toggle js-live-exam-toggle" type="button" aria-expanded="false" aria-label="Expand live exam details">
+                        <span aria-hidden="true">▾</span>
+                    </button>
+                </div>
+            </div>
+            <div class="live-exam-card__details">
+                ${liveExam.instructions ? `<div class="live-exam-note"><strong>Instructions</strong><p class="muted">${escapeHtml(liveExam.instructions)}</p></div>` : ""}
+                <div class="live-exam-card__metrics">
+                    ${renderMetric("Source exam", escapeHtml(liveExam.exam_code))}
+                    ${renderMetric("Assigned", liveExam.counts.assigned)}
+                    ${renderMetric("Pending", liveExam.counts.pending)}
+                    ${renderMetric("In progress", liveExam.counts.in_progress)}
+                    ${renderMetric("Completed", liveExam.counts.completed)}
+                    ${renderMetric("Questions", liveExam.question_count)}
+                    ${renderMetric("Time limit", liveExam.time_limit_minutes ? `${liveExam.time_limit_minutes} min` : "Not set")}
+                </div>
+                <div class="live-exam-assignment-list">
+                    ${(liveExam.assignments || []).length
+                        ? liveExam.assignments
+                            .map(
+                                (assignment) => `
+                            <div class="live-exam-assignment-row">
+                                <div class="live-exam-assignment-row__identity">
+                                    <strong>${escapeHtml(assignment.display_name)}</strong>
+                                    <span class="muted">@${escapeHtml(assignment.login_name)}</span>
+                                </div>
+                                <div class="live-exam-assignment-row__actions">
+                                    ${renderStatusBadge(assignment.assignment_status)}
+                                    ${assignment.score_percent !== null && assignment.score_percent !== undefined ? `<span class="badge">${formatPercent(assignment.score_percent)}</span>` : ""}
+                                    ${renderAdminAttemptLink(assignment)}
+                                </div>
+                            </div>
+                        `
+                            )
+                            .join("")
+                        : `<div class="empty-state">No users are assigned to this live exam.</div>`}
+                </div>
+            </div>
+        </article>
+    `;
+}
+
+function bindLiveExamModal({ availableExams, availableUsers, availableGroups, onCreated }) {
+    const modal = document.getElementById("live-exam-modal");
+    const form = document.getElementById("live-exam-form");
+    const sourceSelect = document.getElementById("live-exam-source");
+    const hintNode = document.getElementById("live-exam-source-hint");
+    const errorNode = document.getElementById("live-exam-form-error");
+    const closeButton = document.getElementById("live-exam-modal-close");
+    const cancelButton = document.getElementById("live-exam-form-cancel");
+    const backdrop = document.getElementById("live-exam-modal-backdrop");
+    const questionCountInput = document.getElementById("live-exam-question-count");
+    const timeLimitInput = document.getElementById("live-exam-time-limit");
+    const difficultySelect = document.getElementById("live-exam-difficulty");
+    const randomCheckbox = document.getElementById("live-exam-random");
+    const sharedChipsContainers = {
+        includeContainer: document.getElementById("live-exam-filters-include"),
+        excludeContainer: document.getElementById("live-exam-filters-exclude"),
+        includeEmptyLabel: "No included filters",
+        excludeEmptyLabel: "No excluded filters",
+    };
+    const clearIncludeButton = document.getElementById("live-exam-filters-include-clear");
+    const clearExcludeButton = document.getElementById("live-exam-filters-exclude-clear");
+    let isClosing = false;
+    let sourceRequestId = 0;
+    let contentField = null;
+    let typesField = null;
+
+    if (!modal || !form || !sourceSelect) {
+        return { open() {} };
+    }
+
+    const userPicker = createUserAssignmentField(
+        document.getElementById("live-exam-users-field"),
+        {
+            users: availableUsers,
+            groups: availableGroups,
+        },
+    );
+
+    sourceSelect.innerHTML = availableExams.length
+        ? [
+            `<option value="">Select an exam</option>`,
+            ...availableExams.map(
+                (exam) => `<option value="${exam.id}">${escapeHtml(exam.code)}</option>`
+            ),
+        ].join("")
+        : `<option value="">No eligible exams available</option>`;
+
+    const syncClearButtons = () => {
+        const content = contentField?.getValues() || { include: [], exclude: [] };
+        const types = typesField?.getValues() || { include: [], exclude: [] };
+        clearIncludeButton.disabled = !content.include.length && !types.include.length;
+        clearExcludeButton.disabled = !content.exclude.length && !types.exclude.length;
+    };
+
+    clearIncludeButton?.addEventListener("click", () => {
+        contentField?.setModeValues("include", []);
+        typesField?.setModeValues("include", []);
+    });
+    clearExcludeButton?.addEventListener("click", () => {
+        contentField?.setModeValues("exclude", []);
+        typesField?.setModeValues("exclude", []);
+    });
+
+    sourceSelect.addEventListener("change", async () => {
+        await loadSourceMeta();
+    });
+
+    async function loadSourceMeta() {
+        const selectedExam = availableExams.find((exam) => String(exam.id) === String(sourceSelect.value));
+        const requestId = ++sourceRequestId;
+
+        resetBuilderFields();
+        updateSourceHint(selectedExam, questionCountInput, hintNode);
+        if (!selectedExam) {
+            return;
+        }
+
+        try {
+            const response = await request(`/api/exams/${selectedExam.id}/builder-meta`);
+            if (requestId !== sourceRequestId) {
+                return;
+            }
+            const meta = response.builder_meta || {};
+            contentField = createAddableSelect(document.getElementById("live-exam-content-field"), {
+                id: "live-exam-content",
+                label: "Content filters",
+                options: buildContentFilterOptions(meta),
+                searchable: true,
+                searchPlaceholder: "Search tags or topics",
+                emptySearchMessage: "Type to search available tags and topics.",
+                noResultsMessage: "No tags or topics match the current search.",
+                sharedChipsContainers,
+                sharedChipGroup: (_value, option) => option.group,
+                sharedChipGroupLabel: (_value, option) => option.groupLabel,
+                sharedChipLabel: (_value, option) => option.label.replace(/^(Tag|Topic)\s+\u00b7\s+/u, ""),
+                onChange: syncClearButtons,
+            });
+            typesField = createAddableSelect(document.getElementById("live-exam-types-field"), {
+                id: "live-exam-types",
+                label: "Question types",
+                options: meta.question_types || [],
+                searchable: true,
+                searchPlaceholder: "Search question types",
+                emptySearchMessage: "Type to search available question types.",
+                noResultsMessage: "No question types match the current search.",
+                formatLabel: (value) => value.replaceAll("_", " "),
+                sharedChipsContainers,
+                sharedChipGroup: "type",
+                sharedChipGroupLabel: "Type",
+                sharedChipLabel: (value) => value.replaceAll("_", " "),
+                onChange: syncClearButtons,
+            });
+            syncClearButtons();
+        } catch (error) {
+            errorNode.textContent = error.message;
+        }
+    }
+
+    form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        errorNode.textContent = "";
+        const selectedContent = splitContentFilterValues(contentField?.getValues() || { include: [], exclude: [] });
+
+        const payload = {
+            title: document.getElementById("live-exam-title").value.trim(),
+            exam_id: Number(sourceSelect.value),
+            topics: selectedContent.topics,
+            tags: selectedContent.tags,
+            question_types: typesField?.getValues() || { include: [], exclude: [] },
+            difficulty: difficultySelect.value || "",
+            question_count: Number(questionCountInput.value),
+            time_limit_minutes: Number(timeLimitInput.value || 0),
+            random_order: randomCheckbox.checked,
+            description: document.getElementById("live-exam-description").value.trim(),
+            instructions: document.getElementById("live-exam-instructions").value.trim(),
+            ...userPicker.getPayload(),
+        };
+
+        try {
+            await request("/api/live-exams", {
+                method: "POST",
+                body: payload,
+            });
+            resetLiveExamForm();
+            closeModal(modal, () => {
+                isClosing = false;
+            });
+            if (typeof onCreated === "function") {
+                await onCreated();
+            }
+        } catch (error) {
+            errorNode.textContent = error.message;
+        }
+    });
+
+    function resetBuilderFields() {
+        document.getElementById("live-exam-content-field").innerHTML = "";
+        document.getElementById("live-exam-types-field").innerHTML = "";
+        if (sharedChipsContainers.includeContainer.__selectionChipStore) {
+            sharedChipsContainers.includeContainer.__selectionChipStore.clear();
+        } else {
+            sharedChipsContainers.includeContainer.innerHTML = `<button class="selection-chip selection-chip--empty" type="button" tabindex="-1">No included filters</button>`;
+        }
+        if (sharedChipsContainers.excludeContainer.__selectionChipStore) {
+            sharedChipsContainers.excludeContainer.__selectionChipStore.clear();
+        } else {
+            sharedChipsContainers.excludeContainer.innerHTML = `<button class="selection-chip selection-chip--empty" type="button" tabindex="-1">No excluded filters</button>`;
+        }
+        contentField = null;
+        typesField = null;
+        syncClearButtons();
+    }
+
+    function resetLiveExamForm() {
+        form.reset();
+        sourceSelect.value = "";
+        questionCountInput.value = "";
+        questionCountInput.max = "";
+        hintNode.textContent = "Select a source exam to see the available question count.";
+        difficultySelect.value = "";
+        randomCheckbox.checked = true;
+        userPicker.reset();
+        resetBuilderFields();
+        errorNode.textContent = "";
+    }
+
+    const requestClose = () => {
+        if (isClosing) {
+            return;
+        }
+        isClosing = true;
+        resetLiveExamForm();
+        closeModal(modal, () => {
+            isClosing = false;
+        });
+    };
+
+    closeButton?.addEventListener("click", requestClose);
+    cancelButton?.addEventListener("click", requestClose);
+    backdrop?.addEventListener("click", requestClose);
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && !modal.hidden) {
+            requestClose();
+        }
+    });
+
+    resetLiveExamForm();
+
+    return {
+        open() {
+            if (!availableExams.length || (!availableUsers.length && !availableGroups.length)) {
+                return;
+            }
+            modal.hidden = false;
+            modal.dataset.state = "closed";
+            document.body.classList.add("modal-open");
+            window.requestAnimationFrame(() => {
+                window.requestAnimationFrame(() => {
+                    modal.dataset.state = "open";
+                });
+            });
+        },
+    };
+}
+
+function buildContentFilterOptions(builderMeta) {
+    return [
+        ...(builderMeta.tags || []).map((value) => ({
+            value: `tag:${value}`,
+            label: `Tag · ${value}`,
+            group: "tag",
+            groupLabel: "Tag",
+            searchTerms: [value, "tag"],
+        })),
+        ...(builderMeta.topics || []).map((value) => ({
+            value: `topic:${value}`,
+            label: `Topic · ${value}`,
+            group: "topic",
+            groupLabel: "Topic",
+            searchTerms: [value, "topic"],
+        })),
+    ];
+}
+
+function splitContentFilterValues(values) {
+    return {
+        tags: {
+            include: (values.include || []).filter((value) => value.startsWith("tag:")).map((value) => value.slice(4)),
+            exclude: (values.exclude || []).filter((value) => value.startsWith("tag:")).map((value) => value.slice(4)),
+        },
+        topics: {
+            include: (values.include || []).filter((value) => value.startsWith("topic:")).map((value) => value.slice(6)),
+            exclude: (values.exclude || []).filter((value) => value.startsWith("topic:")).map((value) => value.slice(6)),
+        },
+    };
+}
+
+function createUserAssignmentField(container, { users = [], groups = [] } = {}) {
+    if (!container) {
+        return {
+            getPayload: () => ({ user_ids: [], group_ids: [], excluded_user_ids: [] }),
+            reset: () => {},
+        };
+    }
+
+    const usersById = new Map(
+        users.map((user) => [Number(user.id), { ...user, id: Number(user.id) }])
+    );
+    const groupsById = new Map(
+        groups.map((group) => [
+            Number(group.id),
+            {
+                ...group,
+                id: Number(group.id),
+                members: (group.members || [])
+                    .map((member) => ({ ...member, id: Number(member.id) }))
+                    .filter((member) => usersById.has(member.id)),
+            },
+        ])
+    );
+    const state = {
+        directUserIds: [],
+        groupIds: [],
+        excludedUserIds: [],
+    };
+
+    container.classList.add("selection-field");
+    container.innerHTML = `
+        <div class="selection-field__top live-exam-assignment-field__top">
+            <span class="selection-field__label">Assigned users and groups</span>
+        </div>
+        <div class="admin-group-picker live-exam-assignment-picker">
+            <label>
+                <input id="live-exam-entity-search" type="search" placeholder="Search by login name or group">
+            </label>
+            <div id="live-exam-entity-results" class="admin-picker-results live-exam-picker-results"></div>
+        </div>
+        <div class="selection-field live-exam-selection-box">
+            <div class="selection-field__top">
+                <span class="selection-field__label">Included in exam</span>
+            </div>
+            <div id="live-exam-selection-list" class="selection-field__chips live-exam-selection-box__chips"></div>
+        </div>
+        <div class="selection-field live-exam-selection-box">
+            <div class="selection-field__top">
+                <span class="selection-field__label">Excluded from exam</span>
+            </div>
+            <div id="live-exam-exclusion-list" class="selection-field__chips live-exam-selection-box__chips"></div>
+        </div>
+    `;
+
+    const searchInput = container.querySelector("#live-exam-entity-search");
+    const results = container.querySelector("#live-exam-entity-results");
+    const selectionList = container.querySelector("#live-exam-selection-list");
+    const exclusionList = container.querySelector("#live-exam-exclusion-list");
+    let resultsPopover = null;
+
+    const getSelectedGroupMemberIds = () => {
+        const memberIds = new Set();
+        for (const groupId of state.groupIds) {
+            const group = groupsById.get(Number(groupId));
+            if (!group) {
+                continue;
+            }
+            for (const member of group.members) {
+                memberIds.add(Number(member.id));
+            }
+        }
+        return memberIds;
+    };
+
+    const getGroupCoverageByUserId = () => {
+        const coverage = new Map();
+        for (const groupId of state.groupIds) {
+            const group = groupsById.get(Number(groupId));
+            if (!group) {
+                continue;
+            }
+            for (const member of group.members) {
+                const userId = Number(member.id);
+                if (!coverage.has(userId)) {
+                    coverage.set(userId, []);
+                }
+                coverage.get(userId).push(group);
+            }
+        }
+        return coverage;
+    };
+
+    const ensureUniqueIds = (values) => Array.from(new Set(values.map((value) => Number(value)).filter((value) => value > 0)));
+
+    const pruneRedundantState = () => {
+        const selectedGroupMemberIds = getSelectedGroupMemberIds();
+        state.groupIds = ensureUniqueIds(state.groupIds).filter((groupId) => groupsById.has(groupId));
+        state.directUserIds = ensureUniqueIds(state.directUserIds).filter((userId) => usersById.has(userId) && !selectedGroupMemberIds.has(userId));
+        state.excludedUserIds = ensureUniqueIds(state.excludedUserIds).filter((userId) => usersById.has(userId) && selectedGroupMemberIds.has(userId));
+    };
+
+    const renderSelectedEntities = () => {
+        const selectedGroups = state.groupIds
+            .map((groupId) => groupsById.get(Number(groupId)))
+            .filter(Boolean);
+        const selectedUsers = state.directUserIds
+            .map((userId) => usersById.get(Number(userId)))
+            .filter(Boolean);
+        const excludedUsers = state.excludedUserIds
+            .map((userId) => usersById.get(Number(userId)))
+            .filter(Boolean);
+
+        if (!selectedGroups.length && !selectedUsers.length) {
+            selectionList.innerHTML = `
+                <button class="selection-chip selection-chip--empty" type="button" tabindex="-1">
+                    No users or groups added yet
+                </button>
+            `;
+        } else {
+            selectionList.innerHTML = [
+                ...selectedGroups.map(
+                    (group) => `
+                        <button class="selection-chip" type="button" data-selection-kind="group" data-selection-id="${group.id}" data-group="group">
+                            <span class="selection-chip__group">Group</span>
+                            <span class="selection-chip__value">${escapeHtml(group.name)}</span>
+                        </button>
+                    `,
+                ),
+                ...selectedUsers.map(
+                    (user) => `
+                        <button class="selection-chip" type="button" data-selection-kind="user" data-selection-id="${user.id}" data-group="user">
+                            <span class="selection-chip__group">${escapeHtml(user.login_name)}</span>
+                            <span class="selection-chip__value">${escapeHtml(user.display_name)}</span>
+                        </button>
+                    `,
+                ),
+            ].join("");
+        }
+
+        if (!excludedUsers.length) {
+            exclusionList.innerHTML = `
+                <button class="selection-chip selection-chip--empty" type="button" tabindex="-1">
+                    No excluded users
+                </button>
+            `;
+        } else {
+            exclusionList.innerHTML = excludedUsers
+                .map(
+                    (user) => `
+                        <button class="selection-chip" type="button" data-selection-kind="excluded-user" data-selection-id="${user.id}" data-group="excluded-user">
+                            <span class="selection-chip__group">${escapeHtml(user.login_name)}</span>
+                            <span class="selection-chip__value">${escapeHtml(user.display_name)}</span>
+                        </button>
+                    `,
+                )
+                .join("");
+        }
+    };
+
+    const renderSearchResults = () => {
+        const query = searchInput.value.trim().toLowerCase();
+        if (!query) {
+            results.innerHTML = `<div class="empty-state">Type a login name or group to search available users and groups.</div>`;
+            return;
+        }
+
+        const groupCoverageByUserId = getGroupCoverageByUserId();
+        const matchingUsers = users.filter((user) =>
+            String(user.login_name || "").toLowerCase().includes(query)
+        );
+        const matchingGroups = groups.filter((group) => {
+            const memberTerms = (group.members || []).flatMap((member) => [member.login_name, member.display_name]);
+            return [group.name, group.code, ...memberTerms].some((value) =>
+                String(value || "").toLowerCase().includes(query)
+            );
+        });
+
+        if (!matchingUsers.length && !matchingGroups.length) {
+            results.innerHTML = `<div class="empty-state">No users or groups match the current search.</div>`;
+            return;
+        }
+
+        results.innerHTML = [
+            ...matchingUsers.map((user) => {
+                const userId = Number(user.id);
+                const isExcluded = state.excludedUserIds.includes(userId);
+                const isDirect = state.directUserIds.includes(userId);
+                const groupCoverage = groupCoverageByUserId.get(userId) || [];
+                const isCoveredByGroup = Boolean(groupCoverage.length);
+                const isSelected = isExcluded || isDirect || isCoveredByGroup;
+                const helper = isExcluded
+                    ? `${user.display_name} · ${user.role} · Excluded from this live exam.`
+                    : isDirect
+                        ? `${user.display_name} · ${user.role} · Added individually.`
+                        : isCoveredByGroup
+                            ? `${user.display_name} · ${user.role} · Included via ${groupCoverage.map((group) => group.name).join(", ")}.`
+                            : `${user.display_name} · ${user.role}`;
+                return `
+                    <div class="admin-picker-result" data-entity-kind="user" data-entity-id="${user.id}">
+                        <div>
+                            <strong>${escapeHtml(user.login_name)}</strong>
+                            <p class="muted">${escapeHtml(helper)}</p>
+                        </div>
+                        <button
+                            class="button ${isSelected ? "button--danger js-live-exam-delete-entity" : "button--secondary js-live-exam-add-entity"} button--small"
+                            type="button"
+                            data-entity-kind="user"
+                            data-entity-id="${user.id}"
+                        >
+                            ${isSelected ? "Delete" : "Add"}
+                        </button>
+                    </div>
+                `;
+            }),
+            ...matchingGroups.map((group) => {
+                const isSelected = state.groupIds.includes(Number(group.id));
+                const memberPreview = (group.members || [])
+                    .slice(0, 3)
+                    .map((member) => `@${member.login_name}`)
+                    .join(", ");
+                const extraMembers = Math.max((group.members || []).length - 3, 0);
+                const helperParts = [`${group.member_count || (group.members || []).length} members`];
+                if (memberPreview) {
+                    helperParts.push(memberPreview + (extraMembers ? ` +${extraMembers}` : ""));
+                }
+                return `
+                    <div class="admin-picker-result" data-entity-kind="group" data-entity-id="${group.id}">
+                        <div>
+                            <strong>${escapeHtml(group.name)}</strong>
+                            <p class="muted">${escapeHtml(helperParts.join(" · "))}</p>
+                        </div>
+                        <button
+                            class="button ${isSelected ? "button--danger js-live-exam-delete-entity" : "button--secondary js-live-exam-add-entity"} button--small"
+                            type="button"
+                            data-entity-kind="group"
+                            data-entity-id="${group.id}"
+                        >
+                            ${isSelected ? "Delete" : "Add"}
+                        </button>
+                    </div>
+                `;
+            }),
+        ].join("");
+    };
+
+    resultsPopover = createSearchResultsPopover(searchInput, results, {
+        maxHeight: 360,
+        renderPanel: renderSearchResults,
+    });
+
+    const render = () => {
+        pruneRedundantState();
+        renderSelectedEntities();
+        renderSearchResults();
+    };
+
+    const addEntity = (kind, id) => {
+        const normalizedId = Number(id);
+        if (kind === "group") {
+            if (!groupsById.has(normalizedId) || state.groupIds.includes(normalizedId)) {
+                return;
+            }
+            state.groupIds = [...state.groupIds, normalizedId];
+            render();
+            resultsPopover.refresh();
+            return;
+        }
+        if (!usersById.has(normalizedId)) {
+            return;
+        }
+        if (state.directUserIds.includes(normalizedId)) {
+            return;
+        }
+        state.directUserIds = [...state.directUserIds, normalizedId];
+        render();
+        resultsPopover.refresh();
+    };
+
+    const deleteEntity = (kind, id) => {
+        const normalizedId = Number(id);
+        if (kind === "group") {
+            state.groupIds = state.groupIds.filter((groupId) => groupId !== normalizedId);
+            render();
+            resultsPopover.refresh();
+            return;
+        }
+        if (state.excludedUserIds.includes(normalizedId)) {
+            state.excludedUserIds = state.excludedUserIds.filter((userId) => userId !== normalizedId);
+            render();
+            resultsPopover.refresh();
+            return;
+        }
+        if (state.directUserIds.includes(normalizedId)) {
+            state.directUserIds = state.directUserIds.filter((userId) => userId !== normalizedId);
+            render();
+            resultsPopover.refresh();
+            return;
+        }
+        if (getSelectedGroupMemberIds().has(normalizedId)) {
+            state.excludedUserIds = [...state.excludedUserIds, normalizedId];
+            render();
+            resultsPopover.refresh();
+        }
+    };
+
+    results.addEventListener("pointerdown", (event) => {
+        const target = event.target;
+        if (!(target instanceof Element)) {
+            return;
+        }
+        if (target.closest("button, [role='button'], a")) {
+            event.preventDefault();
+        }
+    });
+    results.addEventListener("click", (event) => {
+        const button = event.target.closest("button[data-entity-kind][data-entity-id]");
+        if (!button) {
+            return;
+        }
+        const { entityKind, entityId } = button.dataset;
+        if (button.classList.contains("js-live-exam-add-entity")) {
+            addEntity(entityKind, entityId);
+            return;
+        }
+        if (button.classList.contains("js-live-exam-delete-entity")) {
+            deleteEntity(entityKind, entityId);
+        }
+    });
+    selectionList.addEventListener("click", (event) => {
+        const chip = event.target.closest("[data-selection-kind][data-selection-id]");
+        if (!chip) {
+            return;
+        }
+        if (chip.dataset.selectionKind === "group") {
+            state.groupIds = state.groupIds.filter((groupId) => groupId !== Number(chip.dataset.selectionId));
+        } else {
+            state.directUserIds = state.directUserIds.filter((userId) => userId !== Number(chip.dataset.selectionId));
+        }
+        render();
+    });
+    exclusionList.addEventListener("click", (event) => {
+        const chip = event.target.closest('[data-selection-kind="excluded-user"][data-selection-id]');
+        if (!chip) {
+            return;
+        }
+        state.excludedUserIds = state.excludedUserIds.filter((userId) => userId !== Number(chip.dataset.selectionId));
+        render();
+    });
+
+    render();
+    resultsPopover.close();
+
+    return {
+        getPayload() {
+            pruneRedundantState();
+            return {
+                user_ids: [...state.directUserIds],
+                group_ids: [...state.groupIds],
+                excluded_user_ids: [...state.excludedUserIds],
+            };
+        },
+        reset() {
+            state.directUserIds = [];
+            state.groupIds = [];
+            state.excludedUserIds = [];
+            searchInput.value = "";
+            render();
+        },
+    };
+}
+
+function closeModal(modal, onClosed) {
+    document.body.classList.remove("modal-open");
+    modal.dataset.state = "closing";
+    window.setTimeout(() => {
+        modal.hidden = true;
+        modal.dataset.state = "closed";
+        if (typeof onClosed === "function") {
+            onClosed();
+        }
+    }, 300);
+}
+
+function updateSourceHint(selectedExam, questionCountInput, hintNode) {
+    if (!selectedExam) {
+        hintNode.textContent = "Select a source exam to see the available question count.";
+        questionCountInput.value = "";
+        questionCountInput.max = "";
+        return;
+    }
+    hintNode.textContent = `${selectedExam.code} currently exposes ${selectedExam.question_count} active questions.`;
+    questionCountInput.max = String(selectedExam.question_count);
+    if (!questionCountInput.value) {
+        questionCountInput.value = String(Math.min(10, selectedExam.question_count));
+    }
+}
+
+function renderStatusBadge(status) {
+    const label = {
+        pending: "Pending",
+        in_progress: "In progress",
+        completed: "Completed",
+    }[status] || status;
+    return `<span class="badge badge--${status.replace("_", "-")}">${escapeHtml(label)}</span>`;
+}
+
+function renderMetric(label, value) {
+    return `
+        <div class="live-exam-card__metric">
+            <span class="muted">${escapeHtml(label)}</span>
+            <strong>${escapeHtml(value)}</strong>
+        </div>
+    `;
+}
+
+function renderUserActionButton(assignment) {
+    if (assignment.assignment_status === "completed" && assignment.attempt_id) {
+        return `<a class="button button--secondary" href="/attempts/${assignment.attempt_id}/results">View results</a>`;
+    }
+    if (assignment.assignment_status === "in_progress") {
+        return `<button class="button button--primary js-live-exam-start" data-assignment-id="${assignment.assignment_id}" type="button">Resume exam</button>`;
+    }
+    return `<button class="button button--primary js-live-exam-start" data-assignment-id="${assignment.assignment_id}" type="button">Start exam</button>`;
+}
+
+function renderAdminAttemptLink(assignment) {
+    if (assignment.assignment_status === "completed" && assignment.attempt_id) {
+        return `<a class="button button--secondary button--small" href="/attempts/${assignment.attempt_id}/results">Open results</a>`;
+    }
+    if (assignment.assignment_status === "in_progress" && assignment.attempt_id) {
+        return `<a class="button button--secondary button--small" href="/attempts/${assignment.attempt_id}/run">Open attempt</a>`;
+    }
+    return "";
+}

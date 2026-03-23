@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="520" viewBox="0 0 960 520" role="img" aria-labelledby="title desc">
+  <title id="title">ZT-100 workflow diagram</title>
+  <desc id="desc">Two numbered markers identify study mode and exam mode inside a simplified Zertan workflow.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f7fbff"/>
+      <stop offset="100%" stop-color="#eef4fb"/>
+    </linearGradient>
+  </defs>
+  <rect width="960" height="520" fill="url(#bg)"/>
+  <rect x="70" y="130" width="310" height="190" rx="20" fill="#dcecff" stroke="#7aa6d8" stroke-width="3"/>
+  <rect x="580" y="130" width="310" height="190" rx="20" fill="#e9eef4" stroke="#9aa8b6" stroke-width="3"/>
+  <text x="225" y="210" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="34" fill="#23476a">Study Mode</text>
+  <text x="225" y="255" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="20" fill="#47627b">Review, filter, correct</text>
+  <text x="735" y="210" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="34" fill="#425364">Exam Mode</text>
+  <text x="735" y="255" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="20" fill="#667789">Fixed attempt, stored results</text>
+  <line x1="380" y1="225" x2="580" y2="225" stroke="#89a9c8" stroke-width="8" stroke-linecap="round"/>
+  <polygon points="560,205 610,225 560,245" fill="#89a9c8"/>
+  <circle cx="332" cy="156" r="26" fill="#23476a"/>
+  <circle cx="842" cy="156" r="26" fill="#425364"/>
+  <text x="332" y="165" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="22" fill="#ffffff">1</text>
+  <text x="842" y="165" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="22" fill="#ffffff">2</text>
+  <text x="480" y="420" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="18" fill="#6a7a88">ZT-100 mock exam workflow reference</text>
+</svg>

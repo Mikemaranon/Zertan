@@ -1,0 +1,92 @@
+label {
+    display: grid;
+    gap: calc(8px * var(--app-density));
+    color: var(--muted);
+}
+
+label span {
+    font-weight: 600;
+    color: var(--text);
+}
+
+input,
+select,
+textarea {
+    width: 100%;
+    padding: calc(12px * var(--app-density)) calc(14px * var(--app-density));
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: #fff;
+    color: var(--text);
+}
+
+select {
+    min-height: calc(52px * var(--app-density));
+    padding: calc(14px * var(--app-density)) calc(48px * var(--app-density)) calc(14px * var(--app-density)) calc(16px * var(--app-density));
+    border-radius: 14px;
+    border-color: #c5d3e2;
+    background-color: #fdfefe;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+select:not([multiple]) {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image:
+        linear-gradient(45deg, transparent 50%, var(--primary-strong) 50%),
+        linear-gradient(135deg, var(--primary-strong) 50%, transparent 50%),
+        linear-gradient(180deg, #f7fbff 0%, #eef5fb 100%);
+    background-position:
+        calc(100% - calc(22px * var(--app-density))) calc(50% - 3px),
+        calc(100% - calc(16px * var(--app-density))) calc(50% - 3px),
+        0 0;
+    background-size:
+        6px 6px,
+        6px 6px,
+        100% 100%;
+    background-repeat: no-repeat;
+}
+
+select:hover {
+    background-color: #f8fbff;
+    border-color: #b5c9dd;
+}
+
+select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px rgba(102, 168, 224, 0.14);
+}
+
+select[multiple] {
+    min-height: calc(140px * var(--app-density));
+}
+
+textarea {
+    resize: vertical;
+}
+
+#exam-description {
+    resize: none;
+}
+
+.checkbox-line {
+    display: flex;
+    align-items: center;
+    gap: calc(10px * var(--app-density));
+}
+
+.checkbox-line input {
+    width: auto;
+}
+
+.error-message {
+    min-height: calc(20px * var(--app-density));
+    color: var(--danger);
+}
+
+.error-message:empty,
+#import-error:empty {
+    display: none;
+}

@@ -1,0 +1,41 @@
+.button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: calc(8px * var(--app-density));
+    padding: calc(12px * var(--app-density)) calc(18px * var(--app-density));
+    border-radius: 999px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.button--primary {
+    background: var(--primary);
+    color: white;
+}
+
+.button--primary:hover {
+    background: var(--primary-strong);
+}
+
+.button--secondary {
+    background: var(--surface-soft);
+    color: var(--text);
+    border-color: var(--border);
+}
+
+.button--danger {
+    background: rgba(199, 90, 90, 0.08);
+    color: var(--danger);
+    border-color: rgba(199, 90, 90, 0.24);
+}
+
+.button--danger:hover {
+    background: rgba(199, 90, 90, 0.14);
+}
+
+.button--small {
+    padding: calc(8px * var(--app-density)) calc(14px * var(--app-density));
+    font-size: 0.92rem;
+}

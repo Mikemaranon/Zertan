@@ -1,0 +1,108 @@
+{% set page_id = "exam-management" %}
+{% extends "shared/base.html" %}
+{% block page_styles %}
+<link rel="stylesheet" href="/static/CSS/pages/management/exams.css">
+{% endblock %}
+{% block content %}
+{% set can_manage_exams = current_user and current_user.role in ["examiner", "administrator"] %}
+{% if can_manage_exams %}
+<section class="grid grid--two">
+    <div class="panel">
+        <form id="exam-form" class="form-stack">
+            <div class="section-heading">
+                <div>
+                    <h2>Create or update exam</h2>
+                    <p class="muted">Manage metadata for structured certification banks.</p>
+                </div>
+            </div>
+            <input id="exam-id" type="hidden">
+            <label><span>Code</span><input id="exam-code" type="text" required></label>
+            <label><span>Title</span><input id="exam-title" type="text" required></label>
+            <label><span>Provider</span><input id="exam-provider" type="text" required></label>
+            <label><span>Description</span><textarea id="exam-description" rows="4"></textarea></label>
+            <label><span>Official exam URL</span><input id="exam-official-url" type="url" placeholder="https://learn.microsoft.com/..."></label>
+            <label>
+                <span>Difficulty</span>
+                <select id="exam-difficulty">
+                    <option value="foundational">Foundational</option>
+                    <option value="intermediate">Intermediate</option>
+                    <option value="advanced">Advanced</option>
+                </select>
+            </label>
+            <label>
+                <span>Status</span>
+                <select id="exam-status">
+                    <option value="draft">Draft</option>
+                    <option value="published">Published</option>
+                    <option value="archived">Archived</option>
+                </select>
+            </label>
+            <label>
+                <span>Availability</span>
+                <select id="exam-scope-mode">
+                    <option value="global">Entire domain</option>
+                    <option value="groups">Specific groups</option>
+                </select>
+            </label>
+            <div id="exam-groups-field" hidden>
+                <div id="exam-group-picker"></div>
+            </div>
+            <p id="exam-scope-hint" class="muted">Administrators can publish to the whole domain or restrict availability to selected groups.</p>
+            <label><span>Tags</span><input id="exam-tags" type="text" placeholder="azure-ai, search, fundamentals"></label>
+            <div id="exam-form-error" class="error-message"></div>
+            <div class="button-row">
+                <button class="button button--primary" type="submit">Save exam</button>
+                <button id="exam-form-reset" class="button button--secondary" type="button">Reset</button>
+            </div>
+        </form>
+    </div>
+    <div class="panel">
+        <form id="import-form" class="form-stack">
+            <div class="section-heading">
+                <div>
+                    <h2>Import package</h2>
+                    <p class="muted">Upload a structured `.zip` package with exam metadata, one JSON file per question, and assets.</p>
+                </div>
+            </div>
+            <label><span>Package</span><input id="import-package" type="file" accept=".zip" required></label>
+            <label>
+                <span>Imported exam availability</span>
+                <select id="import-scope-mode">
+                    <option value="global">Entire domain</option>
+                    <option value="groups">Specific groups</option>
+                </select>
+            </label>
+            <div id="import-groups-field" hidden>
+                <span>Groups</span>
+                <div id="import-group-picker"></div>
+            </div>
+            <p id="import-scope-hint" class="muted">Choose where the imported exam should be available after creation.</p>
+            <div id="import-error" class="error-message"></div>
+            <button class="button button--secondary" type="submit">Import exam package</button>
+            <div class="package-guide">
+                <strong>Expected package structure</strong>
+                <pre><code>exam-package/
+  exam.json
+  questions/
+    q_0001.json
+    q_0002.json
+  assets/
+    img_1.jpg
+    img_2.png
+    img_3.svg</code></pre>
+            </div>
+        </form>
+    </div>
+</section>
+{% endif %}
+
+<section class="panel stack-gap">
+    <div class="section-heading">
+        <div>
+            <h2>Managed exams</h2>
+            <p class="muted">Edit metadata, manage questions, or export structured packages.</p>
+        </div>
+    </div>
+    <div id="management-exam-list" class="list-stack"></div>
+</section>
+{% endblock %}

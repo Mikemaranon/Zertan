@@ -1,0 +1,148 @@
+name: Release Image
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Semantic version without the leading v (example: 1.2.0)"
+        required: true
+      latest:
+        description: "Also publish the latest tag"
+        required: true
+        default: true
+        type: boolean
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.inputs.version || github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  ZERTAN_BOOTSTRAP_ADMIN_PASSWORD: workflow-admin-password
+  ZERTAN_SEED_DEMO_CONTENT: "0"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Validate manual release version
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        run: |
+          version="${{ github.event.inputs.version }}"
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
+            echo "Version must use semantic versioning, for example 1.0.0 or 1.0.0-rc.1" >&2
+            exit 1
+          fi
+
+      - name: Resolve release metadata
+        id: release
+        shell: bash
+        run: |
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            tag="v${{ github.event.inputs.version }}"
+            version="${{ github.event.inputs.version }}"
+            publish_latest="${{ github.event.inputs.latest }}"
+          else
+            tag="${GITHUB_REF_NAME}"
+            version="${tag#v}"
+            if [[ "$version" == *-* ]]; then
+              publish_latest="false"
+            else
+              publish_latest="true"
+            fi
+          fi
+
+          stable_version="${version%%-*}"
+          IFS=. read -r major minor patch <<< "$stable_version"
+
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "major_minor=$major.$minor" >> "$GITHUB_OUTPUT"
+          echo "publish_latest=$publish_latest" >> "$GITHUB_OUTPUT"
+
+      - name: Ensure manual release tag is unused
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        run: |
+          tag="${{ steps.release.outputs.tag }}"
+          if git rev-parse "$tag" >/dev/null 2>&1; then
+            echo "Tag $tag already exists." >&2
+            exit 1
+          fi
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install backend dependencies
+        run: python -m pip install -r app/requirements.txt
+
+      - name: Run test suite
+        run: python -m unittest discover -s tests
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          labels: |
+            org.opencontainers.image.title=Zertan
+            org.opencontainers.image.description=Professional certification exam preparation platform built with Flask and SQLite.
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.version=${{ steps.release.outputs.version }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          tags: |
+            type=raw,value=${{ steps.release.outputs.version }}
+            type=raw,value=${{ steps.release.outputs.major_minor }},enable=${{ steps.release.outputs.publish_latest == 'true' }}
+            type=sha
+            type=raw,value=latest,enable=${{ steps.release.outputs.publish_latest == 'true' }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./deploy/docker/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.release.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          generate_release_notes: true
+          prerelease: ${{ contains(steps.release.outputs.version, '-') }}
+          files: |
+            deploy/docker/.env.example
+            deploy/docker/compose.yml
+            deploy/docker/compose.ghcr.yml

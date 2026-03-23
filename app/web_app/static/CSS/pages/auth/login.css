@@ -1,0 +1,70 @@
+.auth-layout {
+    width: min(1080px, 100%);
+    display: grid;
+    grid-template-columns: 1.2fr 0.8fr;
+    gap: 24px;
+}
+
+.section-heading--compact {
+    margin-bottom: 14px;
+}
+
+.section-heading--compact .eyebrow {
+    margin-bottom: 8px;
+}
+
+.section-heading--compact .muted {
+    margin: 0;
+}
+
+.seeded-accounts-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    border: 1px solid rgba(211, 220, 231, 0.92);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.88);
+    color: var(--muted);
+    cursor: pointer;
+    flex: 0 0 auto;
+    transition: transform 0.18s ease, color 0.18s ease, border-color 0.18s ease, background-color 0.18s ease;
+}
+
+.seeded-accounts-toggle:hover {
+    color: var(--text);
+    border-color: rgba(102, 168, 224, 0.55);
+    background: rgba(255, 255, 255, 0.98);
+}
+
+.seeded-accounts-toggle__icon {
+    display: inline-block;
+    font-size: 1.2rem;
+    line-height: 1;
+    transform: rotate(180deg);
+    transition: transform 0.18s ease;
+}
+
+.seeded-accounts-toggle[aria-expanded="true"] .seeded-accounts-toggle__icon {
+    transform: rotate(0deg);
+}
+
+.credential-list {
+    margin: 20px 0 0;
+    padding-left: 20px;
+    color: var(--muted);
+    display: grid;
+    gap: 12px;
+}
+
+.credential-list[hidden] {
+    display: none;
+}
+
+@media (max-width: 860px) {
+    .auth-layout {
+        grid-template-columns: 1fr;
+    }
+}

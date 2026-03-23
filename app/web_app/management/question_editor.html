@@ -1,0 +1,111 @@
+{% set page_id = "question-editor" %}
+{% extends "shared/base.html" %}
+{% block page_styles %}
+<link rel="stylesheet" href="/static/CSS/pages/management/question-editor.css">
+{% endblock %}
+{% block content %}
+<section class="panel">
+    <form id="question-form" class="form-stack">
+        <div id="question-editor-header" class="section-heading"></div>
+        <input id="question-id" type="hidden">
+        <label><span>Title</span><input id="question-title" type="text"></label>
+        <label><span>Statement</span><textarea id="question-statement" rows="5" required></textarea></label>
+        <label><span>Explanation</span><textarea id="question-explanation" rows="4"></textarea></label>
+        <div class="grid grid--two">
+            <label>
+                <span>Question type</span>
+                <select id="question-type">
+                    <option value="single_select">Single select</option>
+                    <option value="multiple_choice">Multiple choice</option>
+                    <option value="hot_spot">Hot spot</option>
+                    <option value="drag_drop">Drag and drop</option>
+                </select>
+            </label>
+            <label>
+                <span>Difficulty</span>
+                <select id="question-difficulty">
+                    <option value="foundational">Foundational</option>
+                    <option value="intermediate">Intermediate</option>
+                    <option value="advanced">Advanced</option>
+                </select>
+            </label>
+        </div>
+        <div class="grid grid--two">
+            <label><span>Tags</span><input id="question-tags" type="text" placeholder="tag-a, tag-b"></label>
+            <label><span>Topics</span><input id="question-topics" type="text" placeholder="topic-a, topic-b"></label>
+        </div>
+        <label>
+            <span>Status</span>
+            <select id="question-status">
+                <option value="active">Active</option>
+                <option value="draft">Draft</option>
+                <option value="archived">Archived</option>
+            </select>
+        </label>
+        <label><span>Position</span><input id="question-position" type="number" min="1" value="1"></label>
+
+        <section id="choice-section" class="editor-section">
+            <div class="section-heading">
+                <div>
+                    <h2>Options</h2>
+                    <p class="muted">Define the answer options and mark the correct ones.</p>
+                </div>
+                <button id="add-option-button" class="button button--secondary button--small" type="button">Add option</button>
+            </div>
+            <div id="options-list" class="stack-gap"></div>
+        </section>
+
+        <section id="hotspot-section" class="editor-section">
+            <div class="section-heading">
+                <div>
+                    <h2>Hot spot dropdowns</h2>
+                    <p class="muted">Define the numbered dropdowns shown in the image. Add the same digits directly into the uploaded image.</p>
+                </div>
+                <button id="add-hotspot-dropdown-button" class="button button--secondary button--small" type="button">Add dropdown</button>
+            </div>
+            <label><span>Image file</span><input id="question-asset-file" type="file" accept=".png,.jpg,.svg"></label>
+            <label><span>Image description</span><input id="question-asset-alt" type="text"></label>
+            <div id="hotspot-dropdowns-list" class="stack-gap"></div>
+        </section>
+
+        <section id="dragdrop-section" class="editor-section">
+            <div class="section-heading">
+                <div>
+                    <h2>Drag and drop structure</h2>
+                    <p class="muted">Create source items, destination zones, the expected mapping, and whether items can be reused.</p>
+                </div>
+            </div>
+            <label>
+                <span>Usage mode</span>
+                <select id="dragdrop-mode">
+                    <option value="U">U: unique item usage</option>
+                    <option value="R">R: reusable item usage</option>
+                </select>
+            </label>
+            <div class="grid grid--two">
+                <div>
+                    <div class="section-heading">
+                        <h3>Items</h3>
+                        <button id="add-item-button" class="button button--secondary button--small" type="button">Add item</button>
+                    </div>
+                    <div id="items-list" class="stack-gap"></div>
+                </div>
+                <div>
+                    <div class="section-heading">
+                        <h3>Destinations</h3>
+                        <button id="add-destination-button" class="button button--secondary button--small" type="button">Add destination</button>
+                    </div>
+                    <div id="destinations-list" class="stack-gap"></div>
+                </div>
+            </div>
+        </section>
+
+        <div id="question-form-error" class="error-message"></div>
+        <div class="button-row">
+            <button class="button button--primary" type="submit">Save question</button>
+            <button id="cancel-question-button" class="button button--danger" type="button">Cancel</button>
+            <button id="archive-question-button" class="button button--secondary" type="button">Archive question</button>
+        </div>
+    </form>
+</section>
+{% endblock %}

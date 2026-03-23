@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_title }} | Zertan</title>
+    <link rel="stylesheet" href="/static/CSS/core/tokens.css?v={{ asset_version }}">
+    <link rel="stylesheet" href="/static/CSS/core/reset.css?v={{ asset_version }}">
+    <link rel="stylesheet" href="/static/CSS/core/base.css?v={{ asset_version }}">
+    <link rel="stylesheet" href="/static/CSS/layout/shell.css?v={{ asset_version }}">
+    <link rel="stylesheet" href="/static/CSS/components/brand.css?v={{ asset_version }}">
+    <link rel="stylesheet" href="/static/CSS/components/buttons.css?v={{ asset_version }}">
+    <link rel="stylesheet" href="/static/CSS/components/cards.css?v={{ asset_version }}">
+    <link rel="stylesheet" href="/static/CSS/components/badges.css?v={{ asset_version }}">
+    <link rel="stylesheet" href="/static/CSS/components/forms.css?v={{ asset_version }}">
+    <link rel="stylesheet" href="/static/CSS/components/meta.css?v={{ asset_version }}">
+    <link rel="stylesheet" href="/static/CSS/components/pagination.css?v={{ asset_version }}">
+    <link rel="stylesheet" href="/static/CSS/components/selection-field.css?v={{ asset_version }}">
+    <link rel="stylesheet" href="/static/CSS/components/questions.css?v={{ asset_version }}">
+    <link rel="stylesheet" href="/static/CSS/components/profile-modal.css?v={{ asset_version }}">
+    {% block page_styles %}{% endblock %}
+</head>
+<body data-page="{{ page_id }}">
+    {% set avatar_url = "" %}
+    {% if current_user.avatar_path %}
+        {% if current_user.avatar_path.startswith("web_app/") %}
+            {% set avatar_url = "/" ~ current_user.avatar_path.replace("web_app/", "") %}
+        {% else %}
+            {% set avatar_url = "/media/" ~ current_user.avatar_path.replace("web_server/data_m/assets/", "") %}
+        {% endif %}
+    {% endif %}
+    {% set can_manage = current_user and current_user.role in ["reviewer", "examiner", "administrator"] %}
+    {% set can_admin = current_user and current_user.role == "administrator" %}
+    <div class="app-shell">
+        <aside class="sidebar">
+            <div class="sidebar-topbar">
+                <div class="brand-block">
+                    <a class="brand" href="/home" aria-label="Zertan home">
+                        <img class="brand__logo" src="/static/assets/Zertan.png" alt="Zertan">
+                        <span class="brand__divider" aria-hidden="true"></span>
+                        <span class="brand-copy" aria-label="Certification preparation workspace">
+                            <span>Certification</span>
+                            <span>Preparation</span>
+                            <span>Workspace</span>
+                        </span>
+                    </a>
+                </div>
+                <button
+                    id="sidebar-toggle"
+                    class="sidebar-toggle"
+                    type="button"
+                    aria-expanded="false"
+                    aria-controls="sidebar-menu"
+                    aria-label="Open navigation menu"
+                >
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <button class="user-chip user-chip--header" type="button" data-open-profile-modal aria-label="Open profile">
+                    {% if current_user.avatar_path %}
+                    <img class="user-chip__avatar user-chip__avatar--image" src="{{ avatar_url }}" alt="{{ current_user.display_name }}">
+                    {% else %}
+                    <span class="user-chip__avatar">{{ current_user.display_name[:1]|upper }}</span>
+                    {% endif %}
+                    <span class="user-chip__name">{{ current_user.display_name }}</span>
+                </button>
+            </div>
+            <div id="sidebar-menu" class="sidebar-menu">
+                <nav class="sidebar-nav">
+                    <a href="/home">Home</a>
+                    <div class="sidebar-nav__section">
+                        <p class="sidebar-nav__title">stats</p>
+                        <a href="/dashboard">Dashboard</a>
+                        {% if feature_access.get("global_stats_page") %}
+                        <a href="/global-stats">Global Stats</a>
+                        {% endif %}
+                    </div>
+                    <div class="sidebar-nav__section">
+                        <p class="sidebar-nav__title">exams</p>
+                        <a href="/catalog">Exam Catalog</a>
+                        {% if feature_access.get("live_exams_page") %}
+                        <a href="/live-exams">Live Exams</a>
+                        {% endif %}
+                    </div>
+                    {% if can_manage or can_admin %}
+                    <div class="sidebar-nav__section">
+                        <p class="sidebar-nav__title">admin</p>
+                        {% if can_manage %}
+                        <a href="/management/exams">Exam Management</a>
+                        {% endif %}
+                        {% if can_admin %}
+                        <a href="/admin">Admin Panel</a>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </nav>
+                <div class="sidebar-footer">
+                    <button class="user-chip user-chip--footer" type="button" data-open-profile-modal>
+                        {% if current_user.avatar_path %}
+                        <img class="user-chip__avatar user-chip__avatar--image" src="{{ avatar_url }}" alt="{{ current_user.display_name }}">
+                        {% else %}
+                        <span class="user-chip__avatar">{{ current_user.display_name[:1]|upper }}</span>
+                        {% endif %}
+                        <span class="user-chip__meta">
+                            <span class="user-chip__name">{{ current_user.display_name }}</span>
+                            <span class="user-chip__role">{{ current_user.role }}</span>
+                        </span>
+                    </button>
+                    <button id="logout-button" class="button button--secondary button--small" type="button">Log out</button>
+                </div>
+            </div>
+        </aside>
+        <main class="content-shell">
+            <header class="content-header">
+                <div>
+                    <p class="eyebrow">Zertan platform</p>
+                    <h1>{{ page_title }}</h1>
+                </div>
+                <div class="header-meta">
+                    <span class="muted">Signed in as {{ current_user.display_name }}</span>
+                </div>
+            </header>
+            <section class="content-body">
+                {% block content %}{% endblock %}
+            </section>
+        </main>
+    </div>
+
+    <div id="profile-modal" class="profile-modal" hidden>
+        <div id="profile-modal-backdrop" class="profile-modal__backdrop"></div>
+        <div class="profile-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="profile-modal-title">
+            <button id="profile-modal-close" class="profile-modal__close" type="button" aria-label="Close profile modal">Close</button>
+            <div class="profile-modal__layout">
+                <div class="profile-summary">
+                    <div class="profile-summary__header">
+                        <label class="profile-avatar-picker" for="profile-avatar-input">
+                            <input id="profile-avatar-input" type="file" accept="image/*" hidden>
+                            <span id="profile-avatar" class="profile-avatar" aria-hidden="true"></span>
+                            <span class="profile-avatar-picker__hint">Change photo</span>
+                        </label>
+                        <div class="profile-summary__identity">
+                            <h2 id="profile-modal-title"></h2>
+                            <p id="profile-role" class="profile-summary__role"></p>
+                        </div>
+                    </div>
+                    <div class="profile-summary__stats">
+                        <span class="eyebrow">Activity</span>
+                        <strong id="profile-exam-count">0 exams completed</strong>
+                    </div>
+                    <div class="profile-summary__meta">
+                        <span class="muted">Login name</span>
+                        <strong id="profile-login-name"></strong>
+                    </div>
+                    <div id="profile-avatar-error" class="error-message"></div>
+                    <button id="profile-edit-toggle" class="button button--secondary" type="button">Modify credentials</button>
+                </div>
+                <div id="profile-edit-panel" class="profile-edit-panel" data-mode="placeholder">
+                    <div id="profile-brand-placeholder" class="profile-brand-placeholder">
+                        <div class="profile-brand-placeholder__content">
+                            <img class="profile-brand-placeholder__logo" src="/static/assets/Zertan.png" alt="Zertan">
+                            <span class="profile-brand-placeholder__divider" aria-hidden="true"></span>
+                            <span class="profile-brand-placeholder__copy" aria-label="Certification preparation workspace">
+                                <span>Certification</span>
+                                <span>Preparation</span>
+                                <span>Workspace</span>
+                            </span>
+                        </div>
+                    </div>
+                    <form id="profile-credentials-form" class="form-stack">
+                        <div class="section-heading">
+                            <div>
+                                <h3>Edit credentials</h3>
+                                <p class="muted">Leave all password fields blank to keep the current password.</p>
+                            </div>
+                        </div>
+                        <label><span>Name</span><input id="profile-display-name" type="text" required></label>
+                        <label><span>Current password</span><input id="profile-current-password" type="password"></label>
+                        <label><span>New password</span><input id="profile-new-password" type="password"></label>
+                        <label><span>Confirm new password</span><input id="profile-confirm-password" type="password"></label>
+                        <div id="profile-form-error" class="error-message"></div>
+                        <div class="button-row">
+                            <button class="button button--primary" type="submit">Save changes</button>
+                            <button id="profile-form-cancel" class="button button--secondary" type="button">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script id="current-user-data" type="application/json">{{ current_user|tojson }}</script>
+    <script id="page-context-data" type="application/json">{{ page_context|default({})|tojson }}</script>
+    <script type="module" src="/static/JS/app.js?v={{ asset_version }}"></script>
+</body>
+</html>

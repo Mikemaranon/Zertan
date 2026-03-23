@@ -1,0 +1,13 @@
+.exam-reference {
+    display: flex;
+    align-items: center;
+}
+
+.meta-link {
+    color: var(--primary-strong);
+    font-weight: 600;
+}
+
+.meta-link:hover {
+    text-decoration: underline;
+}

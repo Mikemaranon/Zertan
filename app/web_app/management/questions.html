@@ -1,0 +1,24 @@
+{% set page_id = "question-management" %}
+{% extends "shared/base.html" %}
+{% block page_styles %}
+<link rel="stylesheet" href="/static/CSS/pages/management/questions.css">
+{% endblock %}
+{% block content %}
+<section class="panel stack-gap">
+    <div id="question-management-header" class="section-heading"></div>
+    <div class="grid grid--two question-management-tools">
+        <label>
+            <span>Search questions</span>
+            <input id="question-management-search" type="search" placeholder="Search by id, title, type, tag, topic, status or difficulty">
+        </label>
+        <div class="question-management-summary">
+            <span class="muted">Question directory</span>
+            <strong id="question-management-count">0 questions</strong>
+        </div>
+    </div>
+    <div id="question-management-pagination-top"></div>
+</section>
+
+<section id="question-management-list" class="grid grid--cards"></section>
+<div id="question-management-pagination-bottom"></div>
+{% endblock %}

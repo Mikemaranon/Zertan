@@ -1,0 +1,104 @@
+{% set page_id = "live-exams" %}
+{% extends "shared/base.html" %}
+{% block page_styles %}
+<link rel="stylesheet" href="/static/CSS/pages/home/live-exams.css">
+{% endblock %}
+{% block content %}
+{% if current_user.role == "administrator" %}
+<section id="live-exams-admin-panel" class="panel stack-gap">
+    <div class="live-exam-toolbar">
+        <div>
+            <h2>Active live exams</h2>
+            <p class="muted">Create assigned formal exams from existing certification banks and supervise their progress.</p>
+        </div>
+        <button id="live-exam-open-modal" class="button button--primary" type="button">Create exam</button>
+    </div>
+    <div id="live-exams-admin-list" class="list-stack"></div>
+</section>
+{% else %}
+<section id="live-exams-user-panel" class="panel stack-gap">
+    <div class="section-heading">
+        <div>
+            <h2>Assigned live exams</h2>
+            <p class="muted">Formal assigned exams with persistent progress and evaluative results.</p>
+        </div>
+    </div>
+    <div id="live-exams-user-list" class="list-stack"></div>
+</section>
+{% endif %}
+
+<div id="live-exam-modal" class="profile-modal" hidden>
+    <div id="live-exam-modal-backdrop" class="profile-modal__backdrop"></div>
+    <div class="profile-modal__dialog live-exam-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="live-exam-modal-title">
+        <button id="live-exam-modal-close" class="profile-modal__close" type="button" aria-label="Close live exam form">Close</button>
+        <form id="live-exam-form" class="live-exam-modal__body">
+            <div class="section-heading">
+                <div>
+                    <h2 id="live-exam-modal-title">Create live exam</h2>
+                    <p class="muted">Assign a fixed formal exam to one or more users or groups.</p>
+                </div>
+            </div>
+            <label><span>Live exam title</span><input id="live-exam-title" type="text" required></label>
+            <label>
+                <span>Source exam</span>
+                <select id="live-exam-source" required></select>
+            </label>
+            <div id="live-exam-content-field"></div>
+            <div id="live-exam-types-field"></div>
+            <div id="live-exam-builder-summary" class="study-filters__active builder-filters-summary live-exam-builder-summary">
+                <div class="selection-field__top">
+                    <span class="selection-field__label">Selected filters</span>
+                </div>
+                <div class="selection-field__mode-grid">
+                    <div class="selection-field__mode-panel">
+                        <div class="selection-field__top">
+                            <span class="selection-field__mode-title">Include</span>
+                            <button id="live-exam-filters-include-clear" class="button button--secondary button--small" type="button">Clear</button>
+                        </div>
+                        <div id="live-exam-filters-include" class="selection-field__chips selection-field__chips--shared"></div>
+                    </div>
+                    <div class="selection-field__mode-panel">
+                        <div class="selection-field__top">
+                            <span class="selection-field__mode-title">Exclude</span>
+                            <button id="live-exam-filters-exclude-clear" class="button button--secondary button--small" type="button">Clear</button>
+                        </div>
+                        <div id="live-exam-filters-exclude" class="selection-field__chips selection-field__chips--shared"></div>
+                    </div>
+                </div>
+            </div>
+            <label>
+                <span>Difficulty</span>
+                <select id="live-exam-difficulty">
+                    <option value="">Any difficulty</option>
+                    <option value="foundational">Foundational</option>
+                    <option value="intermediate">Intermediate</option>
+                    <option value="advanced">Advanced</option>
+                </select>
+            </label>
+            <div class="live-exam-modal__grid">
+                <label>
+                    <span>Number of questions</span>
+                    <input id="live-exam-question-count" type="number" min="1" required>
+                </label>
+                <label>
+                    <span>Time limit in minutes</span>
+                    <input id="live-exam-time-limit" type="number" min="0" value="0">
+                </label>
+            </div>
+            <label class="checkbox-line">
+                <input id="live-exam-random" type="checkbox" checked>
+                <span>Random order</span>
+            </label>
+            <p id="live-exam-source-hint" class="muted"></p>
+            <label><span>Description</span><textarea id="live-exam-description" rows="3"></textarea></label>
+            <label><span>Instructions</span><textarea id="live-exam-instructions" rows="4"></textarea></label>
+            <div id="live-exam-users-field"></div>
+            <div id="live-exam-form-error" class="error-message"></div>
+            <div class="button-row">
+                <button class="button button--primary" type="submit">Create exam</button>
+                <button id="live-exam-form-cancel" class="button button--secondary" type="button">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

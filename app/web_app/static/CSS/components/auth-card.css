@@ -1,0 +1,65 @@
+.auth-card {
+    padding: 36px;
+    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.94);
+    border: 1px solid rgba(211, 220, 231, 0.9);
+    box-shadow: 0 24px 48px rgba(28, 53, 76, 0.1);
+}
+
+.auth-card h1 {
+    margin: 12px 0;
+    font-size: 2.4rem;
+    line-height: 1.15;
+}
+
+.auth-card--secondary {
+    background: rgba(241, 247, 253, 0.95);
+}
+
+.auth-brand {
+    margin-bottom: 28px;
+    padding-bottom: 22px;
+    border-bottom: 1px solid rgba(211, 220, 231, 0.82);
+}
+
+.auth-brand__signature {
+    width: 100%;
+    justify-content: flex-start;
+    gap: 26px;
+}
+
+.auth-card--secondary .brand__logo {
+    width: 136px;
+}
+
+.auth-card--secondary .brand-copy {
+    gap: 6px;
+    font-size: 1rem;
+    letter-spacing: 0.18em;
+}
+
+@media (max-width: 860px) {
+    .auth-card--secondary .brand__logo {
+        width: 108px;
+    }
+
+    .auth-card--secondary .brand-copy {
+        font-size: 0.84rem;
+    }
+}
+
+@media (max-width: 560px) {
+    .auth-brand__signature {
+        gap: 18px;
+    }
+
+    .auth-card--secondary .brand__logo {
+        width: 88px;
+    }
+
+    .auth-card--secondary .brand-copy {
+        gap: 3px;
+        font-size: 0.72rem;
+        letter-spacing: 0.14em;
+    }
+}

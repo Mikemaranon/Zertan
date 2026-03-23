@@ -1,0 +1,113 @@
+name: Release Desktop Bundles
+
+on:
+  push:
+    tags:
+      - "desktop-v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Desktop release version without the leading v"
+        required: true
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.inputs.version || github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  ZERTAN_BOOTSTRAP_ADMIN_PASSWORD: workflow-admin-password
+  ZERTAN_SEED_DEMO_CONTENT: "0"
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Resolve version
+        id: version
+        shell: bash
+        run: |
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            version="${{ github.event.inputs.version }}"
+          else
+            tag="${GITHUB_REF_NAME}"
+            version="${tag#desktop-v}"
+          fi
+          echo "value=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install build dependencies
+        run: python -m pip install -r deploy/desktop/requirements.txt
+
+      - name: Run tests
+        run: python -m unittest discover -s tests
+
+      - name: Build desktop bundle
+        run: python deploy/desktop/build_release.py --version ${{ steps.version.outputs.value }}
+
+      - name: Upload bundle artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: zertan-desktop-${{ matrix.os }}
+          path: deploy/desktop/dist/*.zip
+          if-no-files-found: error
+
+  release:
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Download workflow artifacts
+        uses: actions/download-artifact@v6
+        with:
+          path: deploy/desktop/release-assets
+
+      - name: Resolve release metadata
+        id: release
+        shell: bash
+        run: |
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            tag="desktop-v${{ github.event.inputs.version }}"
+          else
+            tag="${GITHUB_REF_NAME}"
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Ensure manual desktop release tag is unused
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        run: |
+          tag="${{ steps.release.outputs.tag }}"
+          if git rev-parse "$tag" >/dev/null 2>&1; then
+            echo "Tag $tag already exists." >&2
+            exit 1
+          fi
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.release.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          generate_release_notes: true
+          files: deploy/desktop/release-assets/**/*.zip

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_title }} | Zertan</title>
+    <link rel="stylesheet" href="/static/CSS/core/tokens.css">
+    <link rel="stylesheet" href="/static/CSS/core/reset.css">
+    <link rel="stylesheet" href="/static/CSS/core/base.css">
+    <link rel="stylesheet" href="/static/CSS/layout/auth.css">
+    <link rel="stylesheet" href="/static/CSS/components/buttons.css">
+    <link rel="stylesheet" href="/static/CSS/components/auth-card.css">
+    <link rel="stylesheet" href="/static/CSS/pages/shared/forbidden.css">
+</head>
+<body class="auth-body">
+    <div class="auth-card">
+        <p class="eyebrow">Access denied</p>
+        <h1>{{ forbidden_title|default("Forbidden") }}</h1>
+        <p class="muted">{{ forbidden_message|default("Your current role does not allow access to this workspace.") }}</p>
+        <div class="button-row">
+            <a class="button button--primary" href="/home">Return to home</a>
+            <a class="button button--secondary" href="/logout">Log out</a>
+        </div>
+    </div>
+</body>
+</html>

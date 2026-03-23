@@ -1,0 +1,57 @@
+.brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 16px;
+    max-width: 100%;
+}
+
+.brand__logo {
+    display: block;
+    width: 72px;
+    height: auto;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+.brand__divider {
+    width: 1px;
+    align-self: stretch;
+    background: rgba(102, 118, 138, 0.28);
+    flex-shrink: 0;
+}
+
+.brand-copy {
+    margin: 0;
+    display: grid;
+    gap: 2px;
+    color: var(--muted);
+    line-height: 1.15;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-size: 0.64rem;
+    font-weight: 700;
+}
+
+.brand-copy span {
+    display: block;
+}
+
+@media (max-width: 1024px) {
+    .sidebar .brand {
+        gap: 8px;
+    }
+
+    .sidebar .brand__logo {
+        width: 32px;
+    }
+}
+
+@media (max-width: 720px) {
+    .sidebar .brand {
+        gap: 6px;
+    }
+
+    .sidebar .brand__logo {
+        width: 24px;
+    }
+}

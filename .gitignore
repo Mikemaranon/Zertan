@@ -1,0 +1,13 @@
+__pycache__
+.venv
+AGENTS.md
+.env
+.DS_store
+opencode.json
+deploy/docker/.env
+app/web_server/data_m/database/*.db
+app/web_server/data_m/database/*.init.lock
+deploy/desktop/build/
+deploy/desktop/dist/
+AUDIT_REPORT.md
+TODO
