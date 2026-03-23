@@ -140,17 +140,15 @@ The desktop launcher:
 
 ## CI/CD And Releases
 
-The repository now ships with three workflows:
+The repository now ships with two workflows:
 
 - [`ci.yml`](/Users/myke/Desktop/codes/Projects/Zertan/.github/workflows/ci.yml): tests on push and pull request, then verifies the Docker image builds
-- [`release-image.yml`](/Users/myke/Desktop/codes/Projects/Zertan/.github/workflows/release-image.yml): publishes the Docker image to GHCR and creates a GitHub Release
-- [`release-desktop.yml`](/Users/myke/Desktop/codes/Projects/Zertan/.github/workflows/release-desktop.yml): builds desktop bundles for Linux, macOS, and Windows and attaches them to a GitHub Release
+- [`release-image.yml`](/Users/myke/Desktop/codes/Projects/Zertan/.github/workflows/release-image.yml): publishes the Docker image to GHCR, builds desktop bundles for Linux, macOS, and Windows, and creates a single GitHub Release with everything attached
 
 Release options:
 
-1. Push a tag such as `v1.2.0` to publish the Docker image release.
-2. Push a tag such as `desktop-v1.2.0` to publish desktop bundles.
-3. Use manual workflow dispatch when you want GitHub Actions to create the release tag and release from the selected commit.
+1. Push a tag such as `v1.2.0` to publish the Docker image and desktop bundles in the same release.
+2. Use manual workflow dispatch when you want GitHub Actions to create the release tag and release from the selected commit.
 
 The release workflows were updated to use Node 24 compatible action versions where applicable.
 

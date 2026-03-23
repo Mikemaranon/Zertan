@@ -195,7 +195,6 @@ CI/CD workflows:
 
 - [`ci.yml`](/Users/myke/Desktop/codes/Projects/Zertan/.github/workflows/ci.yml)
 - [`release-image.yml`](/Users/myke/Desktop/codes/Projects/Zertan/.github/workflows/release-image.yml)
-- [`release-desktop.yml`](/Users/myke/Desktop/codes/Projects/Zertan/.github/workflows/release-desktop.yml)
 
 ## Troubleshooting
 
@@ -216,6 +215,5 @@ CI/CD workflows:
 
 `Release workflow produced no artifact`
 
-- Check the matching workflow:
-  `release-image.yml` for container releases, `release-desktop.yml` for desktop bundles.
-- Manual releases require a version input; tag-driven releases require the correct tag prefix.
+- Check `release-image.yml`, which now publishes the container image and attaches the desktop bundles in the same release.
+- Manual releases require a version input; tag-driven releases require a `v*` release tag.

@@ -1,4 +1,4 @@
-name: Release Image
+name: Release
 
 on:
   push:
@@ -15,20 +15,23 @@ on:
         default: true
         type: boolean
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.inputs.version || github.ref_name }}
-  cancel-in-progress: false
-
 env:
   ZERTAN_BOOTSTRAP_ADMIN_PASSWORD: workflow-admin-password
   ZERTAN_SEED_DEMO_CONTENT: "0"
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  GHCR_USERNAME: ${{ github.repository_owner }}
+  GHCR_TOKEN: ${{ secrets.GHCR_TOKEN != '' && secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}
 
 jobs:
-  publish:
+  prepare:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
-      packages: write
+      contents: read
+    outputs:
+      tag: ${{ steps.release.outputs.tag }}
+      version: ${{ steps.release.outputs.version }}
+      major_minor: ${{ steps.release.outputs.major_minor }}
+      publish_latest: ${{ steps.release.outputs.publish_latest }}
 
     steps:
       - name: Checkout
@@ -82,6 +85,17 @@ jobs:
             exit 1
           fi
 
+  publish_image:
+    runs-on: ubuntu-latest
+    needs: prepare
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
@@ -103,8 +117,8 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ env.GHCR_USERNAME }}
+          password: ${{ env.GHCR_TOKEN }}
 
       - name: Extract metadata
         id: meta
@@ -115,13 +129,13 @@ jobs:
             org.opencontainers.image.title=Zertan
             org.opencontainers.image.description=Professional certification exam preparation platform built with Flask and SQLite.
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
-            org.opencontainers.image.version=${{ steps.release.outputs.version }}
+            org.opencontainers.image.version=${{ needs.prepare.outputs.version }}
             org.opencontainers.image.revision=${{ github.sha }}
           tags: |
-            type=raw,value=${{ steps.release.outputs.version }}
-            type=raw,value=${{ steps.release.outputs.major_minor }},enable=${{ steps.release.outputs.publish_latest == 'true' }}
+            type=raw,value=${{ needs.prepare.outputs.version }}
+            type=raw,value=${{ needs.prepare.outputs.major_minor }},enable=${{ needs.prepare.outputs.publish_latest == 'true' }}
             type=sha
-            type=raw,value=latest,enable=${{ steps.release.outputs.publish_latest == 'true' }}
+            type=raw,value=latest,enable=${{ needs.prepare.outputs.publish_latest == 'true' }}
 
       - name: Build and push image
         uses: docker/build-push-action@v6
@@ -135,14 +149,68 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+  build_desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    runs-on: ${{ matrix.os }}
+    needs: prepare
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install build dependencies
+        run: python -m pip install -r deploy/desktop/requirements.txt
+
+      - name: Run tests
+        run: python -m unittest discover -s tests
+
+      - name: Build desktop bundle
+        run: python deploy/desktop/build_release.py --version ${{ needs.prepare.outputs.version }}
+
+      - name: Upload bundle artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: zertan-desktop-${{ matrix.os }}
+          path: deploy/desktop/dist/*.zip
+          if-no-files-found: error
+
+  release:
+    runs-on: ubuntu-latest
+    needs: [prepare, publish_image, build_desktop]
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Download workflow artifacts
+        uses: actions/download-artifact@v6
+        with:
+          path: deploy/desktop/release-assets
+
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.release.outputs.tag }}
+          tag_name: ${{ needs.prepare.outputs.tag }}
           target_commitish: ${{ github.sha }}
           generate_release_notes: true
-          prerelease: ${{ contains(steps.release.outputs.version, '-') }}
+          prerelease: ${{ contains(needs.prepare.outputs.version, '-') }}
           files: |
             deploy/docker/.env.example
             deploy/docker/compose.yml
             deploy/docker/compose.ghcr.yml
+            deploy/desktop/release-assets/**/*.zip

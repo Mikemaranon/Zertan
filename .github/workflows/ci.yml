@@ -2,14 +2,11 @@ name: CI
 
 on:
   push:
+    branches:
+      - master
     tags-ignore:
       - "v*"
-      - "desktop-v*"
   pull_request:
-
-concurrency:
-  group: ci-${{ github.event.pull_request.head.sha || github.ref }}
-  cancel-in-progress: true
 
 env:
   ZERTAN_BOOTSTRAP_ADMIN_PASSWORD: ci-admin-password
