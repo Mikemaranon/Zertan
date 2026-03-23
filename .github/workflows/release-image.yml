@@ -200,6 +200,8 @@ jobs:
       - name: Download workflow artifacts
         uses: actions/download-artifact@v6
         with:
+          pattern: zertan-desktop-*
+          merge-multiple: true
           path: deploy/desktop/release-assets
 
       - name: Create GitHub release
