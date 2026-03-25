@@ -18,6 +18,24 @@ use uuid::Uuid;
 
 const APP_SCHEME: &str = "http";
 
+#[cfg(target_os = "linux")]
+fn configure_linux_runtime() {
+    let defaults = [
+        ("WEBKIT_DISABLE_COMPOSITING_MODE", "1"),
+        ("WEBKIT_DISABLE_DMABUF_RENDERER", "1"),
+        ("GDK_BACKEND", "x11"),
+    ];
+
+    for (key, value) in defaults {
+        if std::env::var_os(key).is_none() {
+            std::env::set_var(key, value);
+        }
+    }
+}
+
+#[cfg(not(target_os = "linux"))]
+fn configure_linux_runtime() {}
+
 #[derive(Default)]
 struct AppState {
     store_guard: Mutex<()>,
@@ -281,6 +299,8 @@ fn now_iso() -> String {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    configure_linux_runtime();
+
     tauri::Builder::default()
         .manage(AppState::default())
         .invoke_handler(tauri::generate_handler![

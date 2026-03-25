@@ -155,9 +155,9 @@ Direct entrypoints also exist per operating system:
 
 Artifacts are generated under:
 
-- `deploy/builds/windows/<component>/release/` on Windows
-- `deploy/builds/linux/<component>/release/` on Debian/Linux
-- `deploy/builds/mac/<component>/release/` on macOS
+- `deploy/builds/windows/files/` on Windows
+- `deploy/builds/linux/files/` on Debian/Linux
+- `deploy/builds/mac/files/` on macOS
 
 The packaged server:
 

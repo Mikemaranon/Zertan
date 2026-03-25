@@ -20,10 +20,11 @@ RELEASE_ROOT = DEPLOY_ROOT / "release"
 MACOS_CODESIGN_IDENTITY_ENV = "ZERTAN_MACOS_CODESIGN_IDENTITY"
 MACOS_ENTITLEMENTS_PATH_ENV = "ZERTAN_MACOS_ENTITLEMENTS_PATH"
 SERVER_VERSION_ENV = "ZERTAN_SERVER_VERSION"
+PRESERVE_RELEASE_ROOT = False
 
 
-def configure_output_roots(*, build_root="", dist_root="", release_root=""):
-    global BUILD_ROOT, DIST_ROOT, RELEASE_ROOT
+def configure_output_roots(*, build_root="", dist_root="", release_root="", preserve_release_root=False):
+    global BUILD_ROOT, DIST_ROOT, RELEASE_ROOT, PRESERVE_RELEASE_ROOT
 
     if build_root:
         BUILD_ROOT = Path(build_root).resolve()
@@ -31,6 +32,7 @@ def configure_output_roots(*, build_root="", dist_root="", release_root=""):
         DIST_ROOT = Path(dist_root).resolve()
     if release_root:
         RELEASE_ROOT = Path(release_root).resolve()
+    PRESERVE_RELEASE_ROOT = preserve_release_root
 
 
 def normalize_arch():
@@ -76,10 +78,14 @@ def ensure_clean_path(path):
 
 
 def prepare_output_directories():
-    for root in (BUILD_ROOT, DIST_ROOT, RELEASE_ROOT):
+    for root in (BUILD_ROOT, DIST_ROOT):
         if root.exists():
             shutil.rmtree(root)
         root.mkdir(parents=True, exist_ok=True)
+
+    if RELEASE_ROOT.exists() and not PRESERVE_RELEASE_ROOT:
+        shutil.rmtree(RELEASE_ROOT)
+    RELEASE_ROOT.mkdir(parents=True, exist_ok=True)
 
 
 def icon_output_paths():
@@ -372,12 +378,18 @@ def main(argv=None):
     parser.add_argument("--build-root", default="", help="Optional directory for intermediate build files.")
     parser.add_argument("--dist-root", default="", help="Optional directory for raw packaged app bundles.")
     parser.add_argument("--release-root", default="", help="Optional directory for the final release artifact.")
+    parser.add_argument(
+        "--preserve-release-root",
+        action="store_true",
+        help="Keep any existing release directory contents instead of clearing the directory first.",
+    )
     args = parser.parse_args(argv)
 
     configure_output_roots(
         build_root=args.build_root,
         dist_root=args.dist_root,
         release_root=args.release_root,
+        preserve_release_root=args.preserve_release_root,
     )
     prepare_output_directories()
     generate_platform_icons()

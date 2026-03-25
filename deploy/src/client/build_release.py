@@ -15,21 +15,26 @@ ROOT = CLIENT_ROOT.parents[2]
 SRC_TAURI_ROOT = CLIENT_ROOT / "src-tauri"
 BUILD_ROOT = CLIENT_ROOT / "build"
 RELEASE_ROOT = CLIENT_ROOT / "release"
+TARGET_ROOT = SRC_TAURI_ROOT / "target"
 PACKAGE_JSON_PATH = CLIENT_ROOT / "package.json"
 TAURI_CONFIG_PATH = SRC_TAURI_ROOT / "tauri.conf.json"
 CARGO_TOML_PATH = SRC_TAURI_ROOT / "Cargo.toml"
 SOURCE_ICON_PATH = ROOT / "app" / "web_app" / "static" / "assets" / "Zertan.png"
 MACOS_CODESIGN_IDENTITY_ENV = "ZERTAN_MACOS_CODESIGN_IDENTITY"
 MACOS_ENTITLEMENTS_PATH_ENV = "ZERTAN_MACOS_ENTITLEMENTS_PATH"
+PRESERVE_RELEASE_ROOT = False
 
 
-def configure_output_roots(*, build_root="", release_root=""):
-    global BUILD_ROOT, RELEASE_ROOT
+def configure_output_roots(*, build_root="", release_root="", target_root="", preserve_release_root=False):
+    global BUILD_ROOT, RELEASE_ROOT, TARGET_ROOT, PRESERVE_RELEASE_ROOT
 
     if build_root:
         BUILD_ROOT = Path(build_root).resolve()
     if release_root:
         RELEASE_ROOT = Path(release_root).resolve()
+    if target_root:
+        TARGET_ROOT = Path(target_root).resolve()
+    PRESERVE_RELEASE_ROOT = preserve_release_root
 
 
 def normalize_arch():
@@ -75,10 +80,13 @@ def ensure_clean_path(path):
 
 
 def prepare_output_directories():
-    for root in (BUILD_ROOT, RELEASE_ROOT):
-        if root.exists():
-            shutil.rmtree(root)
-        root.mkdir(parents=True, exist_ok=True)
+    if BUILD_ROOT.exists():
+        shutil.rmtree(BUILD_ROOT)
+    BUILD_ROOT.mkdir(parents=True, exist_ok=True)
+
+    if RELEASE_ROOT.exists() and not PRESERVE_RELEASE_ROOT:
+        shutil.rmtree(RELEASE_ROOT)
+    RELEASE_ROOT.mkdir(parents=True, exist_ok=True)
 
 
 def load_pillow_image():
@@ -181,8 +189,8 @@ def update_cargo_version(path, version):
     Path(path).write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def run_command(command, *, cwd):
-    subprocess.run(command, check=True, cwd=str(cwd))
+def run_command(command, *, cwd, env=None):
+    subprocess.run(command, check=True, cwd=str(cwd), env=env)
 
 
 def node_executable(command_name):
@@ -232,16 +240,20 @@ def bundle_target():
 
 
 def build_tauri_bundle(version):
+    env = dict(os.environ)
+    env["CARGO_TARGET_DIR"] = str(TARGET_ROOT)
+
     with versioned_build(version):
         run_command(
             [node_executable("npm"), "run", "tauri", "build", "--", "--bundles", bundle_target()],
             cwd=CLIENT_ROOT,
+            env=env,
         )
 
 
 def release_source_glob():
     platform_name = normalize_platform()
-    bundle_root = SRC_TAURI_ROOT / "target" / "release" / "bundle"
+    bundle_root = TARGET_ROOT / "release" / "bundle"
     if platform_name == "windows":
         return bundle_root / "nsis" / "*.exe"
     if platform_name == "macos":
@@ -348,6 +360,12 @@ def main(argv=None):
     parser.add_argument("--version", required=True, help="Version label used in the release artifact name.")
     parser.add_argument("--build-root", default="", help="Optional directory for intermediate build files.")
     parser.add_argument("--release-root", default="", help="Optional directory for the final release artifact.")
+    parser.add_argument("--target-root", default="", help="Optional Cargo target directory.")
+    parser.add_argument(
+        "--preserve-release-root",
+        action="store_true",
+        help="Keep any existing release directory contents instead of clearing the directory first.",
+    )
     parser.add_argument(
         "--skip-install",
         action="store_true",
@@ -358,6 +376,8 @@ def main(argv=None):
     configure_output_roots(
         build_root=args.build_root,
         release_root=args.release_root,
+        target_root=args.target_root,
+        preserve_release_root=args.preserve_release_root,
     )
     prepare_output_directories()
     generate_platform_icons()

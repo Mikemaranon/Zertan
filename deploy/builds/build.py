@@ -1,8 +1,9 @@
 import argparse
+import shutil
 import sys
 from pathlib import Path
 
-from common import build_directory_name, normalize_platform, run
+from common import build_directory_name, normalize_platform, platform_files_root, run
 
 
 BUILDS_ROOT = Path(__file__).resolve().parent
@@ -32,6 +33,11 @@ def main(argv=None):
 
     platform_name = normalize_platform()
     components = ("client", "server") if args.target == "all" else (args.target,)
+    files_root = platform_files_root(platform_name)
+
+    if files_root.exists():
+        shutil.rmtree(files_root)
+    files_root.mkdir(parents=True, exist_ok=True)
 
     for component in components:
         command = [

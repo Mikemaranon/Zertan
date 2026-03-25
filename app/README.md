@@ -206,6 +206,7 @@ Build orchestration assets:
 - [`deploy/builds/windows`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/builds/windows)
 - [`deploy/builds/linux`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/builds/linux)
 - [`deploy/builds/mac`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/builds/mac)
+- Final native artifacts are written into `deploy/builds/<os>/files/`.
 
 ## Troubleshooting
 

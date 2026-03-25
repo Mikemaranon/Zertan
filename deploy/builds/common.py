@@ -1,4 +1,5 @@
 import argparse
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -44,8 +45,26 @@ def component_output_root(platform_name, component):
     return BUILDS_ROOT / build_directory_name(platform_name) / component
 
 
+def platform_files_root(platform_name):
+    return BUILDS_ROOT / build_directory_name(platform_name) / "files"
+
+
+def runtime_env():
+    env = dict(os.environ)
+    cargo_bin = Path.home() / ".cargo" / "bin"
+    current_path = env.get("PATH", "")
+
+    if cargo_bin.exists():
+        path_entries = current_path.split(os.pathsep) if current_path else []
+        cargo_entry = str(cargo_bin)
+        if cargo_entry not in path_entries:
+            env["PATH"] = os.pathsep.join([cargo_entry, *path_entries]) if path_entries else cargo_entry
+
+    return env
+
+
 def run(command):
-    subprocess.run(command, check=True, cwd=str(ROOT))
+    subprocess.run(command, check=True, cwd=str(ROOT), env=runtime_env())
 
 
 def ensure_platform(expected_platform):
@@ -69,13 +88,17 @@ def build_component(expected_platform, component, version, *, skip_install=False
         "--build-root",
         str(output_root / "build"),
         "--release-root",
-        str(output_root / "release"),
+        str(platform_files_root(expected_platform)),
+        "--preserve-release-root",
     ]
 
     if component == "server":
         command.extend(["--dist-root", str(output_root / "dist")])
     elif skip_install:
         command.append("--skip-install")
+        command.extend(["--target-root", str(output_root / "build" / "cargo-target")])
+    elif component == "client":
+        command.extend(["--target-root", str(output_root / "build" / "cargo-target")])
 
     run(command)
 

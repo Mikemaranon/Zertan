@@ -280,6 +280,17 @@ def show_server_status_window(*, display_host, port, server_thread):
     webview.start()
 
 
+def run_with_gui_fallback(*, display_host, port, server_thread):
+    try:
+        show_server_status_window(display_host=display_host, port=port, server_thread=server_thread)
+        return
+    except Exception as exc:
+        print(f"Server status window is unavailable: {exc}")
+        print("Falling back to headless server mode.")
+
+    run_headless_loop(server_thread=server_thread, display_host=display_host, port=port)
+
+
 def main(argv=None):
     args = build_argument_parser().parse_args(argv)
     data_dir = Path(args.data_dir).expanduser() if args.data_dir else default_data_dir()
@@ -304,7 +315,7 @@ def main(argv=None):
         run_headless_loop(server_thread=server_thread, display_host=display_host, port=chosen_port)
         return
 
-    show_server_status_window(display_host=display_host, port=chosen_port, server_thread=server_thread)
+    run_with_gui_fallback(display_host=display_host, port=chosen_port, server_thread=server_thread)
 
 
 if __name__ == "__main__":
