@@ -24,6 +24,7 @@ class Server:
         self.app.config["DB_PATH"] = str(self.runtime_config["db_path"])
         self.app.config["MEDIA_ROOT"] = str(self.media_root)
         self.app.config["UPLOAD_FOLDER"] = str(self.media_root)
+        self.app.config["INSTANCE_ID"] = self.runtime_config["instance_id"]
         self.app.config["JWT_LIFETIME_HOURS"] = self.runtime_config["jwt_lifetime_hours"]
         self.app.config["COOKIE_SECURE"] = self.runtime_config["cookie_secure"]
         self.app.config["COOKIE_SAMESITE"] = self.runtime_config["cookie_samesite"]

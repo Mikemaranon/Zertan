@@ -1,0 +1,108 @@
+.access-card-shell,
+.access-alias-list,
+.access-runtime-list {
+    display: grid;
+    gap: 14px;
+}
+
+.access-card {
+    display: grid;
+    gap: 16px;
+    padding: 22px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-small);
+    background: linear-gradient(180deg, #f8fbfe 0%, #f2f7fb 100%);
+}
+
+.access-card__top,
+.access-card__meta,
+.access-alias-card__top,
+.access-alias-card__meta {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.access-card__top h3,
+.access-alias-card__top h3,
+.access-runtime-item h3 {
+    margin: 0 0 6px;
+}
+
+.access-alias-card__top h3 {
+    margin-bottom: 10px;
+}
+
+.access-card__endpoint,
+.access-alias-card__endpoint {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    word-break: break-word;
+}
+
+.access-card__meta,
+.access-alias-card__meta {
+    color: var(--muted);
+    font-size: 0.92rem;
+}
+
+.access-alias-card__meta {
+    align-items: center;
+}
+
+.access-runtime-item,
+.access-alias-card {
+    display: grid;
+    gap: 12px;
+    padding: 18px 20px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-small);
+    background: var(--surface);
+}
+
+.access-runtime-item p,
+.access-alias-card p,
+.access-card p {
+    margin: 0;
+}
+
+.access-inline-code {
+    font-family: ui-monospace, "SFMono-Regular", "SF Mono", Monaco, Consolas, "Liberation Mono", monospace;
+    font-size: 0.95rem;
+}
+
+.access-alias-card__endpoint .selection-chip {
+    cursor: default;
+}
+
+.access-alias-card__endpoint .selection-chip[data-group="ip"] .selection-chip__group {
+    color: #2f7fd8;
+}
+
+.access-alias-card__endpoint .selection-chip[data-group="dns"] .selection-chip__group {
+    color: #2f9b57;
+}
+
+.access-alias-card__endpoint .selection-chip[data-group="port"] .selection-chip__group {
+    color: #d97a20;
+}
+
+@media (max-width: 720px) {
+    .access-card,
+    .access-runtime-item,
+    .access-alias-card {
+        padding: 18px;
+    }
+
+    .access-card__top,
+    .access-card__meta,
+    .access-alias-card__top,
+    .access-alias-card__meta {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}

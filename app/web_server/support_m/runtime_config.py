@@ -1,4 +1,5 @@
 import os
+import hashlib
 from pathlib import Path
 
 
@@ -50,6 +51,7 @@ def get_runtime_config():
         "db_path": db_path,
         "media_root": media_root,
         "secret_key": secret_key,
+        "instance_id": _build_instance_id(secret_key, data_root, db_path),
         "host": os.environ.get("HOST", "0.0.0.0"),
         "port": int(os.environ.get("PORT", 5050)),
         "debug": debug_enabled,
@@ -80,3 +82,8 @@ def _resolve_db_path(data_root):
             legacy_lock.replace(target_lock)
 
     return default_db_path
+
+
+def _build_instance_id(secret_key, data_root, db_path):
+    raw = f"{secret_key}|{Path(data_root).resolve()}|{Path(db_path).resolve()}"
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]

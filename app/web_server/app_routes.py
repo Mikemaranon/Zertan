@@ -12,6 +12,7 @@ ROUTE_DEFINITIONS = (
     ("/home", "home_page", "get_home_page", ["GET"]),
     ("/dashboard", "dashboard", "get_dashboard", ["GET"]),
     ("/global-stats", "global_stats", "get_global_stats", ["GET"]),
+    ("/access-info", "access_info", "get_access_info", ["GET"]),
     ("/catalog", "catalog", "get_catalog", ["GET"]),
     ("/live-exams", "live_exams", "get_live_exams", ["GET"]),
     ("/login", "login", "get_login", ["GET"]),
@@ -76,6 +77,9 @@ class AppRoutes:
 
     def get_dashboard(self):
         return self._render_auth_page("home/dashboard.html", "Dashboard")
+
+    def get_access_info(self):
+        return self._render_auth_page("home/access_info.html", "Connection Info")
 
     def get_catalog(self):
         return self._render_auth_page("home/catalog.html", "Exam Catalog")

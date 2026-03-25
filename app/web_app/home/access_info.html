@@ -1,0 +1,57 @@
+{% set page_id = "access-info" %}
+{% extends "shared/base.html" %}
+{% block page_styles %}
+<link rel="stylesheet" href="/static/CSS/pages/home/access-info.css?v={{ asset_version }}">
+{% endblock %}
+{% block content %}
+<section class="grid grid--two">
+    <div class="panel stack-gap">
+        <div class="section-heading">
+            <div>
+                <h2>Primary access</h2>
+                <p class="muted">Share this endpoint first when users need to reach the current Zertan instance.</p>
+            </div>
+        </div>
+        <div id="access-primary-endpoint" class="access-card-shell"></div>
+    </div>
+    <div class="panel stack-gap">
+        <div class="section-heading">
+            <div>
+                <h2>Runtime binding</h2>
+                <p class="muted">The bind host controls whether this process is reachable only locally or from the network.</p>
+            </div>
+        </div>
+        <div id="access-runtime-summary" class="stack-gap"></div>
+    </div>
+</section>
+
+<section class="panel stack-gap">
+    <div class="section-heading">
+        <div>
+            <h2>Shared aliases</h2>
+            <p class="muted">These names and IPs are informative entries shared with all users. Zertan verifies whether each one resolves back to this instance.</p>
+        </div>
+    </div>
+    <div id="access-shared-aliases" class="stack-gap"></div>
+</section>
+
+{% if current_user.role == "administrator" %}
+<section class="panel stack-gap">
+    <div class="section-heading">
+        <div>
+            <h2>Add alias</h2>
+            <p class="muted">Add a LAN IP, VPN IP, or DNS name. New entries are verified immediately against this running instance.</p>
+        </div>
+    </div>
+    <form id="access-alias-form" class="form-stack">
+        <label><span>Label</span><input id="access-alias-label" type="text" placeholder="Optional label, for example Tailscale"></label>
+        <label><span>IP or DNS name</span><input id="access-alias-host" type="text" placeholder="192.168.1.131 or zertan.tailnet-name.ts.net" required></label>
+        <label><span>Port override</span><input id="access-alias-port" type="number" min="1" max="65535" placeholder="Optional. Uses the runtime port if empty."></label>
+        <div id="access-alias-error" class="error-message"></div>
+        <div class="button-row">
+            <button class="button button--primary" type="submit">Add alias</button>
+        </div>
+    </form>
+</section>
+{% endif %}
+{% endblock %}

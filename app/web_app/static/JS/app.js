@@ -1,5 +1,6 @@
 import { getPageContext, isMobileViewport, request } from "./core/api.js";
 import { bindProfileModal } from "./components/profile-modal.js";
+import { initAccessInfoPage } from "./pages/access-info.js";
 import { initAdminPage } from "./pages/admin.js";
 import { initCatalogPage } from "./pages/catalog.js";
 import { initDashboardPage } from "./pages/dashboard.js";
@@ -16,6 +17,7 @@ import { initResultsPage } from "./pages/results.js";
 
 const pageMap = {
     login: initLoginPage,
+    "access-info": initAccessInfoPage,
     dashboard: initDashboardPage,
     "global-stats": initGlobalStatsPage,
     catalog: initCatalogPage,

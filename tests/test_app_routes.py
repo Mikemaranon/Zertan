@@ -116,6 +116,22 @@ class AppRoutesTests(unittest.TestCase):
         self.assertEqual(response.status_code, 403)
         self.assertIn(b"Access denied", response.data)
 
+    def test_access_info_is_visible_for_regular_user(self):
+        app, _ = self._build_app(
+            user={
+                "id": 8,
+                "display_name": "Regular User",
+                "role": "user",
+                "avatar_path": None,
+            }
+        )
+
+        with app.test_client() as client:
+            response = client.get("/access-info")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Shared aliases", response.data)
+
     def test_safe_return_to_accepts_internal_paths_only(self):
         app, routes = self._build_app(
             user={

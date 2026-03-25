@@ -1,4 +1,4 @@
-from flask import jsonify
+from flask import current_app, jsonify
 
 from .domain_registry import register_domain_apis
 
@@ -27,4 +27,10 @@ class ApiManager:
             self.app.logger.info("Loaded API: %s", api_name)
 
     def api_check(self):
-        return jsonify({"status": "ok"}), 200
+        return jsonify(
+            {
+                "status": "ok",
+                "service": "zertan",
+                "instance_id": current_app.config.get("INSTANCE_ID", ""),
+            }
+        ), 200

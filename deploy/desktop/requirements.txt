@@ -1,2 +1,0 @@
--r ../../app/requirements.txt
-PyInstaller>=6.11,<7.0

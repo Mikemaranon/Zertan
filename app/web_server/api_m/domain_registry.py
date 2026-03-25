@@ -1,43 +1,33 @@
-import importlib
-import inspect
-import pkgutil
+from api_m.domains.admin_api import AdminAPI
+from api_m.domains.attempts_api import AttemptsAPI
+from api_m.domains.auth_api import AuthAPI
+from api_m.domains.exams_api import ExamsAPI
+from api_m.domains.import_export_api import ImportExportAPI
+from api_m.domains.live_exams_api import LiveExamsAPI
+from api_m.domains.questions_api import QuestionsAPI
+from api_m.domains.statistics_api import StatisticsAPI
+from api_m.domains.system_api import SystemAPI
+from api_m.domains.user_api import UserAPI
 
-from api_m.domains.base_api import BaseAPI
 
-
-FALLBACK_DOMAIN_MODULES = (
-    "admin_api",
-    "attempts_api",
-    "auth_api",
-    "exams_api",
-    "import_export_api",
-    "live_exams_api",
-    "questions_api",
-    "statistics_api",
-    "user_api",
+REGISTERED_DOMAIN_APIS = (
+    AdminAPI,
+    AttemptsAPI,
+    AuthAPI,
+    ExamsAPI,
+    ImportExportAPI,
+    LiveExamsAPI,
+    QuestionsAPI,
+    StatisticsAPI,
+    SystemAPI,
+    UserAPI,
 )
 
 
-def _discover_domain_module_names(package):
-    discovered_names = [module_name for _, module_name, _ in pkgutil.iter_modules(package.__path__)]
-    if discovered_names:
-        return discovered_names
-    return list(FALLBACK_DOMAIN_MODULES)
-
-
 def discover_domain_api_classes(package_name="api_m.domains"):
-    package = importlib.import_module(package_name)
-    discovered = []
-    for module_name in _discover_domain_module_names(package):
-        module = importlib.import_module(f"{package.__name__}.{module_name}")
-        for _, member in inspect.getmembers(module, inspect.isclass):
-            if member is BaseAPI:
-                continue
-            if member.__module__ != module.__name__:
-                continue
-            if issubclass(member, BaseAPI):
-                discovered.append(member)
-    return discovered
+    # Keep the public function shape stable, but use explicit imports so
+    # frozen desktop builds do not depend on runtime module discovery.
+    return list(REGISTERED_DOMAIN_APIS)
 
 
 def register_domain_apis(app, user_manager, db_manager, service_manager, package_name="api_m.domains"):

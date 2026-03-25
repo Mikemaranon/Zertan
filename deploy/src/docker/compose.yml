@@ -3,8 +3,8 @@ services:
     image: ${ZERTAN_IMAGE:-zertan:local}
     init: true
     build:
-      context: ../..
-      dockerfile: deploy/docker/Dockerfile
+      context: ../../..
+      dockerfile: deploy/src/docker/Dockerfile
     ports:
       - "${HOST_PORT:-5050}:5050"
     environment:

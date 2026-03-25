@@ -180,21 +180,32 @@ Still relatively thin:
 
 Docker assets:
 
-- [`deploy/docker/Dockerfile`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/docker/Dockerfile)
-- [`deploy/docker/compose.yml`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/docker/compose.yml)
-- [`deploy/docker/compose.ghcr.yml`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/docker/compose.ghcr.yml)
-- [`deploy/docker/.env.example`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/docker/.env.example)
+- [`deploy/src/docker/Dockerfile`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/src/docker/Dockerfile)
+- [`deploy/src/docker/compose.yml`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/src/docker/compose.yml)
+- [`deploy/src/docker/compose.ghcr.yml`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/src/docker/compose.ghcr.yml)
+- [`deploy/src/docker/.env.example`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/src/docker/.env.example)
 
-Desktop packaging assets:
+Server packaging assets:
 
-- [`deploy/desktop/desktop_launcher.py`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/desktop/desktop_launcher.py)
-- [`deploy/desktop/build_release.py`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/desktop/build_release.py)
-- [`deploy/desktop/zertan.spec`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/desktop/zertan.spec)
+- [`deploy/src/server/desktop_launcher.py`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/src/server/desktop_launcher.py)
+- [`deploy/src/server/server_launcher.py`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/src/server/server_launcher.py)
+- [`deploy/src/server/build_release.py`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/src/server/build_release.py)
+- [`deploy/src/server/zertan.spec`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/src/server/zertan.spec)
 
-CI/CD workflows:
+Client packaging assets:
 
-- [`ci.yml`](/Users/myke/Desktop/codes/Projects/Zertan/.github/workflows/ci.yml)
-- [`release-image.yml`](/Users/myke/Desktop/codes/Projects/Zertan/.github/workflows/release-image.yml)
+- [`deploy/src/client/package.json`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/src/client/package.json)
+- [`deploy/src/client/build_release.py`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/src/client/build_release.py)
+- [`deploy/src/client/src-tauri/tauri.conf.json`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/src/client/src-tauri/tauri.conf.json)
+- [`deploy/src/client/src-tauri/src/lib.rs`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/src/client/src-tauri/src/lib.rs)
+- [`deploy/src/client/ui/index.html`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/src/client/ui/index.html)
+
+Build orchestration assets:
+
+- [`deploy/builds/build.py`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/builds/build.py)
+- [`deploy/builds/windows`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/builds/windows)
+- [`deploy/builds/linux`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/builds/linux)
+- [`deploy/builds/mac`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/builds/mac)
 
 ## Troubleshooting
 
@@ -210,10 +221,5 @@ CI/CD workflows:
 
 `Tests pass locally but Docker behaves differently`
 
-- Verify `.env` under `deploy/docker/`.
+- Verify `.env` under `deploy/src/docker/`.
 - Docker stores state under `/data`, not in the repository tree.
-
-`Release workflow produced no artifact`
-
-- Check `release-image.yml`, which now publishes the container image and attaches the desktop bundles in the same release.
-- Manual releases require a version input; tag-driven releases require a `v*` release tag.

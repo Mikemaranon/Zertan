@@ -6,6 +6,7 @@ from .t_exams import ExamsTable
 from .t_groups import GroupsTable
 from .t_live_exams import LiveExamsTable
 from .t_questions import QuestionsTable
+from .t_server_aliases import ServerAliasesTable
 from .t_sessions import SessionsTable
 from .t_site_features import SiteFeaturesTable
 from .t_statistics import StatisticsTable
@@ -18,6 +19,7 @@ __all__ = [
     "GroupsTable",
     "LiveExamsTable",
     "QuestionsTable",
+    "ServerAliasesTable",
     "SessionsTable",
     "SiteFeaturesTable",
     "StatisticsTable",

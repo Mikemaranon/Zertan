@@ -7,6 +7,7 @@ from .db_methods import (
     GroupsTable,
     LiveExamsTable,
     QuestionsTable,
+    ServerAliasesTable,
     SessionsTable,
     SiteFeaturesTable,
     StatisticsTable,
@@ -28,6 +29,7 @@ class DBManager:
         self.questions = QuestionsTable(self.db)
         self.attempts = AttemptsTable(self.db)
         self.live_exams = LiveExamsTable(self.db)
+        self.server_aliases = ServerAliasesTable(self.db)
         self.site_features = SiteFeaturesTable(self.db)
         self.statistics = StatisticsTable(self.db)
         self.agent_logs = AgentLogsTable(self.db)

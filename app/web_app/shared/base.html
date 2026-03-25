@@ -31,6 +31,7 @@
     {% endif %}
     {% set can_manage = current_user and current_user.role in ["reviewer", "examiner", "administrator"] %}
     {% set can_admin = current_user and current_user.role == "administrator" %}
+    {% set show_admin_nav = current_user %}
     <div class="app-shell">
         <aside class="sidebar">
             <div class="sidebar-topbar">
@@ -83,9 +84,10 @@
                         <a href="/live-exams">Live Exams</a>
                         {% endif %}
                     </div>
-                    {% if can_manage or can_admin %}
+                    {% if show_admin_nav %}
                     <div class="sidebar-nav__section">
                         <p class="sidebar-nav__title">admin</p>
+                        <a href="/access-info">Connection Info</a>
                         {% if can_manage %}
                         <a href="/management/exams">Exam Management</a>
                         {% endif %}

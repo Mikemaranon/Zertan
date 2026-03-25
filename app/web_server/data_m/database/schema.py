@@ -1,4 +1,4 @@
-SCHEMA_VERSION = 9
+SCHEMA_VERSION = 10
 
 SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS schema_meta (
@@ -243,6 +243,20 @@ CREATE TABLE IF NOT EXISTS site_features (
     label TEXT NOT NULL,
     description TEXT DEFAULT '',
     enabled INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS server_aliases (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    label TEXT DEFAULT '',
+    host TEXT NOT NULL UNIQUE,
+    host_type TEXT NOT NULL,
+    port INTEGER,
+    verification_status TEXT NOT NULL DEFAULT 'pending',
+    verification_message TEXT DEFAULT '',
+    resolved_ips_json TEXT DEFAULT '[]',
+    last_verified_at TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

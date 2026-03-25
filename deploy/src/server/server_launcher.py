@@ -7,25 +7,44 @@ import threading
 import time
 import urllib.error
 import urllib.request
-import webbrowser
 from pathlib import Path
 
-from flask import Flask
-from werkzeug.serving import make_server
-
-
-APP_NAME = "Zertan"
-DEFAULT_HOST = "127.0.0.1"
+APP_NAME = "Zertan Server"
+DEFAULT_HOST = "0.0.0.0"
 DEFAULT_PORT = 5050
 DEFAULT_ADMIN_USERNAME = "admin"
 DEFAULT_ADMIN_PASSWORD = "admin123"
 DEFAULT_ADMIN_EMAIL = "admin@zertan.local"
 
 
+def frozen_resource_root(*, executable_path=None, platform_name=None, meipass=None):
+    if meipass:
+        return Path(meipass).resolve()
+
+    executable = Path(executable_path or sys.executable).resolve()
+    platform_name = platform_name or sys.platform
+
+    if platform_name == "darwin":
+        contents_root = executable.parents[1]
+        for candidate in (
+            contents_root / "Resources",
+            contents_root / "Frameworks",
+            executable.parent,
+        ):
+            if (candidate / "app").exists():
+                return candidate
+        return contents_root / "Resources"
+
+    internal_root = executable.parent / "_internal"
+    if (internal_root / "app").exists():
+        return internal_root
+    return executable.parent
+
+
 def resolve_bundle_root():
     if getattr(sys, "frozen", False):
-        return Path(sys.executable).resolve().parent
-    return Path(__file__).resolve().parents[2]
+        return frozen_resource_root(meipass=getattr(sys, "_MEIPASS", ""))
+    return Path(__file__).resolve().parents[3]
 
 
 def resolve_app_root(project_root=None):
@@ -108,6 +127,7 @@ def choose_port(host, preferred_port):
 def create_desktop_app(project_root=None):
     prepare_import_paths(project_root)
 
+    from flask import Flask
     from server import Server
 
     app_root = resolve_app_root(project_root)
@@ -116,8 +136,8 @@ def create_desktop_app(project_root=None):
         template_folder=str(app_root / "web_app"),
         static_folder=str(app_root / "web_app" / "static"),
     )
-    Server(app, run_server=False)
-    return app
+    backend = Server(app, run_server=False)
+    return app, backend
 
 
 def wait_for_healthcheck(base_url, timeout_seconds=15):
@@ -136,6 +156,8 @@ def wait_for_healthcheck(base_url, timeout_seconds=15):
 class _ServerThread(threading.Thread):
     def __init__(self, host, port, app):
         super().__init__(daemon=True)
+        from werkzeug.serving import make_server
+
         self.server = make_server(host, port, app, threaded=True)
 
     def run(self):
@@ -146,12 +168,116 @@ class _ServerThread(threading.Thread):
 
 
 def build_argument_parser():
-    parser = argparse.ArgumentParser(description="Launch the Zertan local server.")
-    parser.add_argument("--host", default=DEFAULT_HOST, help="Server bind host. Default: 127.0.0.1")
+    parser = argparse.ArgumentParser(description="Launch the Zertan web server.")
+    parser.add_argument("--host", default=DEFAULT_HOST, help="Server bind host. Default: 0.0.0.0")
     parser.add_argument("--port", type=int, default=DEFAULT_PORT, help="Preferred TCP port. Default: 5050")
     parser.add_argument("--data-dir", default="", help="Persistent data directory for Zertan state.")
-    parser.add_argument("--no-browser", action="store_true", help="Do not open the browser automatically.")
+    parser.add_argument("--headless", action="store_true", help="Do not display the local server status window.")
     return parser
+
+
+def fallback_display_host(bind_host):
+    host = str(bind_host or "").strip()
+    if host in {"", "0.0.0.0", "::"}:
+        return "127.0.0.1"
+    return host
+
+
+def build_connection_info_service(*, db_manager, runtime_config):
+    from services_m.connection_info_service import ConnectionInfoService
+
+    return ConnectionInfoService(db_manager, runtime_config=runtime_config)
+
+
+def detect_primary_lan_host(*, db_manager, runtime_config, bind_host):
+    service = build_connection_info_service(db_manager=db_manager, runtime_config=runtime_config)
+    detected_ipv4s = service.list_detected_ipv4_addresses()
+    primary_lan_ip = service._select_primary_lan_ip(detected_ipv4s)
+    return primary_lan_ip or fallback_display_host(bind_host)
+
+
+def stop_server(server_thread):
+    server_thread.shutdown()
+    server_thread.join(timeout=5)
+
+
+def run_headless_loop(*, server_thread, display_host, port):
+    print(f"{APP_NAME} is listening on {display_host}:{port}")
+    print(f"Data directory: {Path(os.environ['ZERTAN_DATA_DIR']).resolve()}")
+    print(f"Default login: {DEFAULT_ADMIN_USERNAME} / {DEFAULT_ADMIN_PASSWORD}")
+    print("Press Ctrl+C to stop the server.")
+
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("\nStopping Zertan...")
+        stop_server(server_thread)
+
+
+def show_server_status_window(*, display_host, port, server_thread):
+    try:
+        import webview
+    except ImportError as exc:
+        raise RuntimeError("pywebview is not available for the Zertan Server status window.") from exc
+
+    html = f"""\
+    <!doctype html>
+    <html lang="en">
+      <head>
+        <meta charset="utf-8">
+        <style>
+          :root {{
+            color-scheme: light;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+          }}
+          body {{
+            margin: 0;
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            background: #f6f8fb;
+            color: #1f2937;
+          }}
+          main {{
+            width: 100%;
+            box-sizing: border-box;
+            padding: 24px;
+            text-align: center;
+          }}
+          h1 {{
+            margin: 0 0 10px;
+            font-size: 22px;
+            font-weight: 700;
+          }}
+          p {{
+            margin: 0;
+            font-size: 15px;
+            color: #4b5563;
+          }}
+        </style>
+      </head>
+      <body>
+        <main>
+          <h1>Server is up!</h1>
+          <p>Running in {display_host}:{port}</p>
+        </main>
+      </body>
+    </html>
+    """
+
+    def on_close():
+        stop_server(server_thread)
+
+    window = webview.create_window(
+        APP_NAME,
+        html=html,
+        width=360,
+        height=160,
+        resizable=False,
+    )
+    window.events.closed += on_close
+    webview.start()
 
 
 def main(argv=None):
@@ -160,30 +286,25 @@ def main(argv=None):
     chosen_port = choose_port(args.host, args.port)
     apply_desktop_environment(data_dir=data_dir, host=args.host, port=chosen_port)
 
-    app = create_desktop_app()
-    base_url = f"http://{args.host}:{chosen_port}"
+    app, backend = create_desktop_app()
+    display_host = detect_primary_lan_host(
+        db_manager=backend.DBManager,
+        runtime_config=backend.runtime_config,
+        bind_host=args.host,
+    )
+    base_url = f"http://{fallback_display_host(args.host)}:{chosen_port}"
     server_thread = _ServerThread(args.host, chosen_port, app)
     server_thread.start()
 
     if not wait_for_healthcheck(base_url):
-        server_thread.shutdown()
+        stop_server(server_thread)
         raise RuntimeError("Zertan did not become healthy in time.")
 
-    print(f"{APP_NAME} started at {base_url}")
-    print(f"Data directory: {Path(os.environ['ZERTAN_DATA_DIR']).resolve()}")
-    print(f"Default login: {DEFAULT_ADMIN_USERNAME} / {DEFAULT_ADMIN_PASSWORD}")
-    print("Press Ctrl+C to stop the server.")
+    if args.headless:
+        run_headless_loop(server_thread=server_thread, display_host=display_host, port=chosen_port)
+        return
 
-    if not args.no_browser:
-        webbrowser.open(base_url)
-
-    try:
-        while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        print("\nStopping Zertan...")
-        server_thread.shutdown()
-        server_thread.join(timeout=5)
+    show_server_status_window(display_host=display_host, port=chosen_port, server_thread=server_thread)
 
 
 if __name__ == "__main__":

@@ -33,6 +33,7 @@ class ApiManagerTests(unittest.TestCase):
 
         self.assertIn("AuthAPI", discovered_names)
         self.assertIn("QuestionsAPI", discovered_names)
+        self.assertIn("SystemAPI", discovered_names)
         self.assertNotIn("BaseAPI", discovered_names)
 
     def test_api_manager_registers_core_and_domain_routes(self):
@@ -49,7 +50,9 @@ class ApiManagerTests(unittest.TestCase):
         self.assertIn("/api/check", rules)
         self.assertIn("/api/auth/login", rules)
         self.assertIn("/api/questions/<int:question_id>", rules)
+        self.assertIn("/api/system/connection-info", rules)
         self.assertIn("AuthAPI", manager.registered_domains)
+        self.assertIn("SystemAPI", manager.registered_domains)
 
 
 if __name__ == "__main__":

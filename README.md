@@ -79,8 +79,10 @@ Manual data generators live in [`tests/README.md`](/Users/myke/Desktop/codes/Pro
 
 - [`app/web_server`](/Users/myke/Desktop/codes/Projects/Zertan/app/web_server): Flask app, APIs, services, data layer, auth, and runtime helpers
 - [`app/web_app`](/Users/myke/Desktop/codes/Projects/Zertan/app/web_app): server-rendered templates plus vanilla JS and CSS
-- [`deploy/docker`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/docker): container image and compose files
-- [`deploy/desktop`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/desktop): PyInstaller-based desktop packaging
+- [`deploy/src/docker`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/src/docker): container image and compose files
+- [`deploy/src/server`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/src/server): server packaging sources
+- [`deploy/src/client`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/src/client): Tauri client packaging sources
+- [`deploy/builds`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/builds): OS-specific build entrypoints and release outputs
 - [`tests`](/Users/myke/Desktop/codes/Projects/Zertan/tests): automated tests and manual data utilities
 
 Technical details live in [`app/README.md`](/Users/myke/Desktop/codes/Projects/Zertan/app/README.md).
@@ -90,7 +92,7 @@ Technical details live in [`app/README.md`](/Users/myke/Desktop/codes/Projects/Z
 Local image build:
 
 ```bash
-cd deploy/docker
+cd deploy/src/docker
 cp .env.example .env
 docker compose -f compose.yml up --build -d
 ```
@@ -98,7 +100,7 @@ docker compose -f compose.yml up --build -d
 Published image deployment:
 
 ```bash
-cd deploy/docker
+cd deploy/src/docker
 cp .env.example .env
 # set ZERTAN_IMAGE in .env, for example ghcr.io/<owner>/<repo>:1.2.0
 docker compose -f compose.ghcr.yml pull
@@ -118,39 +120,61 @@ Recommended before public exposure:
 - set `ZERTAN_SEED_DEMO_CONTENT=0`
 - terminate TLS in a reverse proxy and then enable `ZERTAN_COOKIE_SECURE=true`
 
-## Desktop Bundles
+## Native Releases
 
-Build a desktop bundle for the current operating system:
+Native packaging is now local-first and organized by operating system under [`deploy/builds`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/builds).
+
+Install the packaging dependencies from the repository root:
 
 ```bash
 python3 -m venv .venv
-.venv/bin/python -m pip install -r deploy/desktop/requirements.txt
+.venv/bin/python -m pip install -r deploy/src/server/requirements.txt
+.venv/bin/python -m pip install -r deploy/src/client/requirements.txt
 .venv/bin/python -m unittest discover -s tests
-.venv/bin/python deploy/desktop/build_release.py --version 1.0.0
+npm install --prefix deploy/src/client
 ```
 
-Artifacts are generated under `deploy/desktop/dist/`.
+Build both native packages for the current operating system:
 
-The desktop launcher:
+```bash
+.venv/bin/python deploy/builds/build.py --version 1.0.0
+```
+
+Build only one component:
+
+```bash
+.venv/bin/python deploy/builds/build.py --version 1.0.0 --target server
+.venv/bin/python deploy/builds/build.py --version 1.0.0 --target client --skip-install
+```
+
+Direct entrypoints also exist per operating system:
+
+- [`deploy/builds/windows/build_server.py`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/builds/windows/build_server.py) and [`deploy/builds/windows/build_client.py`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/builds/windows/build_client.py)
+- [`deploy/builds/linux/build_server.py`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/builds/linux/build_server.py) and [`deploy/builds/linux/build_client.py`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/builds/linux/build_client.py)
+- [`deploy/builds/mac/build_server.py`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/builds/mac/build_server.py) and [`deploy/builds/mac/build_client.py`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/builds/mac/build_client.py)
+
+Artifacts are generated under:
+
+- `deploy/builds/windows/<component>/release/` on Windows
+- `deploy/builds/linux/<component>/release/` on Debian/Linux
+- `deploy/builds/mac/<component>/release/` on macOS
+
+The packaged server:
 
 - stores data in a per-user application directory
 - generates and persists a secret key locally
 - seeds demo content on first run
-- starts the local Flask server and opens the browser
+- starts the Flask web server for browser access
 
-## CI/CD And Releases
+The packaged client:
 
-The repository now ships with two workflows:
+- opens with a dedicated native selector window
+- stores registered servers locally
+- opens the remote Zertan UI inside a native window instead of a browser tab
 
-- [`ci.yml`](/Users/myke/Desktop/codes/Projects/Zertan/.github/workflows/ci.yml): tests on push and pull request, then verifies the Docker image builds
-- [`release-image.yml`](/Users/myke/Desktop/codes/Projects/Zertan/.github/workflows/release-image.yml): publishes the Docker image to GHCR, builds desktop bundles for Linux, macOS, and Windows, and creates a single GitHub Release with everything attached
+## Release Packaging
 
-Release options:
-
-1. Push a tag such as `v1.2.0` to publish the Docker image and desktop bundles in the same release.
-2. Use manual workflow dispatch when you want GitHub Actions to create the release tag and release from the selected commit.
-
-The release workflows were updated to use Node 24 compatible action versions where applicable.
+The primary packaging flow now lives in [`deploy/builds/build.py`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/builds/build.py), with OS-specific wrappers under [`deploy/builds/windows`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/builds/windows), [`deploy/builds/linux`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/builds/linux), and [`deploy/builds/mac`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/builds/mac).
 
 ## Runtime Configuration
 
