@@ -77,7 +77,14 @@ class ExamsAPI(BaseAPI):
             )
         except ValueError as exc:
             return self.error(str(exc), 400)
-        return self.ok({"exam": self.db.exams.get(exam_id)}, 201)
+        created_exam = self.db.exams.get(exam_id)
+        self.services.log_registry.record_exam_change(
+            actor_user=user,
+            action="create",
+            after_exam=created_exam,
+            details="Exam created",
+        )
+        return self.ok({"exam": created_exam}, 201)
 
     def get_exam(self, exam_id):
         user, error = self.auth_user(request)
@@ -114,7 +121,15 @@ class ExamsAPI(BaseAPI):
             )
         except ValueError as exc:
             return self.error(str(exc), 400)
-        return self.ok({"exam": self.db.exams.get(exam_id)})
+        updated_exam = self.db.exams.get(exam_id)
+        self.services.log_registry.record_exam_change(
+            actor_user=user,
+            action="update",
+            before_exam=exam,
+            after_exam=updated_exam,
+            details="Exam updated",
+        )
+        return self.ok({"exam": updated_exam})
 
     def delete_exam(self, exam_id):
         user, error = self.auth_user(request, min_role="examiner")
@@ -129,6 +144,12 @@ class ExamsAPI(BaseAPI):
         questions = self.db.questions.list_for_exam(exam_id, include_answers=True, include_archived=True)
         self.db.exams.delete(exam_id)
         self._delete_exam_assets(exam, questions)
+        self.services.log_registry.record_exam_change(
+            actor_user=user,
+            action="delete",
+            before_exam=exam,
+            details="Exam deleted",
+        )
         return self.ok({"status": "deleted"})
 
     def get_study_mode(self, exam_id):

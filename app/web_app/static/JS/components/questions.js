@@ -1,5 +1,7 @@
 import { assetPathToUrl, escapeHtml } from "../core/api.js";
 
+let activeDragDropGesture = null;
+
 export function renderQuestionCard(question, { mode = "study", index = 1, response = null } = {}) {
     const card = document.createElement("article");
     card.className = "panel question-card";
@@ -188,32 +190,13 @@ function renderDragDropQuestion(question, mode) {
 
     const bank = document.createElement("div");
     bank.className = "drag-bank";
-    if (mode !== "results") {
-        bank.addEventListener("dragover", (event) => {
-            event.preventDefault();
-            bank.classList.add("is-active");
-        });
-        bank.addEventListener("dragleave", () => bank.classList.remove("is-active"));
-        bank.addEventListener("drop", (event) => {
-            event.preventDefault();
-            bank.classList.remove("is-active");
-            const sourceDestinationId = event.dataTransfer.getData("application/x-zertan-source-destination");
-            if (sourceDestinationId) {
-                unassignDragDropValue(wrapper, sourceDestinationId, question);
-            }
-        });
-    }
     for (const item of config.items) {
         const itemNode = document.createElement("div");
         itemNode.className = "drag-item";
-        itemNode.draggable = mode !== "results";
         itemNode.dataset.itemId = item.id;
         itemNode.dataset.bankItem = "true";
+        itemNode.dataset.sourceDestinationId = "";
         itemNode.textContent = item.label;
-        itemNode.addEventListener("dragstart", (event) => {
-            event.dataTransfer.setData("text/plain", item.id);
-            event.dataTransfer.setData("application/x-zertan-source-destination", "");
-        });
         bank.appendChild(itemNode);
     }
 
@@ -227,20 +210,6 @@ function renderDragDropQuestion(question, mode) {
             <p class="muted">${escapeHtml(destination.label)}</p>
             <div class="assigned-label"></div>
         `;
-        if (mode !== "results") {
-            zone.addEventListener("dragover", (event) => {
-                event.preventDefault();
-                zone.classList.add("is-active");
-            });
-            zone.addEventListener("dragleave", () => zone.classList.remove("is-active"));
-            zone.addEventListener("drop", (event) => {
-                event.preventDefault();
-                zone.classList.remove("is-active");
-                const itemId = event.dataTransfer.getData("text/plain");
-                const sourceDestinationId = event.dataTransfer.getData("application/x-zertan-source-destination");
-                assignDragDropValue(wrapper, itemId, destination.id, question, sourceDestinationId);
-            });
-        }
         zones.appendChild(zone);
     }
 
@@ -261,6 +230,9 @@ function renderDragDropQuestion(question, mode) {
     }
 
     syncDragDropView(wrapper, question);
+    if (mode !== "results") {
+        bindDragDropPointerInteractions(wrapper);
+    }
     return wrapper;
 }
 
@@ -317,7 +289,6 @@ function syncDragDropView(wrapper, question) {
                 createDragToken({
                     itemId,
                     label: item?.label || itemId,
-                    draggable: wrapper.dataset.interactive === "true",
                     sourceDestinationId: zone.dataset.destinationId,
                 })
             );
@@ -327,6 +298,171 @@ function syncDragDropView(wrapper, question) {
             zone.classList.add("assigned");
         }
     });
+}
+
+function bindDragDropPointerInteractions(wrapper) {
+    wrapper.addEventListener("pointerdown", (event) => {
+        if (wrapper.dataset.interactive !== "true") {
+            return;
+        }
+        if (!(event.target instanceof Element)) {
+            return;
+        }
+        const token = event.target.closest(".drag-item");
+        if (!token || !wrapper.contains(token)) {
+            return;
+        }
+        if (event.pointerType === "mouse" && event.button !== 0) {
+            return;
+        }
+
+        const itemId = token.dataset.itemId || "";
+        if (!itemId) {
+            return;
+        }
+
+        const card = wrapper.closest(".question-card");
+        const question = extractQuestionConfig(card);
+        if (!question?.config) {
+            return;
+        }
+
+        event.preventDefault();
+        startDragDropGesture({
+            wrapper,
+            question,
+            token,
+            itemId,
+            label: token.textContent || itemId,
+            sourceDestinationId: token.dataset.sourceDestinationId || "",
+            pointerId: event.pointerId,
+            clientX: event.clientX,
+            clientY: event.clientY,
+        });
+    });
+}
+
+function startDragDropGesture({ wrapper, question, token, itemId, label, sourceDestinationId, pointerId, clientX, clientY }) {
+    cancelActiveDragDropGesture();
+
+    const ghost = document.createElement("div");
+    ghost.className = "drag-drop-ghost";
+    ghost.textContent = label;
+    document.body.appendChild(ghost);
+
+    const state = {
+        wrapper,
+        question,
+        token,
+        itemId,
+        sourceDestinationId,
+        pointerId,
+        ghost,
+        hoverTarget: null,
+        move: null,
+        end: null,
+        cancel: null,
+    };
+
+    activeDragDropGesture = state;
+    token.classList.add("is-dragging");
+    document.body.classList.add("drag-drop-dragging");
+    updateDragDropGhostPosition(state, clientX, clientY);
+    updateDragDropHoverTarget(state, clientX, clientY);
+
+    state.move = (event) => {
+        if (!activeDragDropGesture || event.pointerId !== state.pointerId) {
+            return;
+        }
+        updateDragDropGhostPosition(state, event.clientX, event.clientY);
+        updateDragDropHoverTarget(state, event.clientX, event.clientY);
+    };
+
+    state.end = (event) => {
+        if (!activeDragDropGesture || event.pointerId !== state.pointerId) {
+            return;
+        }
+        finishDragDropGesture(state, event.clientX, event.clientY);
+    };
+
+    state.cancel = (event) => {
+        if (!activeDragDropGesture || event.pointerId !== state.pointerId) {
+            return;
+        }
+        cancelActiveDragDropGesture();
+    };
+
+    document.addEventListener("pointermove", state.move);
+    document.addEventListener("pointerup", state.end);
+    document.addEventListener("pointercancel", state.cancel);
+}
+
+function finishDragDropGesture(state, clientX, clientY) {
+    const dropTarget = getDragDropTarget(state.wrapper, clientX, clientY);
+    if (dropTarget?.classList.contains("drop-zone")) {
+        assignDragDropValue(
+            state.wrapper,
+            state.itemId,
+            dropTarget.dataset.destinationId,
+            state.question,
+            state.sourceDestinationId
+        );
+    } else if (dropTarget?.classList.contains("drag-bank") && state.sourceDestinationId) {
+        unassignDragDropValue(state.wrapper, state.sourceDestinationId, state.question);
+    }
+    cancelActiveDragDropGesture();
+}
+
+function cancelActiveDragDropGesture() {
+    if (!activeDragDropGesture) {
+        return;
+    }
+    const state = activeDragDropGesture;
+    document.removeEventListener("pointermove", state.move);
+    document.removeEventListener("pointerup", state.end);
+    document.removeEventListener("pointercancel", state.cancel);
+    clearDragDropHoverState(state.wrapper);
+    state.token.classList.remove("is-dragging");
+    state.ghost.remove();
+    document.body.classList.remove("drag-drop-dragging");
+    activeDragDropGesture = null;
+}
+
+function updateDragDropGhostPosition(state, clientX, clientY) {
+    state.ghost.style.left = `${clientX + 18}px`;
+    state.ghost.style.top = `${clientY + 18}px`;
+}
+
+function updateDragDropHoverTarget(state, clientX, clientY) {
+    const nextTarget = getDragDropTarget(state.wrapper, clientX, clientY);
+    if (state.hoverTarget === nextTarget) {
+        return;
+    }
+    clearDragDropHoverState(state.wrapper);
+    state.hoverTarget = nextTarget;
+    if (nextTarget) {
+        nextTarget.classList.add("is-active");
+    }
+}
+
+function clearDragDropHoverState(wrapper) {
+    wrapper.querySelectorAll(".drag-bank, .drop-zone").forEach((node) => node.classList.remove("is-active"));
+}
+
+function getDragDropTarget(wrapper, clientX, clientY) {
+    const target = document.elementFromPoint(clientX, clientY);
+    if (!(target instanceof Element)) {
+        return null;
+    }
+    const zone = target.closest(".drop-zone");
+    if (zone && wrapper.contains(zone)) {
+        return zone;
+    }
+    const bank = target.closest(".drag-bank");
+    if (bank && wrapper.contains(bank)) {
+        return bank;
+    }
+    return null;
 }
 
 function drawHotspotMarker(frame, x, y) {
@@ -506,16 +642,12 @@ function normalizeDragDropMappings(mappings, question) {
     return normalized;
 }
 
-function createDragToken({ itemId, label, draggable, sourceDestinationId = "" }) {
+function createDragToken({ itemId, label, sourceDestinationId = "" }) {
     const itemNode = document.createElement("div");
     itemNode.className = "drag-item drag-item--assigned";
-    itemNode.draggable = draggable;
     itemNode.dataset.itemId = itemId;
+    itemNode.dataset.sourceDestinationId = sourceDestinationId;
     itemNode.textContent = label;
-    itemNode.addEventListener("dragstart", (event) => {
-        event.dataTransfer.setData("text/plain", itemId);
-        event.dataTransfer.setData("application/x-zertan-source-destination", sourceDestinationId);
-    });
     return itemNode;
 }
 

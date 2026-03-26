@@ -68,6 +68,8 @@
 
 .drag-item {
     cursor: grab;
+    user-select: none;
+    touch-action: none;
 }
 
 .drag-drop-layout {
@@ -99,6 +101,30 @@
 
 .drag-item--assigned {
     margin: 0;
+}
+
+.drag-item.is-dragging {
+    opacity: 0.45;
+}
+
+.drag-drop-ghost {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 2000;
+    pointer-events: none;
+    max-width: min(320px, calc(100vw - 32px));
+    padding: calc(14px * var(--app-density)) calc(16px * var(--app-density));
+    border: 1px solid rgba(102, 168, 224, 0.45);
+    border-radius: var(--radius-small);
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 16px 32px rgba(22, 50, 74, 0.18);
+    color: var(--text);
+}
+
+body.drag-drop-dragging {
+    user-select: none;
+    cursor: grabbing;
 }
 
 .drop-zone.is-active,

@@ -1,4 +1,4 @@
-SCHEMA_VERSION = 10
+SCHEMA_VERSION = 11
 
 SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS schema_meta (
@@ -238,6 +238,39 @@ CREATE TABLE IF NOT EXISTS agent_logs (
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS log_registry_entries (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    action TEXT NOT NULL,
+    entity_type TEXT NOT NULL,
+    actor_user_id INTEGER,
+    actor_login_name TEXT NOT NULL DEFAULT '',
+    actor_display_name TEXT NOT NULL DEFAULT '',
+    actor_role TEXT NOT NULL DEFAULT '',
+    exam_id INTEGER,
+    exam_code TEXT NOT NULL DEFAULT '',
+    exam_title TEXT NOT NULL DEFAULT '',
+    question_id INTEGER,
+    question_label TEXT NOT NULL DEFAULT '',
+    question_type TEXT NOT NULL DEFAULT '',
+    question_position INTEGER,
+    details TEXT DEFAULT '',
+    before_snapshot_json TEXT,
+    after_snapshot_json TEXT,
+    before_content_text TEXT DEFAULT '',
+    after_content_text TEXT DEFAULT '',
+    diff_text TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS log_registry_scope_groups (
+    log_id INTEGER NOT NULL,
+    group_id INTEGER NOT NULL,
+    group_code TEXT NOT NULL DEFAULT '',
+    group_name TEXT NOT NULL DEFAULT '',
+    PRIMARY KEY (log_id, group_id),
+    FOREIGN KEY (log_id) REFERENCES log_registry_entries(id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS site_features (
     feature_key TEXT PRIMARY KEY,
     label TEXT NOT NULL,
@@ -279,4 +312,7 @@ CREATE INDEX IF NOT EXISTS idx_exam_group_assignments_group_id ON exam_group_ass
 CREATE INDEX IF NOT EXISTS idx_live_exams_status ON live_exams(status, created_at);
 CREATE INDEX IF NOT EXISTS idx_live_exam_assignments_user_id ON live_exam_assignments(user_id);
 CREATE INDEX IF NOT EXISTS idx_live_exam_assignments_live_exam_id ON live_exam_assignments(live_exam_id);
+CREATE INDEX IF NOT EXISTS idx_log_registry_exam_id_created_at ON log_registry_entries(exam_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_log_registry_action_created_at ON log_registry_entries(action, created_at);
+CREATE INDEX IF NOT EXISTS idx_log_registry_scope_group_id ON log_registry_scope_groups(group_id, log_id);
 """

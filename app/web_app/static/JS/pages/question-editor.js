@@ -43,7 +43,7 @@ export async function initQuestionEditorPage(pageContext) {
         currentExamId = loadedQuestion.exam_id;
         fillQuestionForm(loadedQuestion);
     } else {
-        document.getElementById("question-position").value = 1;
+        document.getElementById("question-position").value = "";
         addOptionRow();
         addOptionRow();
     }
@@ -178,7 +178,7 @@ function buildPayloadFromForm() {
         tags: splitCommaValues(document.getElementById("question-tags").value),
         topics: splitCommaValues(document.getElementById("question-topics").value),
         status: document.getElementById("question-status").value,
-        position: Number(document.getElementById("question-position").value || 1),
+        position: parseOptionalPositiveInteger(document.getElementById("question-position").value),
         assets: [],
     };
 
@@ -380,6 +380,18 @@ function splitLineValues(value) {
         .split(/\n|,/)
         .map((item) => item.trim())
         .filter(Boolean);
+}
+
+function parseOptionalPositiveInteger(value) {
+    const trimmed = String(value || "").trim();
+    if (!trimmed) {
+        return null;
+    }
+    const parsed = Number(trimmed);
+    if (!Number.isFinite(parsed)) {
+        return null;
+    }
+    return Math.max(1, Math.floor(parsed));
 }
 
 function syncHotspotCorrectOptions(row, preferredValue = null) {

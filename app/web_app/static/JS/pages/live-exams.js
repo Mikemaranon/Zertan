@@ -15,7 +15,8 @@ export async function initLiveExamsPage() {
 
 function initAdministratorView(payload) {
     const openModalButton = document.getElementById("live-exam-open-modal");
-    const list = document.getElementById("live-exams-admin-list");
+    const adminList = document.getElementById("live-exams-admin-list");
+    const userList = document.getElementById("live-exams-user-list");
     const canCreate =
         (payload.available_exams || []).length > 0 &&
         ((payload.available_users || []).length > 0 || (payload.available_groups || []).length > 0);
@@ -25,11 +26,13 @@ function initAdministratorView(payload) {
         availableGroups: payload.available_groups || [],
         onCreated: async () => {
             const refreshed = await request("/api/live-exams");
-            renderAdministratorList(list, refreshed.live_exams || []);
+            renderAdministratorList(adminList, refreshed.live_exams || []);
+            renderAssignmentsList(userList, refreshed.assignments || []);
         },
     });
 
-    renderAdministratorList(list, payload.live_exams || []);
+    renderAdministratorList(adminList, payload.live_exams || []);
+    renderAssignmentsList(userList, payload.assignments || []);
     if (openModalButton) {
         openModalButton.disabled = !canCreate;
     }
@@ -38,6 +41,10 @@ function initAdministratorView(payload) {
 
 function initUserView(assignments) {
     const list = document.getElementById("live-exams-user-list");
+    renderAssignmentsList(list, assignments);
+}
+
+function renderAssignmentsList(list, assignments) {
     if (!list) {
         return;
     }
@@ -71,15 +78,7 @@ function initUserView(assignments) {
             .join("")
         : `<div class="empty-state">No live exams have been assigned to you.</div>`;
 
-    list.querySelectorAll(".js-live-exam-start").forEach((button) => {
-        button.addEventListener("click", async (event) => {
-            const assignmentId = event.currentTarget.dataset.assignmentId;
-            const response = await request(`/api/live-exams/assignments/${assignmentId}/start`, {
-                method: "POST",
-            });
-            window.location.href = `/attempts/${response.attempt_id}/run`;
-        });
-    });
+    bindAssignmentStartButtons(list);
 }
 
 function renderAdministratorList(container, liveExams) {
@@ -879,4 +878,16 @@ function renderAdminAttemptLink(assignment) {
         return `<a class="button button--secondary button--small" href="/attempts/${assignment.attempt_id}/run">Open attempt</a>`;
     }
     return "";
+}
+
+function bindAssignmentStartButtons(container) {
+    container.querySelectorAll(".js-live-exam-start").forEach((button) => {
+        button.addEventListener("click", async (event) => {
+            const assignmentId = event.currentTarget.dataset.assignmentId;
+            const response = await request(`/api/live-exams/assignments/${assignmentId}/start`, {
+                method: "POST",
+            });
+            window.location.href = `/attempts/${response.attempt_id}/run`;
+        });
+    });
 }

@@ -57,6 +57,7 @@ class LiveExamsAPI(BaseAPI):
                 {
                     "mode": "administrator",
                     "live_exams": self.services.live_exams.list_for_admin(),
+                    "assignments": self.services.live_exams.list_for_user(user["id"]),
                     "available_users": users,
                     "available_groups": groups,
                     "available_exams": exams,

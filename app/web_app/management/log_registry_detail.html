@@ -1,0 +1,48 @@
+{% set page_id = "log-registry-detail" %}
+{% extends "shared/base.html" %}
+{% block page_styles %}
+<link rel="stylesheet" href="/static/CSS/pages/management/log-registry.css">
+{% endblock %}
+{% block content %}
+<section class="panel stack-gap">
+    <div class="section-heading">
+        <div>
+            <h2 id="log-registry-detail-title">Exam logs</h2>
+            <p id="log-registry-detail-subtitle" class="muted">Loading exam activity...</p>
+        </div>
+        <div class="button-row log-registry-actions">
+            <a class="button button--secondary" href="/log-registry">Back</a>
+            <button id="log-registry-export-exam" class="button button--secondary" type="button">Export exam logs</button>
+            <button id="log-registry-delete-exam" class="button button--danger" type="button" hidden>Delete exam logs</button>
+        </div>
+    </div>
+    <div id="log-registry-detail-meta" class="log-registry-meta-grid"></div>
+    <div id="log-registry-detail-error" class="error-message"></div>
+</section>
+
+<section class="panel stack-gap">
+    <div class="section-heading">
+        <div>
+            <h2>Recorded changes</h2>
+            <p class="muted">Every log stores the actor, the affected question, the operation, and a content diff.</p>
+        </div>
+    </div>
+    <div id="log-registry-entries" class="list-stack"></div>
+</section>
+
+<div id="log-registry-diff-modal" class="profile-modal" hidden>
+    <div id="log-registry-diff-modal-backdrop" class="profile-modal__backdrop"></div>
+    <div class="profile-modal__dialog log-registry-diff-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="log-registry-diff-modal-title">
+        <button id="log-registry-diff-modal-close" class="profile-modal__close" type="button" aria-label="Close diff modal">Close</button>
+        <div class="log-registry-diff-modal__body">
+            <div class="section-heading">
+                <div>
+                    <h2 id="log-registry-diff-modal-title">Diff</h2>
+                    <p id="log-registry-diff-modal-subtitle" class="muted">Loading change details...</p>
+                </div>
+            </div>
+            <pre class="log-registry-diff"><code id="log-registry-diff-modal-content"></code></pre>
+        </div>
+    </div>
+</div>
+{% endblock %}

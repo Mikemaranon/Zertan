@@ -79,10 +79,9 @@ class QuestionsAPI(BaseAPI):
         user, error = self.auth_user(request, min_role="reviewer")
         if error:
             return error
-        _, exam_error = self.get_accessible_exam(user, exam_id)
+        exam, exam_error = self.get_accessible_exam(user, exam_id)
         if exam_error:
             return exam_error
-        exam = self.db.exams.get(exam_id)
         if not self.user_can_manage_exam(user, exam):
             return self.error("Forbidden", 403)
         try:
@@ -90,7 +89,15 @@ class QuestionsAPI(BaseAPI):
             question_id = self.db.questions.create(exam_id, payload)
         except ValueError as exc:
             return self.error(str(exc), 400)
-        return self.ok({"question": self.db.questions.get(question_id, include_answers=True)}, 201)
+        created_question = self.db.questions.get(question_id, include_answers=True)
+        self.services.log_registry.record_question_change(
+            actor_user=user,
+            action="create",
+            exam=self.db.exams.get(exam_id),
+            after_question=created_question,
+            details="Question created",
+        )
+        return self.ok({"question": created_question}, 201)
 
     def update_question(self, question_id):
         user, error = self.auth_user(request, min_role="reviewer")
@@ -109,7 +116,16 @@ class QuestionsAPI(BaseAPI):
             self.db.questions.update(question_id, payload)
         except ValueError as exc:
             return self.error(str(exc), 400)
-        return self.ok({"question": self.db.questions.get(question_id, include_answers=True)})
+        updated_question = self.db.questions.get(question_id, include_answers=True)
+        self.services.log_registry.record_question_change(
+            actor_user=user,
+            action="update",
+            exam=self.db.exams.get(current_question["exam_id"]),
+            before_question=current_question,
+            after_question=updated_question,
+            details="Question updated",
+        )
+        return self.ok({"question": updated_question})
 
     def delete_question(self, question_id):
         user, error = self.auth_user(request, min_role="examiner")
@@ -124,6 +140,13 @@ class QuestionsAPI(BaseAPI):
         if not self.user_can_manage_exam(user, exam):
             return self.error("Forbidden", 403)
         self.db.questions.delete(question_id)
+        self.services.log_registry.record_question_change(
+            actor_user=user,
+            action="delete",
+            exam=exam,
+            before_question=question,
+            details="Question deleted",
+        )
         return self.ok({"status": "deleted"})
 
     def archive_question(self, question_id):
@@ -139,6 +162,15 @@ class QuestionsAPI(BaseAPI):
         if not self.user_can_manage_exam(user, exam):
             return self.error("Forbidden", 403)
         self.db.questions.archive(question_id)
+        archived_question = self.db.questions.get(question_id, include_answers=True)
+        self.services.log_registry.record_question_change(
+            actor_user=user,
+            action="update",
+            exam=self.db.exams.get(question["exam_id"]),
+            before_question=question,
+            after_question=archived_question,
+            details="Question archived",
+        )
         return self.ok({"status": "archived"})
 
     def check_question(self, question_id):

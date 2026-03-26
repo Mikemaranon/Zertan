@@ -49,6 +49,7 @@ class ApiManagerTests(unittest.TestCase):
 
         self.assertIn("/api/check", rules)
         self.assertIn("/api/auth/login", rules)
+        self.assertIn("/api/log-registry", rules)
         self.assertIn("/api/questions/<int:question_id>", rules)
         self.assertIn("/api/system/connection-info", rules)
         self.assertIn("AuthAPI", manager.registered_domains)

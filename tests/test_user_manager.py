@@ -64,15 +64,24 @@ class _FakeSessionsTable:
 
 
 class _FakeGroupsTable:
+    def __init__(self, groups=None):
+        self._groups = {
+            int(user_id): [dict(group) for group in entries]
+            for user_id, entries in (groups or {}).items()
+        }
+
+    def list_for_user(self, user_id):
+        return [dict(group) for group in self._groups.get(int(user_id), [])]
+
     def set_memberships_for_user(self, user_id, group_ids):
         return None
 
 
 class _FakeDbManager:
-    def __init__(self, users):
+    def __init__(self, users, groups=None):
         self.users = _FakeUsersTable(users)
         self.sessions = _FakeSessionsTable()
-        self.groups = _FakeGroupsTable()
+        self.groups = _FakeGroupsTable(groups)
 
 
 class UserManagerTests(unittest.TestCase):
@@ -103,7 +112,13 @@ class UserManagerTests(unittest.TestCase):
                     "updated_at": "2026-03-19T10:00:00",
                     "last_login_at": None,
                 },
-            ]
+            ],
+            groups={
+                7: [
+                    {"id": 3, "code": "grp-review", "name": "Review Team"},
+                    {"id": 5, "code": "grp-content", "name": "Content Ops"},
+                ],
+            },
         )
         self.manager = UserManager(
             db_manager=self.database,
@@ -123,6 +138,13 @@ class UserManagerTests(unittest.TestCase):
 
         self.assertIsNotNone(result)
         self.assertEqual(result["user"]["login_name"], "reviewer.user")
+        self.assertEqual(
+            result["user"]["groups"],
+            [
+                {"id": 3, "code": "grp-review", "name": "Review Team"},
+                {"id": 5, "code": "grp-content", "name": "Content Ops"},
+            ],
+        )
         self.assertEqual(self.database.users.last_touched_user_id, 7)
         self.assertEqual(len(self.database.sessions.records), 1)
 

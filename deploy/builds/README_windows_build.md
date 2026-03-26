@@ -15,6 +15,10 @@ py -3.12 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
 
+```cmd
+.venv\Scripts\Activate.bat
+```
+
 Install dependencies:
 
 ```powershell
@@ -113,7 +117,7 @@ Disable Smart App Control:
 Windows Security → App & Browser Control → Smart App Control → OFF
 ```
 
-⚠️ This is required because Rust build scripts generate executables that Windows may block.
+> ⚠️ This is required because Rust build scripts generate executables that Windows may block.
 
 ---
 
@@ -139,8 +143,17 @@ Finished dev profile
 From project root:
 
 ```powershell
-cd C:\Users\mikem\Desktop\codes\Zertan
-python deploy\builds\build.py --version 1.0.0
+cd C:\Users\xxx\Desktop\codes\Zertan
+.\.venv\Scripts\Activate.ps1
+python deploy\builds\build.py --version x.y.z
+```
+
+If you are using `Developer Command Prompt for VS 2022`:
+
+```cmd
+cd C:\Users\xxx\Desktop\codes\Zertan
+.venv\Scripts\Activate.bat
+python deploy\builds\build.py --version x.y.z
 ```
 
 ---

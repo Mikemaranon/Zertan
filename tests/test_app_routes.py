@@ -116,6 +116,38 @@ class AppRoutesTests(unittest.TestCase):
         self.assertEqual(response.status_code, 403)
         self.assertIn(b"Access denied", response.data)
 
+    def test_log_registry_requires_examiner_role(self):
+        app, _ = self._build_app(
+            user={
+                "id": 6,
+                "display_name": "Reviewer",
+                "role": "reviewer",
+                "avatar_path": None,
+            }
+        )
+
+        with app.test_client() as client:
+            response = client.get("/log-registry")
+
+        self.assertEqual(response.status_code, 403)
+        self.assertIn(b"Access denied", response.data)
+
+    def test_log_registry_is_visible_for_examiner(self):
+        app, _ = self._build_app(
+            user={
+                "id": 7,
+                "display_name": "Examiner",
+                "role": "examiner",
+                "avatar_path": None,
+            }
+        )
+
+        with app.test_client() as client:
+            response = client.get("/log-registry")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Log Registry", response.data)
+
     def test_access_info_is_visible_for_regular_user(self):
         app, _ = self._build_app(
             user={

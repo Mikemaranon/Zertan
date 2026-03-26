@@ -31,6 +31,7 @@
     {% endif %}
     {% set can_manage = current_user and current_user.role in ["reviewer", "examiner", "administrator"] %}
     {% set can_admin = current_user and current_user.role == "administrator" %}
+    {% set can_view_log_registry = current_user and current_user.role in ["examiner", "administrator"] %}
     {% set show_admin_nav = current_user %}
     <div class="app-shell">
         <aside class="sidebar">
@@ -90,6 +91,9 @@
                         <a href="/access-info">Connection Info</a>
                         {% if can_manage %}
                         <a href="/management/exams">Exam Management</a>
+                        {% endif %}
+                        {% if can_view_log_registry %}
+                        <a href="/log-registry">Log Registry</a>
                         {% endif %}
                         {% if can_admin %}
                         <a href="/admin">Admin Panel</a>
@@ -151,8 +155,14 @@
                         <strong id="profile-exam-count">0 exams completed</strong>
                     </div>
                     <div class="profile-summary__meta">
-                        <span class="muted">Login name</span>
-                        <strong id="profile-login-name"></strong>
+                        <div class="profile-summary__meta-section">
+                            <span class="muted">Login name</span>
+                            <strong id="profile-login-name"></strong>
+                        </div>
+                        <div class="profile-summary__meta-section">
+                            <span class="muted">Groups</span>
+                            <div id="profile-groups" class="profile-summary__groups"></div>
+                        </div>
                     </div>
                     <div id="profile-avatar-error" class="error-message"></div>
                     <button id="profile-edit-toggle" class="button button--secondary" type="button">Modify credentials</button>

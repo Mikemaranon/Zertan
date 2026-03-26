@@ -33,6 +33,8 @@ ROUTE_DEFINITIONS = (
     ("/exams/<int:exam_id>/questions/new", "question_create", "get_question_create", ["GET"]),
     ("/questions/<int:question_id>/edit", "question_edit", "get_question_edit", ["GET"]),
     ("/admin", "admin", "get_admin", ["GET"]),
+    ("/log-registry", "log_registry", "get_log_registry", ["GET"]),
+    ("/log-registry/exams/<int:exam_id>", "log_registry_exam", "get_log_registry_exam", ["GET"]),
     ("/media/<path:asset_path>", "media_asset", "get_media_asset", ["GET"]),
 )
 
@@ -144,6 +146,17 @@ class AppRoutes:
 
     def get_admin(self):
         return self._render_auth_page("management/admin.html", "Admin Panel", min_role="administrator")
+
+    def get_log_registry(self):
+        return self._render_auth_page("management/log_registry.html", "Log Registry", min_role="examiner")
+
+    def get_log_registry_exam(self, exam_id):
+        return self._render_auth_page(
+            "management/log_registry_detail.html",
+            "Exam Log Registry",
+            min_role="examiner",
+            exam_id=exam_id,
+        )
 
     def get_media_asset(self, asset_path):
         user = self.user_manager.check_user(request)

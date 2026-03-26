@@ -14,12 +14,13 @@ from .import_scope import PackageImportScopeResolver
 class PackageService:
     MAX_PACKAGE_SIZE = 5 * 1024 * 1024
 
-    def __init__(self, db_manager, project_root, media_root=None):
+    def __init__(self, db_manager, project_root, media_root=None, log_registry=None):
         self.db = db_manager
         self.project_root = Path(project_root)
         self.upload_root = Path(media_root) if media_root else self.project_root / "web_server" / "data_m" / "assets"
         self.archive_validator = PackageArchiveValidator(self.db)
         self.scope_resolver = PackageImportScopeResolver(self.db)
+        self.log_registry = log_registry
 
     def export_exam(self, exam_id):
         exam = self.db.exams.get(exam_id)
@@ -82,6 +83,7 @@ class PackageService:
         temp_dir = Path(tempfile.mkdtemp(prefix="zertan-import-"))
         exam_id = None
         target_dir = None
+        created_questions = []
         try:
             archive_path = temp_dir / Path(uploaded_file.filename).name
             uploaded_file.save(archive_path)
@@ -123,7 +125,12 @@ class PackageService:
                 normalized = dict(question_document["normalized_payload"])
                 normalized["assets"] = self._rewrite_question_assets(question_document["raw_payload"], stored_asset_paths)
                 normalized["source_json_path"] = f"questions/{question_document['file_name']}"
-                self.db.questions.create(exam_id, normalized)
+                question_id = self.db.questions.create(exam_id, normalized)
+                created_questions.append(self.db.questions.get(question_id, include_answers=True))
+
+            actor = self._build_actor(created_by)
+            exam = self.db.exams.get(exam_id)
+            self._record_import_logs(actor, exam, created_questions)
 
             return exam_id
         except Exception:
@@ -203,3 +210,31 @@ class PackageService:
                 normalized_asset["file_path"] = build_media_path(stored_path.relative_to(self.upload_root))
             assets.append(normalized_asset)
         return assets
+
+    def _build_actor(self, user_id):
+        user = self.db.users.get_by_id(user_id) or {}
+        return {
+            "id": user.get("id"),
+            "login_name": user.get("login_name", ""),
+            "display_name": user.get("display_name", ""),
+            "role": user.get("role", ""),
+        }
+
+    def _record_import_logs(self, actor, exam, created_questions):
+        if not self.log_registry:
+            return
+        if exam:
+            self.log_registry.record_exam_change(
+                actor_user=actor,
+                action="create",
+                after_exam=exam,
+                details="Exam imported from package",
+            )
+        for question in created_questions:
+            self.log_registry.record_question_change(
+                actor_user=actor,
+                action="create",
+                exam=exam,
+                after_question=question,
+                details="Question imported from package",
+            )

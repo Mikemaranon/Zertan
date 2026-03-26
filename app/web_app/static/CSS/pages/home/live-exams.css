@@ -147,6 +147,8 @@
 .live-exam-modal__body {
     display: grid;
     gap: 18px;
+    width: 100%;
+    box-sizing: border-box;
     max-height: calc(100dvh - 88px);
     overflow-y: auto;
     overscroll-behavior: contain;

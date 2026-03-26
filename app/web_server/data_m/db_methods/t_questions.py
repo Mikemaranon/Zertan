@@ -128,14 +128,9 @@ class QuestionsTable:
         return questions[0] if questions else None
 
     def create(self, exam_id, payload):
-        position = payload.get("position")
+        position = self._normalize_requested_position(payload.get("position"))
         if position is None:
-            _, row = self.db.execute(
-                "SELECT COALESCE(MAX(position), 0) + 1 AS next_position FROM questions WHERE exam_id = ?",
-                (exam_id,),
-                fetchone=True,
-            )
-            position = row["next_position"]
+            position = self._next_position_for_exam(exam_id)
 
         question_id = self.db.execute_insert(
             """
@@ -160,9 +155,21 @@ class QuestionsTable:
         self._replace_assets(question_id, payload.get("assets", []))
         self._replace_named_relations(question_id, "question_tags", "tag_id", "tags", payload.get("tags", []))
         self._replace_named_relations(question_id, "question_topics", "topic_id", "topics", payload.get("topics", []))
+        self._resequence_exam_questions(
+            exam_id,
+            anchor_question_id=question_id,
+            requested_position=position,
+        )
         return question_id
 
     def update(self, question_id, payload):
+        current = self.get(question_id, include_answers=True)
+        if not current:
+            return
+        requested_position = self._normalize_requested_position(payload.get("position"))
+        if requested_position is None:
+            requested_position = current.get("position") or self._next_position_for_exam(current["exam_id"])
+
         self.db.execute(
             """
             UPDATE questions
@@ -186,7 +193,7 @@ class QuestionsTable:
                 payload.get("explanation", ""),
                 payload.get("difficulty", "intermediate"),
                 payload.get("status", "active"),
-                payload.get("position", 0),
+                requested_position,
                 json.dumps(payload.get("config", {})),
                 payload.get("source_json_path"),
                 question_id,
@@ -196,8 +203,20 @@ class QuestionsTable:
         self._replace_assets(question_id, payload.get("assets", []))
         self._replace_named_relations(question_id, "question_tags", "tag_id", "tags", payload.get("tags", []))
         self._replace_named_relations(question_id, "question_topics", "topic_id", "topics", payload.get("topics", []))
+        self._resequence_exam_questions(
+            current["exam_id"],
+            anchor_question_id=question_id,
+            requested_position=requested_position,
+        )
 
     def archive(self, question_id):
+        _, row = self.db.execute(
+            "SELECT exam_id FROM questions WHERE id = ?",
+            (question_id,),
+            fetchone=True,
+        )
+        if not row:
+            return
         self.db.execute(
             """
             UPDATE questions
@@ -206,9 +225,54 @@ class QuestionsTable:
             """,
             (question_id,),
         )
+        self._resequence_exam_questions(row["exam_id"], anchor_question_id=question_id)
 
     def delete(self, question_id):
+        _, row = self.db.execute(
+            "SELECT exam_id FROM questions WHERE id = ?",
+            (question_id,),
+            fetchone=True,
+        )
+        if not row:
+            return
         self.db.execute("DELETE FROM questions WHERE id = ?", (question_id,))
+        self.normalize_positions_for_exam(row["exam_id"])
+
+    def normalize_positions_for_exam(self, exam_id):
+        _, rows = self.db.execute(
+            """
+            SELECT id
+            FROM questions
+            WHERE exam_id = ?
+            ORDER BY
+                CASE WHEN status = 'archived' THEN 1 ELSE 0 END,
+                position,
+                id
+            """,
+            (exam_id,),
+            fetchall=True,
+        )
+        for index, row in enumerate(rows, start=1):
+            self.db.execute(
+                """
+                UPDATE questions
+                SET position = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+                """,
+                (index, row["id"]),
+            )
+
+    def normalize_all_positions(self):
+        _, rows = self.db.execute(
+            """
+            SELECT id
+            FROM exams
+            ORDER BY id
+            """,
+            fetchall=True,
+        )
+        for row in rows:
+            self.normalize_positions_for_exam(row["id"])
 
     def _get_options(self, question_id, include_answers):
         return self._get_options_by_question_ids([question_id], include_answers=include_answers).get(question_id, [])
@@ -315,6 +379,65 @@ class QuestionsTable:
             seen.add(question_id)
             normalized.append(question_id)
         return normalized
+
+    def _normalize_requested_position(self, value):
+        try:
+            position = int(value)
+        except (TypeError, ValueError):
+            return None
+        return max(1, position)
+
+    def _next_position_for_exam(self, exam_id):
+        _, row = self.db.execute(
+            "SELECT COALESCE(MAX(position), 0) + 1 AS next_position FROM questions WHERE exam_id = ?",
+            (exam_id,),
+            fetchone=True,
+        )
+        return row["next_position"]
+
+    def _resequence_exam_questions(self, exam_id, anchor_question_id=None, requested_position=None):
+        _, rows = self.db.execute(
+            """
+            SELECT id, status, position
+            FROM questions
+            WHERE exam_id = ?
+            ORDER BY position, id
+            """,
+            (exam_id,),
+            fetchall=True,
+        )
+        if not rows:
+            return
+
+        active_ids = []
+        archived_ids = []
+        anchor_row = None
+        for row in rows:
+            if anchor_question_id is not None and row["id"] == anchor_question_id:
+                anchor_row = row
+                continue
+            if row["status"] == "archived":
+                archived_ids.append(row["id"])
+            else:
+                active_ids.append(row["id"])
+
+        if anchor_row is not None:
+            if anchor_row["status"] == "archived":
+                archived_ids.append(anchor_row["id"])
+            else:
+                target_index = max(0, min((requested_position or 1) - 1, len(active_ids)))
+                active_ids.insert(target_index, anchor_row["id"])
+
+        ordered_ids = active_ids + archived_ids
+        for index, question_id in enumerate(ordered_ids, start=1):
+            self.db.execute(
+                """
+                UPDATE questions
+                SET position = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+                """,
+                (index, question_id),
+            )
 
     def _hydrate_question_rows(self, rows, include_answers):
         if not rows:

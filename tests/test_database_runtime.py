@@ -116,6 +116,102 @@ class DatabaseRuntimeTests(unittest.TestCase):
 
         self.assertEqual({row["name"] for row in rows}, expected_indexes)
 
+    def test_question_create_shifts_existing_positions(self):
+        database = self._build_seeded_database()
+        exam_id, first_question_id, second_question_id = self._create_exam_with_questions(database)
+        questions = QuestionsTable(database)
+
+        inserted_question_id = questions.create(
+            exam_id,
+            {
+                "type": "single_select",
+                "title": "Inserted in the middle",
+                "statement": "Inserted question statement",
+                "explanation": "Inserted question explanation",
+                "difficulty": "intermediate",
+                "status": "active",
+                "position": 2,
+                "tags": ["ordering"],
+                "topics": ["ordering"],
+                "options": [
+                    {"key": "A", "text": "Correct", "is_correct": True},
+                    {"key": "B", "text": "Wrong", "is_correct": False},
+                ],
+            },
+        )
+
+        ordered_questions = questions.list_for_exam(exam_id, include_answers=True, include_archived=True)
+        self.assertEqual(
+            [(first_question_id, 1), (inserted_question_id, 2), (second_question_id, 3)],
+            [(question["id"], question["position"]) for question in ordered_questions],
+        )
+
+    def test_question_update_reorders_questions_without_duplicates(self):
+        database = self._build_seeded_database()
+        exam_id, first_question_id, second_question_id = self._create_exam_with_questions(database)
+        questions = QuestionsTable(database)
+        third_question_id = questions.create(
+            exam_id,
+            {
+                "type": "single_select",
+                "title": "Third",
+                "statement": "Third question statement",
+                "explanation": "Third question explanation",
+                "difficulty": "intermediate",
+                "status": "active",
+                "position": 3,
+                "tags": ["ordering"],
+                "topics": ["ordering"],
+                "options": [
+                    {"key": "A", "text": "Correct", "is_correct": True},
+                    {"key": "B", "text": "Wrong", "is_correct": False},
+                ],
+            },
+        )
+
+        third_question = questions.get(third_question_id, include_answers=True)
+        questions.update(
+            third_question_id,
+            {
+                **third_question,
+                "position": 1,
+            },
+        )
+
+        ordered_questions = questions.list_for_exam(exam_id, include_answers=True, include_archived=True)
+        self.assertEqual(
+            [(third_question_id, 1), (first_question_id, 2), (second_question_id, 3)],
+            [(question["id"], question["position"]) for question in ordered_questions],
+        )
+
+    def test_question_delete_closes_position_gaps(self):
+        database = self._build_seeded_database()
+        exam_id, first_question_id, second_question_id = self._create_exam_with_questions(database)
+        questions = QuestionsTable(database)
+
+        questions.delete(first_question_id)
+
+        ordered_questions = questions.list_for_exam(exam_id, include_answers=True, include_archived=True)
+        self.assertEqual([(second_question_id, 1)], [(question["id"], question["position"]) for question in ordered_questions])
+
+    def test_database_startup_normalizes_existing_duplicate_positions(self):
+        database = self._build_seeded_database()
+        exam_id, first_question_id, second_question_id = self._create_exam_with_questions(database)
+
+        database.execute("UPDATE questions SET position = 1 WHERE id = ?", (second_question_id,))
+
+        normalized_database = Database()
+        normalized_questions = QuestionsTable(normalized_database).list_for_exam(
+            exam_id,
+            include_answers=True,
+            include_archived=True,
+        )
+
+        self.assertEqual(
+            [(first_question_id, 1), (second_question_id, 2)],
+            [(question["id"], question["position"]) for question in normalized_questions],
+        )
+
     def _build_seeded_database(self):
         self._set_env("ZERTAN_BOOTSTRAP_ADMIN_PASSWORD", "runtime-admin-password")
         return Database()

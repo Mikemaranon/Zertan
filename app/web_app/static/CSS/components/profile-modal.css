@@ -25,8 +25,9 @@ body.modal-open {
 
 .profile-modal__dialog {
     position: relative;
+    display: flex;
     width: min(840px, 100%);
-    max-height: calc(100dvh - 88px);
+    max-height: calc(100dvh - 48px);
     border-radius: 28px;
     background: var(--surface);
     border: 1px solid rgba(198, 211, 225, 0.88);
@@ -35,6 +36,13 @@ body.modal-open {
     opacity: 0;
     transform: translateY(88px);
     transition: transform 0.24s cubic-bezier(0.18, 0.88, 0.22, 1), opacity 0.2s ease;
+}
+
+.profile-modal__dialog > :not(.profile-modal__close) {
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
 }
 
 .profile-modal[data-state="open"] .profile-modal__backdrop {
@@ -75,16 +83,19 @@ body.modal-open {
 }
 
 .profile-modal__layout {
+    flex: 1 1 auto;
     display: grid;
     grid-template-columns: minmax(0, 0.96fr) minmax(0, 1.04fr);
-    max-height: calc(100dvh - 88px);
-    overflow-y: auto;
-    overscroll-behavior: contain;
+    min-height: 0;
+    width: 100%;
 }
 
 .profile-summary,
 .profile-edit-panel {
     padding: 36px;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
 }
 
 .profile-summary {
@@ -159,10 +170,56 @@ body.modal-open {
     font-size: 1.1rem;
 }
 
+.profile-summary__meta {
+    gap: 16px;
+}
+
+.profile-summary__meta-section {
+    display: grid;
+    gap: 8px;
+}
+
+.profile-summary__groups {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.profile-summary__group-chip,
+.profile-summary__group-empty {
+    display: inline-flex;
+    align-items: center;
+    min-height: 32px;
+    padding: 0 12px;
+    border-radius: 999px;
+    font-size: 0.92rem;
+}
+
+.profile-summary__group-chip {
+    border: 1px solid rgba(141, 177, 214, 0.48);
+    background: rgba(225, 237, 248, 0.82);
+    color: #2f5d8f;
+    font-weight: 600;
+}
+
+.profile-summary__group-empty {
+    border: 1px dashed rgba(171, 186, 203, 0.72);
+    background: rgba(244, 247, 250, 0.92);
+    color: var(--muted);
+}
+
 .profile-edit-panel {
     display: grid;
-    align-content: center;
+    align-content: start;
     border-left: 1px solid rgba(211, 220, 231, 0.9);
+}
+
+.profile-edit-panel[data-mode="placeholder"] {
+    align-content: center;
+}
+
+.profile-edit-panel[data-mode="editing"] {
+    align-content: start;
 }
 
 .profile-edit-panel[data-mode="placeholder"] #profile-credentials-form {
@@ -237,10 +294,6 @@ body.modal-open {
     }
 
     .profile-modal__dialog {
-        max-height: calc(100dvh - 52px);
-    }
-
-    .profile-modal__layout {
         max-height: calc(100dvh - 52px);
     }
 

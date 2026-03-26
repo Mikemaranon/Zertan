@@ -10,6 +10,7 @@ import { initExamRunnerPage } from "./pages/exam-runner.js";
 import { initGlobalStatsPage } from "./pages/global-stats.js";
 import { initLiveExamsPage } from "./pages/live-exams.js";
 import { initLoginPage } from "./pages/login.js";
+import { initLogRegistryDetailPage, initLogRegistryPage } from "./pages/log-registry.js";
 import { initManagementPage } from "./pages/management.js";
 import { initQuestionManagementPage } from "./pages/question-management.js";
 import { initQuestionEditorPage } from "./pages/question-editor.js";
@@ -22,6 +23,8 @@ const pageMap = {
     "global-stats": initGlobalStatsPage,
     catalog: initCatalogPage,
     "live-exams": initLiveExamsPage,
+    "log-registry": initLogRegistryPage,
+    "log-registry-detail": initLogRegistryDetailPage,
     "exam-detail": initExamDetailPage,
     "exam-builder": initExamBuilderPage,
     "exam-runner": initExamRunnerPage,

@@ -200,4 +200,18 @@ class UserManager:
             "created_at": user["created_at"],
             "updated_at": user["updated_at"],
             "last_login_at": user["last_login_at"],
+            "groups": self._public_groups_for_user(user["id"]),
         }
+
+    def _public_groups_for_user(self, user_id):
+        groups_table = getattr(self.db, "groups", None)
+        if not groups_table or not hasattr(groups_table, "list_for_user"):
+            return []
+        return [
+            {
+                "id": group["id"],
+                "code": group["code"],
+                "name": group["name"],
+            }
+            for group in groups_table.list_for_user(user_id)
+        ]

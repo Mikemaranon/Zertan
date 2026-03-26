@@ -6,6 +6,7 @@ from .db_methods import (
     ExamsTable,
     GroupsTable,
     LiveExamsTable,
+    LogRegistryTable,
     QuestionsTable,
     ServerAliasesTable,
     SessionsTable,
@@ -33,6 +34,7 @@ class DBManager:
         self.site_features = SiteFeaturesTable(self.db)
         self.statistics = StatisticsTable(self.db)
         self.agent_logs = AgentLogsTable(self.db)
+        self.log_registry = LogRegistryTable(self.db)
 
     def execute(self, query, params=(), *, fetchone=False, fetchall=False):
         op, data = self.db.execute(query, params, fetchone=fetchone, fetchall=fetchall)

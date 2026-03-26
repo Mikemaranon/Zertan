@@ -5,6 +5,7 @@ from .t_attempts import AttemptsTable
 from .t_exams import ExamsTable
 from .t_groups import GroupsTable
 from .t_live_exams import LiveExamsTable
+from .t_log_registry import LogRegistryTable
 from .t_questions import QuestionsTable
 from .t_server_aliases import ServerAliasesTable
 from .t_sessions import SessionsTable
@@ -18,6 +19,7 @@ __all__ = [
     "ExamsTable",
     "GroupsTable",
     "LiveExamsTable",
+    "LogRegistryTable",
     "QuestionsTable",
     "ServerAliasesTable",
     "SessionsTable",

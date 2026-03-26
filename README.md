@@ -8,210 +8,52 @@
 <br>
 <br>
 
-Zertan is a serious certification exam preparation platform built on a small operational stack:
+Zertan is a professional certification preparation platform built for serious study, controlled exam delivery, and maintainable question-bank operations.
 
-- Flask for the web layer
-- SQLite for persistence
-- JWT-backed sessions for authentication
-- HTML, CSS, and vanilla JavaScript for the frontend
+It is designed for teams and individual candidates who need a focused workspace rather than a noisy quiz app. Zertan combines study mode, formal exam mode, content maintenance, scoped supervision, and persistent performance tracking in a single product.
 
-The project is intentionally server-rendered and single-server friendly. It supports role-based administration, study mode, formal exam mode, editable question banks, import/export packages, and persisted statistics without introducing a separate SPA or infrastructure-heavy deployment model.
+## What Zertan Offers
 
-## Prerequisites
+- Study mode for fast review with immediate answer checking
+- Formal exam mode with fixed attempts, pagination, and stored results
+- Editable question banks for certification content teams
+- Import and export of structured exam packages
+- Role-based access for administrators, examiners, reviewers, and end users
+- Browser access plus an installable desktop client
+- Persistent statistics for personal progress and operational oversight
 
-- Python 3.12 or newer
-- `venv`
-- Docker Desktop or Docker Engine if you want to run the containerized deployment
+## Built For Serious Preparation
 
-## Local Development
+Zertan is meant to feel like a professional study workspace: clear, minimal, and low-noise. The product prioritizes stable workflows, maintainable content, and strong control over who can view, edit, supervise, and evaluate certification material.
 
-Run these commands from the repository root:
+It supports both day-to-day study and controlled evaluation without splitting the experience into separate products.
 
-```bash
-python3 -m venv .venv
-.venv/bin/python -m pip install -r app/requirements.txt
-PYTHONPATH=app/web_server ZERTAN_DEBUG=1 .venv/bin/python app/web_server/main.py
-```
+## Core Experience
 
-Default URL:
+### Study Mode
 
-- `http://127.0.0.1:5050`
+Study mode is the flexible workspace for reviewing questions, exploring content, and validating answers immediately.
 
-When `ZERTAN_DEBUG=1`, Zertan seeds demo content automatically on a fresh database:
+### Exam Mode
 
-- user: `admin`
-- password: `admin123`
-- demo exam: `ZT-100`
+Exam mode is the formal path. The server assembles a fixed attempt, users move through paginated questions, and results are stored for later analysis.
 
-## First Run Without Demo Seed
+### Content Operations
 
-Production-style startup requires an explicit admin bootstrap password on a fresh database:
+Authorized roles can create, update, archive, import, export, and supervise certification content without leaving the platform.
 
-```bash
-SECRET_KEY="$(python3 -c 'import secrets; print(secrets.token_urlsafe(48))')" \
-ZERTAN_BOOTSTRAP_ADMIN_PASSWORD='ChangeThisAdminPassword' \
-PYTHONPATH=app/web_server \
-.venv/bin/python app/web_server/main.py
-```
+## Product Direction
 
-If `ZERTAN_SEED_DEMO_CONTENT=0` and no users exist yet, Zertan will refuse to start without `ZERTAN_BOOTSTRAP_ADMIN_PASSWORD`.
+Zertan is intentionally conservative in product shape:
 
-## Testing
+- serious UX
+- maintainable architecture
+- operational simplicity
+- strong backend control
+- plain, understandable frontend behavior
 
-Run the automated suite from the repository root:
+## More Information
 
-```bash
-PYTHONPATH=app/web_server .venv/bin/python -m unittest discover -s tests
-```
+Recent product and platform changes are summarized in [release_updates.md](/Users/myke/Desktop/codes/Projects/Zertan/release_updates.md).
 
-What is covered today:
-
-- auth and role handling
-- protected routes and API bootstrap
-- question normalization and payload parsing
-- exam pagination and live exam assignment rules
-- import/export package validation
-- database bootstrap behavior and query batching for question retrieval
-
-Manual data generators live in [`tests/README.md`](/Users/myke/Desktop/codes/Projects/Zertan/tests/README.md).
-
-## Project Layout
-
-- [`app/web_server`](/Users/myke/Desktop/codes/Projects/Zertan/app/web_server): Flask app, APIs, services, data layer, auth, and runtime helpers
-- [`app/web_app`](/Users/myke/Desktop/codes/Projects/Zertan/app/web_app): server-rendered templates plus vanilla JS and CSS
-- [`deploy/src/docker`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/src/docker): container image and compose files
-- [`deploy/src/server`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/src/server): server packaging sources
-- [`deploy/src/client`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/src/client): Tauri client packaging sources
-- [`deploy/builds`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/builds): OS-specific build entrypoints and release outputs
-- [`tests`](/Users/myke/Desktop/codes/Projects/Zertan/tests): automated tests and manual data utilities
-
-Technical details live in [`app/README.md`](/Users/myke/Desktop/codes/Projects/Zertan/app/README.md).
-
-## Docker
-
-Local image build:
-
-```bash
-cd deploy/src/docker
-cp .env.example .env
-docker compose -f compose.yml up --build -d
-```
-
-Published image deployment:
-
-```bash
-cd deploy/src/docker
-cp .env.example .env
-# set ZERTAN_IMAGE in .env, for example ghcr.io/<owner>/<repo>:1.2.0
-docker compose -f compose.ghcr.yml pull
-docker compose -f compose.ghcr.yml up -d
-```
-
-Container defaults:
-
-- data volume: `zertan_data`
-- in-container data root: `/data`
-- health endpoint: `GET /healthz`
-
-Recommended before public exposure:
-
-- set a real `SECRET_KEY`
-- set a real `ZERTAN_BOOTSTRAP_ADMIN_PASSWORD`
-- set `ZERTAN_SEED_DEMO_CONTENT=0`
-- terminate TLS in a reverse proxy and then enable `ZERTAN_COOKIE_SECURE=true`
-
-## Native Releases
-
-Native packaging is now local-first and organized by operating system under [`deploy/builds`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/builds).
-
-Install the packaging dependencies from the repository root:
-
-```bash
-python3 -m venv .venv
-.venv/bin/python -m pip install -r deploy/src/server/requirements.txt
-.venv/bin/python -m pip install -r deploy/src/client/requirements.txt
-.venv/bin/python -m unittest discover -s tests
-npm install --prefix deploy/src/client
-```
-
-Build both native packages for the current operating system:
-
-```bash
-.venv/bin/python deploy/builds/build.py --version 1.0.0
-```
-
-Build only one component:
-
-```bash
-.venv/bin/python deploy/builds/build.py --version 1.0.0 --target server
-.venv/bin/python deploy/builds/build.py --version 1.0.0 --target client --skip-install
-```
-
-Direct entrypoints also exist per operating system:
-
-- [`deploy/builds/windows/build_server.py`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/builds/windows/build_server.py) and [`deploy/builds/windows/build_client.py`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/builds/windows/build_client.py)
-- [`deploy/builds/linux/build_server.py`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/builds/linux/build_server.py) and [`deploy/builds/linux/build_client.py`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/builds/linux/build_client.py)
-- [`deploy/builds/mac/build_server.py`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/builds/mac/build_server.py) and [`deploy/builds/mac/build_client.py`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/builds/mac/build_client.py)
-
-Artifacts are generated under:
-
-- `deploy/builds/windows/files/` on Windows
-- `deploy/builds/linux/files/` on Debian/Linux
-- `deploy/builds/mac/files/` on macOS
-
-The packaged server:
-
-- stores data in a per-user application directory
-- generates and persists a secret key locally
-- seeds demo content on first run
-- starts the Flask web server for browser access
-
-The packaged client:
-
-- opens with a dedicated native selector window
-- stores registered servers locally
-- opens the remote Zertan UI inside a native window instead of a browser tab
-
-## Release Packaging
-
-The primary packaging flow now lives in [`deploy/builds/build.py`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/builds/build.py), with OS-specific wrappers under [`deploy/builds/windows`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/builds/windows), [`deploy/builds/linux`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/builds/linux), and [`deploy/builds/mac`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/builds/mac).
-
-## Runtime Configuration
-
-Most important environment variables:
-
-- `SECRET_KEY`
-- `HOST`
-- `PORT`
-- `ZERTAN_DEBUG`
-- `ZERTAN_DATA_DIR`
-- `ZERTAN_DB_PATH`
-- `ZERTAN_MEDIA_ROOT`
-- `ZERTAN_SEED_DEMO_CONTENT`
-- `ZERTAN_BOOTSTRAP_ADMIN_USERNAME`
-- `ZERTAN_BOOTSTRAP_ADMIN_PASSWORD`
-- `ZERTAN_BOOTSTRAP_ADMIN_EMAIL`
-- `ZERTAN_COOKIE_SECURE`
-- `ZERTAN_COOKIE_SAMESITE`
-- `ZERTAN_JWT_HOURS`
-
-## Troubleshooting
-
-`First startup requires ZERTAN_BOOTSTRAP_ADMIN_PASSWORD`
-
-- You started with `ZERTAN_SEED_DEMO_CONTENT=0` on an empty database.
-- Set `ZERTAN_BOOTSTRAP_ADMIN_PASSWORD` or run in debug/demo mode for local development.
-
-`Production startup requires SECRET_KEY`
-
-- `SECRET_KEY` is missing or still uses the known insecure production placeholder.
-- Set a long random value before non-debug deployment.
-
-`Port 5050 is already in use`
-
-- Change `PORT` for local runs or `HOST_PORT` in Docker.
-
-`Database or uploads are not where I expect`
-
-- Inspect `ZERTAN_DATA_DIR`, `ZERTAN_DB_PATH`, and `ZERTAN_MEDIA_ROOT`.
-- In Docker, operational state is stored under `/data` inside the container.
+Technical and developer-oriented documentation lives in [app/README.md](/Users/myke/Desktop/codes/Projects/Zertan/app/README.md).

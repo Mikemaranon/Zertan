@@ -136,6 +136,7 @@ class ExamScopeRulesTests(unittest.TestCase):
             "tags": ["scope"],
         }
 
+
     def _set_env(self, key, value):
         original = os.environ.get(key)
         os.environ[key] = value

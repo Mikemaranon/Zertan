@@ -12,26 +12,26 @@
     --shadow: 0 16px 32px rgba(20, 48, 74, 0.08);
     --radius: 18px;
     --radius-small: 12px;
-    --content-width: 1240px;
-    --sidebar-width: 272px;
+    --content-width: 1180px;
+    --sidebar-width: 248px;
     --mobile-header-height: 76px;
     --font: "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
-    --app-font-scale: 1;
-    --app-density: 1;
+    --app-font-scale: 0.9;
+    --app-density: 0.94;
 }
 
 @media (max-width: 1024px) {
     :root {
-        --app-font-scale: 0.9;
-        --app-density: 0.95;
+        --app-font-scale: 0.86;
+        --app-density: 0.9;
         --mobile-header-height: 72px;
     }
 }
 
 @media (max-width: 720px) {
     :root {
-        --app-font-scale: 0.75;
-        --app-density: 0.9;
+        --app-font-scale: 0.74;
+        --app-density: 0.88;
         --mobile-header-height: 64px;
     }
 }

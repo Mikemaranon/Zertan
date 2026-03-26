@@ -15,6 +15,7 @@
     --radius-card: 24px;
     --radius-control: 14px;
     --font-body: "Segoe UI", "SF Pro Text", "Helvetica Neue", sans-serif;
+    --client-scale: 0.9;
 }
 
 * {
@@ -25,6 +26,10 @@ html,
 body {
     margin: 0;
     min-height: 100%;
+}
+
+html {
+    font-size: calc(16px * var(--client-scale));
 }
 
 body {
@@ -46,14 +51,14 @@ input {
 
 .client-body {
     min-height: 100vh;
-    padding: 40px 28px;
+    padding: calc(40px * var(--client-scale)) calc(28px * var(--client-scale));
 }
 
 .client-shell {
     width: min(1120px, 100%);
     margin: 0 auto;
     display: grid;
-    gap: 24px;
+    gap: calc(24px * var(--client-scale));
 }
 
 .client-card {
@@ -61,26 +66,26 @@ input {
     border: 1px solid rgba(189, 208, 228, 0.82);
     border-radius: var(--radius-card);
     box-shadow: var(--shadow-card);
-    padding: 28px;
+    padding: calc(28px * var(--client-scale));
 }
 
 .client-card--hero {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 24px;
+    gap: calc(24px * var(--client-scale));
 }
 
 .client-identity {
     display: flex;
     align-items: center;
-    gap: 18px;
+    gap: calc(18px * var(--client-scale));
 }
 
 .client-logo {
-    width: 72px;
-    height: 72px;
-    border-radius: 18px;
+    width: calc(72px * var(--client-scale));
+    height: calc(72px * var(--client-scale));
+    border-radius: calc(18px * var(--client-scale));
     object-fit: cover;
 }
 
@@ -119,8 +124,8 @@ h3 {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 18px;
-    margin-bottom: 20px;
+    gap: calc(18px * var(--client-scale));
+    margin-bottom: calc(20px * var(--client-scale));
 }
 
 .section-heading--compact h2 {
@@ -168,13 +173,13 @@ h3 {
 
 .server-list {
     display: grid;
-    gap: 14px;
+    gap: calc(14px * var(--client-scale));
 }
 
 .server-empty {
-    padding: 32px;
+    padding: calc(32px * var(--client-scale));
     border: 1px dashed var(--color-border-strong);
-    border-radius: 18px;
+    border-radius: calc(18px * var(--client-scale));
     background: var(--color-surface-soft);
     color: var(--color-text-muted);
     text-align: center;
@@ -183,18 +188,18 @@ h3 {
 .server-card {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
-    gap: 18px;
-    padding: 20px 22px;
+    gap: calc(18px * var(--client-scale));
+    padding: calc(20px * var(--client-scale)) calc(22px * var(--client-scale));
     border: 1px solid var(--color-border);
-    border-radius: 18px;
+    border-radius: calc(18px * var(--client-scale));
     background: var(--color-surface);
 }
 
 .server-meta {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
-    margin-top: 10px;
+    gap: calc(10px * var(--client-scale));
+    margin-top: calc(10px * var(--client-scale));
 }
 
 .server-chip {
@@ -212,7 +217,7 @@ h3 {
 .server-card__actions {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: calc(10px * var(--client-scale));
 }
 
 .error-message {
@@ -229,7 +234,7 @@ h3 {
     z-index: 60;
     display: grid;
     place-items: center;
-    padding: 24px;
+    padding: calc(24px * var(--client-scale));
 }
 
 .client-modal[hidden] {
@@ -246,7 +251,7 @@ h3 {
 .client-modal__dialog {
     position: relative;
     width: min(560px, calc(100vw - 24px));
-    border-radius: 26px;
+    border-radius: calc(26px * var(--client-scale));
     background: var(--color-surface);
     box-shadow: var(--shadow-modal);
     border: 1px solid rgba(189, 208, 228, 0.82);
@@ -254,8 +259,8 @@ h3 {
 
 .client-modal__close {
     position: absolute;
-    top: 18px;
-    right: 18px;
+    top: calc(18px * var(--client-scale));
+    right: calc(18px * var(--client-scale));
     border: 0;
     background: transparent;
     color: var(--color-text-muted);
@@ -264,13 +269,13 @@ h3 {
 
 .client-modal__body {
     display: grid;
-    gap: 16px;
-    padding: 32px;
+    gap: calc(16px * var(--client-scale));
+    padding: calc(32px * var(--client-scale));
 }
 
 label {
     display: grid;
-    gap: 8px;
+    gap: calc(8px * var(--client-scale));
     color: var(--color-text);
     font-weight: 600;
 }
@@ -295,25 +300,25 @@ input:focus {
 .checkbox-row {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: calc(10px * var(--client-scale));
     font-weight: 600;
 }
 
 .checkbox-row input {
-    width: 18px;
-    height: 18px;
+    width: calc(18px * var(--client-scale));
+    height: calc(18px * var(--client-scale));
 }
 
 .modal-actions {
     display: flex;
     justify-content: flex-end;
-    gap: 12px;
-    margin-top: 8px;
+    gap: calc(12px * var(--client-scale));
+    margin-top: calc(8px * var(--client-scale));
 }
 
 @media (max-width: 860px) {
     .client-body {
-        padding: 20px;
+        padding: calc(20px * var(--client-scale));
     }
 
     .client-card--hero,

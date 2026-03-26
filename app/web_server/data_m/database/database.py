@@ -124,6 +124,8 @@ class Database:
             self.connector.close(conn)
 
     def _init_db(self):
+        from ..db_methods.t_questions import QuestionsTable
+
         self.upload_root.mkdir(parents=True, exist_ok=True)
         self.migrations.rename_legacy_live_exam_tables()
         self.execute_script(SCHEMA_SQL)
@@ -151,6 +153,7 @@ class Database:
 
         self.seeder.seed_defaults()
         self.integrity.ensure_users_indexes()
+        QuestionsTable(self).normalize_all_positions()
         if current_version < 2:
             self.seeder.seed_exam_links()
         if current_version < 4:

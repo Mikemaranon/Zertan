@@ -1,4 +1,4 @@
-import { assetPathToUrl, focusFieldForDesktop, getCurrentUser, request } from "../core/api.js";
+import { assetPathToUrl, escapeHtml, focusFieldForDesktop, getCurrentUser, request } from "../core/api.js";
 
 export function bindProfileModal() {
     const modal = document.getElementById("profile-modal");
@@ -20,6 +20,7 @@ export function bindProfileModal() {
     const titleNode = document.getElementById("profile-modal-title");
     const roleNode = document.getElementById("profile-role");
     const loginNameNode = document.getElementById("profile-login-name");
+    const groupsNode = document.getElementById("profile-groups");
     const nameInput = document.getElementById("profile-display-name");
     const currentPasswordInput = document.getElementById("profile-current-password");
     const newPasswordInput = document.getElementById("profile-new-password");
@@ -72,9 +73,28 @@ export function bindProfileModal() {
         titleNode.textContent = currentUser.display_name || currentUser.username || currentUser.login_name;
         roleNode.textContent = currentUser.role || "";
         loginNameNode.textContent = currentUser.login_name || "";
+        renderGroups();
         nameInput.value = currentUser.display_name || currentUser.username || "";
         renderModalAvatar();
         syncShellUser();
+    }
+
+    function renderGroups() {
+        if (!groupsNode) {
+            return;
+        }
+        const groups = Array.isArray(currentUser.groups) ? currentUser.groups : [];
+        groupsNode.innerHTML = groups.length
+            ? groups
+                .map(
+                    (group) => `
+                        <span class="profile-summary__group-chip" title="${escapeHtml(group.code ? `${group.name} (${group.code})` : group.name)}">
+                            ${escapeHtml(group.name)}
+                        </span>
+                    `
+                )
+                .join("")
+            : `<span class="profile-summary__group-empty">No groups assigned</span>`;
     }
 
     function renderModalAvatar() {

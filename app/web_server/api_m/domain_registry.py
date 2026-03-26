@@ -4,6 +4,7 @@ from api_m.domains.auth_api import AuthAPI
 from api_m.domains.exams_api import ExamsAPI
 from api_m.domains.import_export_api import ImportExportAPI
 from api_m.domains.live_exams_api import LiveExamsAPI
+from api_m.domains.log_registry_api import LogRegistryAPI
 from api_m.domains.questions_api import QuestionsAPI
 from api_m.domains.statistics_api import StatisticsAPI
 from api_m.domains.system_api import SystemAPI
@@ -17,6 +18,7 @@ REGISTERED_DOMAIN_APIS = (
     ExamsAPI,
     ImportExportAPI,
     LiveExamsAPI,
+    LogRegistryAPI,
     QuestionsAPI,
     StatisticsAPI,
     SystemAPI,
