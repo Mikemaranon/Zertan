@@ -65,8 +65,8 @@ class DatabaseSeeder:
 
             self.db.executemany(
                 """
-                INSERT INTO users (username, email, login_name, display_name, password_hash, role, status)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO users (username, email, login_name, display_name, password_hash, role, status, is_protected)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 [
                     (
@@ -77,9 +77,19 @@ class DatabaseSeeder:
                         generate_password_hash(admin_password),
                         "administrator",
                         "active",
+                        1,
                     ),
                 ],
             )
+
+        self.db.execute(
+            """
+            UPDATE users
+            SET is_protected = 1
+            WHERE lower(COALESCE(login_name, username)) = lower(?)
+            """,
+            (admin_username,),
+        )
 
         _, exams_row = self.db.execute("SELECT COUNT(*) AS total FROM exams", fetchone=True)
         if exams_row["total"] > 0 or not self.runtime_config.get("seed_demo_content"):

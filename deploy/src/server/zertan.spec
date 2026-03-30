@@ -2,7 +2,7 @@ import os
 import sys
 from pathlib import Path
 
-from PyInstaller.utils.hooks import collect_submodules
+from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
 
 APP_NAME = "Zertan Server"
@@ -19,6 +19,15 @@ datas = [
     (str(project_root / "app" / "web_app"), "app/web_app"),
 ]
 hiddenimports = collect_submodules("api_m.domains") + collect_submodules("webview")
+runtime_hooks = []
+if sys.platform.startswith("linux"):
+    runtime_hooks.append(str(project_root / "deploy" / "src" / "server" / "pyi_rth_linux_gi.py"))
+    hiddenimports += ["optparse"]
+    try:
+        datas += collect_data_files("gi", includes=["**/*.typelib"])
+        hiddenimports += collect_submodules("gi")
+    except Exception:
+        pass
 
 
 a = Analysis(
@@ -29,7 +38,7 @@ a = Analysis(
     hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},
-    runtime_hooks=[],
+    runtime_hooks=runtime_hooks,
     excludes=[],
     noarchive=False,
 )

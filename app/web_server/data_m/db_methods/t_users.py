@@ -17,7 +17,7 @@ class UsersTable:
     def get_by_id(self, user_id):
         _, row = self.db.execute(
             """
-            SELECT id, username, email, login_name, display_name, password_hash, role, status, avatar_path, created_at, updated_at, last_login_at
+            SELECT id, username, email, login_name, display_name, password_hash, role, status, is_protected, avatar_path, created_at, updated_at, last_login_at
             FROM users WHERE id = ?
             """,
             (user_id,),
@@ -28,7 +28,7 @@ class UsersTable:
     def get_by_login_name(self, login_name):
         _, row = self.db.execute(
             """
-            SELECT id, username, email, login_name, display_name, password_hash, role, status, avatar_path, created_at, updated_at, last_login_at
+            SELECT id, username, email, login_name, display_name, password_hash, role, status, is_protected, avatar_path, created_at, updated_at, last_login_at
             FROM users WHERE lower(COALESCE(login_name, username)) = lower(?)
             """,
             (login_name,),
@@ -42,7 +42,7 @@ class UsersTable:
     def get_by_email(self, email):
         _, row = self.db.execute(
             """
-            SELECT id, username, email, login_name, display_name, password_hash, role, status, avatar_path, created_at, updated_at, last_login_at
+            SELECT id, username, email, login_name, display_name, password_hash, role, status, is_protected, avatar_path, created_at, updated_at, last_login_at
             FROM users WHERE lower(email) = lower(?)
             """,
             (email,),
@@ -53,7 +53,7 @@ class UsersTable:
     def all(self):
         _, rows = self.db.execute(
             """
-            SELECT id, login_name, display_name, role, status, avatar_path, created_at, last_login_at
+            SELECT id, login_name, display_name, role, status, is_protected, avatar_path, created_at, last_login_at
             FROM users ORDER BY lower(display_name), lower(login_name)
             """,
             fetchall=True,
@@ -65,6 +65,7 @@ class UsersTable:
                 "display_name": row["display_name"],
                 "role": row["role"],
                 "status": row["status"],
+                "is_protected": bool(row["is_protected"]),
                 "avatar_path": row["avatar_path"],
                 "created_at": row["created_at"],
                 "last_login_at": row["last_login_at"],
@@ -139,6 +140,7 @@ class UsersTable:
             "password_hash": row["password_hash"],
             "role": row["role"],
             "status": row["status"],
+            "is_protected": bool(row["is_protected"]),
             "avatar_path": row["avatar_path"],
             "created_at": row["created_at"],
             "updated_at": row["updated_at"],

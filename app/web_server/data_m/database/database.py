@@ -133,6 +133,7 @@ class Database:
         self.integrity.ensure_column("exams", "official_url", "TEXT DEFAULT ''")
         self.integrity.ensure_column("users", "login_name", "TEXT")
         self.integrity.ensure_column("users", "display_name", "TEXT")
+        self.integrity.ensure_column("users", "is_protected", "INTEGER NOT NULL DEFAULT 0")
         self.integrity.ensure_column("users", "avatar_path", "TEXT")
         self.integrity.ensure_column("live_exams", "status", "TEXT NOT NULL DEFAULT 'active'")
         self.integrity.ensure_column("live_exams", "closed_at", "TEXT")

@@ -17,6 +17,7 @@ class _FakeUsersTable:
     def __init__(self, users):
         self._users = {int(user["id"]): dict(user) for user in users}
         self.last_touched_user_id = None
+        self.deleted_user_ids = []
 
     def get_by_login_name(self, login_name):
         normalized = (login_name or "").strip().lower()
@@ -43,11 +44,16 @@ class _FakeUsersTable:
     def update_avatar(self, user_id, avatar_path):
         self._users[int(user_id)]["avatar_path"] = avatar_path
 
+    def delete(self, user_id):
+        self.deleted_user_ids.append(int(user_id))
+        self._users.pop(int(user_id), None)
+
 
 class _FakeSessionsTable:
     def __init__(self):
         self.records = {}
         self.deleted_tokens = []
+        self.deleted_user_ids = []
 
     def create(self, user_id, token, expires_at):
         self.records[token] = {
@@ -61,6 +67,12 @@ class _FakeSessionsTable:
     def delete(self, token):
         self.deleted_tokens.append(token)
         self.records.pop(token, None)
+
+    def delete_for_user(self, user_id):
+        user_id = int(user_id)
+        self.deleted_user_ids.append(user_id)
+        for token in [token for token, record in self.records.items() if int(record["user_id"]) == user_id]:
+            self.records.pop(token, None)
 
 
 class _FakeGroupsTable:
@@ -95,6 +107,7 @@ class UserManagerTests(unittest.TestCase):
                     "password_hash": generate_password_hash("valid-password"),
                     "role": "reviewer",
                     "status": "active",
+                    "is_protected": False,
                     "avatar_path": None,
                     "created_at": "2026-03-19T10:00:00",
                     "updated_at": "2026-03-19T10:00:00",
@@ -107,6 +120,33 @@ class UserManagerTests(unittest.TestCase):
                     "password_hash": generate_password_hash("valid-password"),
                     "role": "user",
                     "status": "disabled",
+                    "is_protected": False,
+                    "avatar_path": None,
+                    "created_at": "2026-03-19T10:00:00",
+                    "updated_at": "2026-03-19T10:00:00",
+                    "last_login_at": None,
+                },
+                {
+                    "id": 9,
+                    "login_name": "admin",
+                    "display_name": "Admin",
+                    "password_hash": generate_password_hash("valid-password"),
+                    "role": "administrator",
+                    "status": "active",
+                    "is_protected": True,
+                    "avatar_path": None,
+                    "created_at": "2026-03-19T10:00:00",
+                    "updated_at": "2026-03-19T10:00:00",
+                    "last_login_at": None,
+                },
+                {
+                    "id": 10,
+                    "login_name": "ops.admin",
+                    "display_name": "Ops Admin",
+                    "password_hash": generate_password_hash("valid-password"),
+                    "role": "administrator",
+                    "status": "active",
+                    "is_protected": False,
                     "avatar_path": None,
                     "created_at": "2026-03-19T10:00:00",
                     "updated_at": "2026-03-19T10:00:00",
@@ -183,6 +223,30 @@ class UserManagerTests(unittest.TestCase):
 
         self.assertIsNone(resolved_user)
         self.assertEqual(self.database.sessions.deleted_tokens, [token])
+
+    def test_delete_user_rejects_self_deletion(self):
+        actor = self.manager.public_user(self.database.users.get_by_id(10))
+
+        with self.assertRaisesRegex(ValueError, "cannot delete their own user"):
+            self.manager.delete_user(actor, 10)
+
+    def test_delete_user_rejects_protected_admin(self):
+        actor = self.manager.public_user(self.database.users.get_by_id(10))
+
+        with self.assertRaisesRegex(ValueError, "protected admin user"):
+            self.manager.delete_user(actor, 9)
+
+    def test_delete_user_clears_sessions_and_removes_target(self):
+        actor = self.manager.public_user(self.database.users.get_by_id(9))
+        token, _ = self.manager.generate_token(self.database.users.get_by_id(7))
+        self.database.sessions.create(7, token, "2026-03-19T14:00:00")
+
+        deleted = self.manager.delete_user(actor, 7)
+
+        self.assertEqual(deleted["id"], 7)
+        self.assertEqual(self.database.sessions.deleted_user_ids, [7])
+        self.assertEqual(self.database.users.deleted_user_ids, [7])
+        self.assertIsNone(self.database.users.get_by_id(7))
 
 
 if __name__ == "__main__":

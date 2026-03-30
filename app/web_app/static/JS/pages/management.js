@@ -1,4 +1,5 @@
 import { escapeHtml, focusFieldForDesktop, request, splitCommaValues } from "../core/api.js";
+import { confirmAction } from "../components/confirm-modal.js";
 import { createGroupScopePicker } from "../components/group-scope-picker.js";
 
 const MAX_IMPORT_PACKAGE_SIZE = 5 * 1024 * 1024;
@@ -97,7 +98,12 @@ export async function initManagementPage() {
                 const card = event.currentTarget.closest("[data-exam-id]");
                 const examId = card.dataset.examId;
                 const examTitle = card.querySelector("h3")?.textContent?.trim() || "this exam";
-                const confirmed = window.confirm(`Delete ${examTitle}? This removes the exam, its questions, attempts, answers, and linked assets.`);
+                const confirmed = await confirmAction({
+                    title: "Delete exam",
+                    message: `Delete ${examTitle}? This removes the exam, its questions, attempts, answers, and linked assets.`,
+                    confirmLabel: "Delete exam",
+                    eyebrow: "Management action",
+                });
                 if (!confirmed) {
                     return;
                 }

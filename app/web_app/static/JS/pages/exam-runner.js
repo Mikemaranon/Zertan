@@ -1,4 +1,5 @@
 import { formatDuration, request } from "../core/api.js";
+import { confirmAction } from "../components/confirm-modal.js";
 import { renderPagination } from "../components/pagination.js";
 import { applyResponse, attachQuestionConfig, collectResponse, renderQuestionCard } from "../components/questions.js";
 
@@ -71,7 +72,14 @@ export async function initExamRunnerPage(pageContext) {
     });
 
     document.getElementById("submit-attempt-button").addEventListener("click", async () => {
-        if (!window.confirm("Submit this formal attempt? You will not be able to modify answers afterwards.")) {
+        const confirmed = await confirmAction({
+            title: "Submit formal attempt",
+            message: "Submit this formal attempt? You will not be able to modify answers afterwards.",
+            confirmLabel: "Submit attempt",
+            confirmVariant: "primary",
+            eyebrow: "Exam mode",
+        });
+        if (!confirmed) {
             return;
         }
         const cards = Array.from(questionContainer.querySelectorAll(".question-card"));

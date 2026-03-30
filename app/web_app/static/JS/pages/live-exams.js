@@ -1,4 +1,5 @@
 import { createAddableSelect } from "../components/addable-select.js";
+import { confirmAction } from "../components/confirm-modal.js";
 import { createSearchResultsPopover } from "../components/search-results-popover.js";
 import { escapeHtml, formatPercent, request } from "../core/api.js";
 
@@ -106,7 +107,13 @@ function renderAdministratorList(container, liveExams) {
             const liveExamId = event.currentTarget.dataset.liveExamId;
             const card = event.currentTarget.closest(".card");
             const title = card?.querySelector("h2")?.textContent?.trim() || "this live exam";
-            const confirmed = window.confirm(`Close ${title}? It will disappear from Live Exams but all recorded data will remain available.`);
+            const confirmed = await confirmAction({
+                title: "Close live exam",
+                message: `Close ${title}? It will disappear from Live Exams but all recorded data will remain available.`,
+                confirmLabel: "Close exam",
+                confirmVariant: "primary",
+                eyebrow: "Live exams",
+            });
             if (!confirmed) {
                 return;
             }
@@ -121,7 +128,12 @@ function renderAdministratorList(container, liveExams) {
             const liveExamId = event.currentTarget.dataset.liveExamId;
             const card = event.currentTarget.closest(".card");
             const title = card?.querySelector("h2")?.textContent?.trim() || "this live exam";
-            const confirmed = window.confirm(`Delete ${title}? This removes the live exam, its assignments, and all attempts created from it.`);
+            const confirmed = await confirmAction({
+                title: "Delete live exam",
+                message: `Delete ${title}? This removes the live exam, its assignments, and all attempts created from it.`,
+                confirmLabel: "Delete exam",
+                eyebrow: "Live exams",
+            });
             if (!confirmed) {
                 return;
             }

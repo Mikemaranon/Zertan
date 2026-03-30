@@ -76,3 +76,20 @@ rustc --version
 pkg-config --version
 python --version
 ```
+
+## Debian Runtime Note
+
+The Linux server package relies on GTK/WebKit through `pywebview`. The generated `.deb`
+declares the Debian runtime packages needed for the desktop window:
+
+```bash
+python3-gi
+python3-gi-cairo
+gir1.2-gtk-3.0
+gir1.2-webkit2-4.1
+libgtk-3-0
+libwebkit2gtk-4.1-0
+```
+
+If you are validating an already-installed older package, reinstall the rebuilt `.deb`
+so those dependencies and the updated launcher are applied.

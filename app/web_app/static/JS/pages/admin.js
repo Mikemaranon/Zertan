@@ -1,4 +1,5 @@
 import { renderDashboardLoadingState, renderDashboardView } from "../components/dashboard-view.js";
+import { confirmAction } from "../components/confirm-modal.js";
 import { createGroupScopePicker } from "../components/group-scope-picker.js";
 import { createSearchResultsPopover } from "../components/search-results-popover.js";
 import { assetPathToUrl, escapeHtml, focusFieldForDesktop, request } from "../core/api.js";
@@ -354,7 +355,13 @@ export async function initAdminPage() {
         }
 
         if (event.target.closest(".js-delete-user")) {
-            if (!window.confirm(`Delete user ${user.login_name}?`)) {
+            const confirmed = await confirmAction({
+                title: "Delete user",
+                message: `Delete user ${user.login_name}?`,
+                confirmLabel: "Delete user",
+                eyebrow: "Administrator action",
+            });
+            if (!confirmed) {
                 return;
             }
             await request(`/api/admin/users/${user.id}`, { method: "DELETE" });
@@ -383,7 +390,13 @@ export async function initAdminPage() {
         }
 
         if (event.target.closest(".js-delete-group")) {
-            if (!window.confirm(`Delete group ${group.name}?`)) {
+            const confirmed = await confirmAction({
+                title: "Delete group",
+                message: `Delete group ${group.name}?`,
+                confirmLabel: "Delete group",
+                eyebrow: "Administrator action",
+            });
+            if (!confirmed) {
                 return;
             }
             await request(`/api/admin/user-groups/${group.id}`, { method: "DELETE" });
@@ -634,6 +647,12 @@ function renderUserCard(user, groups) {
     const groupsLabel = groups.length
         ? groups.map((group) => group.name).join(", ")
         : "No groups assigned";
+    const deleteLabel = user.can_delete ? "Delete" : "Protected";
+    const deleteDisabled = user.can_delete ? "" : "disabled";
+    const deleteTitle = user.delete_block_reason ? ` title="${escapeHtml(user.delete_block_reason)}"` : "";
+    const protectionNote = user.delete_block_reason
+        ? `<span title="${escapeHtml(user.delete_block_reason)}">Deletion: <strong>${escapeHtml(user.delete_block_reason)}</strong></span>`
+        : "";
     return `
         <div class="card admin-directory-card" data-user-id="${user.id}">
             <div class="section-heading">
@@ -646,11 +665,12 @@ function renderUserCard(user, groups) {
             <div class="admin-directory-card__meta">
                 <span>Status: <strong>${escapeHtml(user.status)}</strong></span>
                 <span title="${escapeHtml(groupsLabel)}">Groups: <strong>${groups.length}</strong></span>
+                ${protectionNote}
             </div>
             <div class="button-row">
                 <button class="button button--secondary button--small js-view-user" type="button">View</button>
                 <button class="button button--secondary button--small js-edit-user" type="button">Edit</button>
-                <button class="button button--danger button--small js-delete-user" type="button">Delete</button>
+                <button class="button button--danger button--small js-delete-user" type="button" ${deleteDisabled}${deleteTitle}>${deleteLabel}</button>
             </div>
         </div>
     `;

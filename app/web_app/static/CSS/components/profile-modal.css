@@ -82,6 +82,36 @@ body.modal-open {
     box-shadow: 0 8px 18px rgba(16, 34, 52, 0.08);
 }
 
+.confirm-modal__dialog {
+    width: min(560px, 100%);
+}
+
+.confirm-modal__body {
+    display: grid;
+    gap: 24px;
+    padding: 40px;
+}
+
+.confirm-modal__header {
+    align-items: start;
+    margin: 0;
+    padding-right: 56px;
+}
+
+.confirm-modal__header h2 {
+    margin: 0;
+}
+
+.confirm-modal__header .muted {
+    margin: 10px 0 0;
+    line-height: 1.6;
+}
+
+.confirm-modal__actions {
+    justify-content: flex-end;
+    margin-top: 8px;
+}
+
 .profile-modal__layout {
     flex: 1 1 auto;
     display: grid;
@@ -274,16 +304,29 @@ body.modal-open {
 }
 
 @media (max-width: 1024px) {
-    .profile-modal__layout {
-        grid-template-columns: 1fr;
+    #profile-modal .profile-modal__layout {
+        display: block;
+        min-height: auto;
     }
 
-    .profile-edit-panel {
+    #profile-modal .profile-modal__dialog {
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+
+    #profile-modal .profile-summary,
+    #profile-modal .profile-edit-panel {
+        min-height: auto;
+        overflow: visible;
+        overscroll-behavior: auto;
+    }
+
+    #profile-modal .profile-edit-panel {
         border-left: 0;
         border-top: 1px solid rgba(211, 220, 231, 0.9);
     }
 
-    .profile-edit-panel[data-mode="placeholder"] {
+    #profile-modal .profile-edit-panel[data-mode="placeholder"] {
         display: none;
     }
 }
@@ -291,6 +334,19 @@ body.modal-open {
 @media (max-width: 720px) {
     .profile-modal {
         padding: 20px;
+    }
+
+    .confirm-modal__body {
+        padding: 28px;
+    }
+
+    .confirm-modal__header {
+        padding-right: 0;
+    }
+
+    .confirm-modal__actions {
+        flex-direction: column-reverse;
+        align-items: stretch;
     }
 
     .profile-modal__dialog {

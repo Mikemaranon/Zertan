@@ -284,7 +284,7 @@ def linux_control_contents(version, architecture):
         Priority: optional
         Architecture: {architecture}
         Maintainer: Zertan Release Automation <noreply@zertan.local>
-        Depends: libgtk-3-0, libwebkit2gtk-4.1-0
+        Depends: libgtk-3-0, libwebkit2gtk-4.1-0, python3-gi, python3-gi-cairo, gir1.2-gtk-3.0, gir1.2-webkit2-4.1
         Description: Zertan web server for browser-based study and exam sessions.
         """
     )
@@ -310,6 +310,16 @@ def linux_launcher_script():
     return textwrap.dedent(
         f"""\
         #!/bin/sh
+        export WEBKIT_DMABUF_RENDERER_DISABLE_GBM="${{WEBKIT_DMABUF_RENDERER_DISABLE_GBM:-1}}"
+
+        if [ -d /usr/lib/python3/dist-packages ]; then
+          if [ -n "$PYTHONPATH" ]; then
+            export PYTHONPATH="/usr/lib/python3/dist-packages:$PYTHONPATH"
+          else
+            export PYTHONPATH="/usr/lib/python3/dist-packages"
+          fi
+        fi
+
         exec "/opt/{APP_NAME}/{APP_NAME}" "$@"
         """
     )

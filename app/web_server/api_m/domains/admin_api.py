@@ -34,10 +34,10 @@ class AdminAPI(BaseAPI):
         )
 
     def list_users(self):
-        _, error = self.auth_user(request, min_role="administrator")
+        actor_user, error = self.auth_user(request, min_role="administrator")
         if error:
             return error
-        return self.ok({"users": self.db.users.all()})
+        return self.ok({"users": [self._serialize_admin_user(user, actor_user) for user in self.db.users.all()]})
 
     def create_user(self):
         _, error = self.auth_user(request, min_role="administrator")
@@ -81,14 +81,36 @@ class AdminAPI(BaseAPI):
         return self.ok({"user": self.user_manager.public_user(updated)})
 
     def delete_user(self, user_id):
-        _, error = self.auth_user(request, min_role="administrator")
+        actor_user, error = self.auth_user(request, min_role="administrator")
         if error:
             return error
         existing = self.db.users.get_by_id(user_id)
         if not existing:
             return self.error("User not found.", 404)
-        self.db.users.delete(user_id)
+        try:
+            self.user_manager.delete_user(actor_user, user_id)
+        except PermissionError:
+            return self.error("Forbidden", 403)
+        except ValueError as exc:
+            return self.error(str(exc), 400)
         return self.ok({"status": "deleted"})
+
+    def _serialize_admin_user(self, user, actor_user):
+        delete_block_reason = self._delete_block_reason(actor_user, user)
+        return {
+            **user,
+            "can_delete": delete_block_reason is None,
+            "delete_block_reason": delete_block_reason or "",
+        }
+
+    def _delete_block_reason(self, actor_user, target_user):
+        if not self.user_manager.user_has_role(actor_user, "administrator"):
+            return "Only administrators can delete users."
+        if int(actor_user["id"]) == int(target_user["id"]):
+            return "Administrators cannot delete their own user."
+        if self.user_manager.is_protected_user(target_user):
+            return "The protected admin user cannot be deleted."
+        return None
 
     def list_groups(self):
         _, error = self.auth_user(request, min_role="administrator")

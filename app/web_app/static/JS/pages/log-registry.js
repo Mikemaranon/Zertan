@@ -1,4 +1,5 @@
 import { escapeHtml, request } from "../core/api.js";
+import { confirmAction } from "../components/confirm-modal.js";
 
 export async function initLogRegistryPage() {
     const nodes = {
@@ -34,7 +35,13 @@ export async function initLogRegistryPage() {
         if (!href) {
             return;
         }
-        if (!window.confirm("Delete the logs for the current scope? This cannot be undone.")) {
+        const confirmed = await confirmAction({
+            title: "Delete logs",
+            message: "Delete the logs for the current scope? This cannot be undone.",
+            confirmLabel: "Delete logs",
+            eyebrow: "Log registry",
+        });
+        if (!confirmed) {
             return;
         }
         await request(href, { method: "DELETE" });
@@ -80,7 +87,13 @@ export async function initLogRegistryDetailPage(context) {
         window.location.href = `/api/log-registry/export?scope=exam&exam_id=${examId}`;
     });
     nodes.deleteButton.addEventListener("click", async () => {
-        if (!window.confirm("Delete all logs for this exam? This cannot be undone.")) {
+        const confirmed = await confirmAction({
+            title: "Delete exam logs",
+            message: "Delete all logs for this exam? This cannot be undone.",
+            confirmLabel: "Delete logs",
+            eyebrow: "Log registry",
+        });
+        if (!confirmed) {
             return;
         }
         await request(`/api/log-registry?scope=exam&exam_id=${examId}`, { method: "DELETE" });

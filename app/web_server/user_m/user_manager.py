@@ -19,6 +19,7 @@ class UserManager:
 
     def __init__(self, secret_key=None, db_manager=None, runtime_config=None):
         config = dict(runtime_config or get_runtime_config())
+        self.runtime_config = config
         self.db = db_manager or DBManager()
         self.secret_key = secret_key or config["secret_key"]
         self.jwt_lifetime_hours = config["jwt_lifetime_hours"]
@@ -126,6 +127,35 @@ class UserManager:
         self.db.users.update_avatar(user_id, avatar_path)
         return self.db.users.get_by_id(user_id)
 
+    def is_protected_user(self, user):
+        return bool(user and user.get("is_protected"))
+
+    def can_delete_user(self, actor_user, target_user):
+        if not actor_user or not target_user:
+            return False
+        if not self.user_has_role(actor_user, "administrator"):
+            return False
+        if int(actor_user["id"]) == int(target_user["id"]):
+            return False
+        if self.is_protected_user(target_user):
+            return False
+        return True
+
+    def delete_user(self, actor_user, user_id):
+        target_user = self.db.users.get_by_id(user_id)
+        if not target_user:
+            raise ValueError("User not found.")
+        if not self.user_has_role(actor_user, "administrator"):
+            raise PermissionError("Forbidden")
+        if int(actor_user["id"]) == int(target_user["id"]):
+            raise ValueError("Administrators cannot delete their own user.")
+        if self.is_protected_user(target_user):
+            raise ValueError("The protected admin user cannot be deleted.")
+
+        self.db.sessions.delete_for_user(target_user["id"])
+        self.db.users.delete(target_user["id"])
+        return target_user
+
     def login(self, login_name, password):
         user = self.authenticate(login_name, password)
         if not user:
@@ -196,6 +226,7 @@ class UserManager:
             "display_name": user["display_name"],
             "role": self.normalize_role(user["role"]),
             "status": user["status"],
+            "is_protected": bool(user.get("is_protected")),
             "avatar_path": user.get("avatar_path"),
             "created_at": user["created_at"],
             "updated_at": user["updated_at"],

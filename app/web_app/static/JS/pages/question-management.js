@@ -1,4 +1,5 @@
 import { escapeHtml, request } from "../core/api.js";
+import { confirmAction } from "../components/confirm-modal.js";
 import { renderPagination } from "../components/pagination.js";
 
 export async function initQuestionManagementPage(pageContext) {
@@ -45,9 +46,12 @@ export async function initQuestionManagementPage(pageContext) {
     });
 
     async function handleDelete(question) {
-        const confirmed = window.confirm(
-            `Delete question #${question.id}? This permanently removes the question and any attempt answers linked to it.`,
-        );
+        const confirmed = await confirmAction({
+            title: "Delete question",
+            message: `Delete question #${question.id}? This permanently removes the question and any attempt answers linked to it.`,
+            confirmLabel: "Delete question",
+            eyebrow: "Question bank action",
+        });
         if (!confirmed) {
             return;
         }

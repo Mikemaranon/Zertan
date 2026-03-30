@@ -40,3 +40,4 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+server_console_mockup.html
