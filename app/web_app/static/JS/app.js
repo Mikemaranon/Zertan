@@ -1,6 +1,7 @@
 import { getPageContext, isMobileViewport, request } from "./core/api.js";
 import { bindConfirmModal } from "./components/confirm-modal.js";
 import { bindProfileModal } from "./components/profile-modal.js";
+import { syncThemeFromNativeStore } from "./core/theme.js";
 import { initAccessInfoPage } from "./pages/access-info.js";
 import { initAdminPage } from "./pages/admin.js";
 import { initCatalogPage } from "./pages/catalog.js";
@@ -37,6 +38,7 @@ const pageMap = {
 };
 
 document.addEventListener("DOMContentLoaded", async () => {
+    await syncThemeFromNativeStore();
     const page = document.body.dataset.page;
     const context = getPageContext();
 

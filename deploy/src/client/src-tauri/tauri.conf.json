@@ -20,8 +20,6 @@
         "title": "Zertan Client",
         "width": 1120,
         "height": 860,
-        "minWidth": 960,
-        "minHeight": 720,
         "center": true,
         "resizable": true
       }

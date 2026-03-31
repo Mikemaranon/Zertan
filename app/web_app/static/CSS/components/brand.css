@@ -16,7 +16,7 @@
 .brand__divider {
     width: 1px;
     align-self: stretch;
-    background: rgba(102, 118, 138, 0.28);
+    background: var(--profile-brand-divider);
     flex-shrink: 0;
 }
 

@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from deploy.desktop import desktop_launcher
+from deploy.src.server import desktop_launcher
 
 
 class DesktopLauncherTests(unittest.TestCase):
@@ -130,7 +130,7 @@ class DesktopLauncherTests(unittest.TestCase):
             list_detected_ipv4_addresses=lambda: ["192.168.1.24", "10.0.0.15"],
             _select_primary_lan_ip=lambda addresses: addresses[0],
         )
-        with patch("deploy.desktop.server_launcher.build_connection_info_service", return_value=fake_service):
+        with patch("deploy.src.server.server_launcher.build_connection_info_service", return_value=fake_service):
             host = desktop_launcher.detect_primary_lan_host(
                 db_manager=object(),
                 runtime_config={"host": "0.0.0.0", "port": 5050},
@@ -144,7 +144,7 @@ class DesktopLauncherTests(unittest.TestCase):
             list_detected_ipv4_addresses=lambda: [],
             _select_primary_lan_ip=lambda addresses: "",
         )
-        with patch("deploy.desktop.server_launcher.build_connection_info_service", return_value=fake_service):
+        with patch("deploy.src.server.server_launcher.build_connection_info_service", return_value=fake_service):
             host = desktop_launcher.detect_primary_lan_host(
                 db_manager=object(),
                 runtime_config={"host": "0.0.0.0", "port": 5050},

@@ -1,0 +1,36 @@
+        <header class="console-mobile-header">
+            <div class="console-mobile-header__topbar">
+                <section class="brand brand--mobile">
+                    <p class="eyebrow">Zertan server</p>
+                    <h1>Administration console</h1>
+                </section>
+
+                <button
+                    id="nav-toggle"
+                    class="menu-toggle"
+                    type="button"
+                    aria-expanded="false"
+                    aria-controls="nav-menu"
+                    aria-label="Open navigation menu"
+                >
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
+
+            <div id="nav-menu" class="menu-panel" hidden>
+                <div class="menu-panel__content">
+                    <label class="theme-control theme-control--mobile" for="server-console-theme-select-mobile">
+                        <span>Theme</span>
+                        <select
+                            id="server-console-theme-select-mobile"
+                            data-server-console-theme-select
+                            aria-label="Select console theme"
+                        ></select>
+                    </label>
+                    <p class="sidebar-label">Navigate</p>
+                    <nav id="nav-list-mobile" class="nav-list" aria-label="Console sections"></nav>
+                </div>
+            </div>
+        </header>

@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from deploy.client import build_release
+from deploy.src.client import build_release
 
 
 class ClientBuildReleaseTests(unittest.TestCase):
@@ -23,7 +23,8 @@ class ClientBuildReleaseTests(unittest.TestCase):
         self.src_tauri_root = self.client_root / "src-tauri"
         self.build_root = self.client_root / "build"
         self.release_root = self.client_root / "release"
-        self.bundle_root = self.src_tauri_root / "target" / "release" / "bundle"
+        self.target_root = self.src_tauri_root / "target"
+        self.bundle_root = self.target_root / "release" / "bundle"
         self.package_json_path = self.client_root / "package.json"
         self.tauri_config_path = self.src_tauri_root / "tauri.conf.json"
         self.cargo_toml_path = self.src_tauri_root / "Cargo.toml"
@@ -43,6 +44,7 @@ class ClientBuildReleaseTests(unittest.TestCase):
             SRC_TAURI_ROOT=self.src_tauri_root,
             BUILD_ROOT=self.build_root,
             RELEASE_ROOT=self.release_root,
+            TARGET_ROOT=self.target_root,
             PACKAGE_JSON_PATH=self.package_json_path,
             TAURI_CONFIG_PATH=self.tauri_config_path,
             CARGO_TOML_PATH=self.cargo_toml_path,
@@ -137,8 +139,8 @@ class ClientBuildReleaseTests(unittest.TestCase):
     def test_build_tauri_bundle_uses_npm_cmd_on_windows(self):
         commands = []
 
-        def fake_run(command, *, cwd):
-            commands.append((command, cwd))
+        def fake_run(command, *, cwd, env=None):
+            commands.append((command, cwd, env))
 
         with (
             self.patch_paths(),

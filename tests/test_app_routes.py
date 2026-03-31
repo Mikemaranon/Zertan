@@ -164,6 +164,33 @@ class AppRoutesTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"Shared aliases", response.data)
 
+    def test_login_page_bootstraps_theme_from_storage(self):
+        app, _ = self._build_app(user=None)
+
+        with app.test_client() as client:
+            response = client.get("/login")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"zertan.theme", response.data)
+        self.assertIn(b"document.documentElement.dataset.theme", response.data)
+
+    def test_home_page_includes_profile_theme_selector(self):
+        app, _ = self._build_app(
+            user={
+                "id": 9,
+                "display_name": "Candidate",
+                "role": "user",
+                "avatar_path": None,
+            }
+        )
+
+        with app.test_client() as client:
+            response = client.get("/home")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"profile-theme-select", response.data)
+        self.assertIn(b"zertan.theme", response.data)
+
     def test_safe_return_to_accepts_internal_paths_only(self):
         app, routes = self._build_app(
             user={

@@ -1,9 +1,11 @@
 (function () {
     const invoke = window.__TAURI__.core.invoke;
+    const THEMES = new Set(["light", "dark", "graphite", "sage", "north-sea"]);
 
     const state = {
         busyServerId: "",
         servers: [],
+        theme: "light",
     };
 
     const nodes = {
@@ -20,14 +22,50 @@
         name: document.getElementById("server-name"),
         host: document.getElementById("server-host"),
         port: document.getElementById("server-port"),
+        themeSelect: document.getElementById("client-theme-select"),
     };
 
     document.addEventListener("DOMContentLoaded", async () => {
+        bindThemeSelect();
         bindModal();
         bindForm();
         bindListActions();
+        bindThemeRefresh();
+        await loadTheme();
         await loadServers();
     });
+
+    function bindThemeSelect() {
+        if (!nodes.themeSelect) {
+            return;
+        }
+
+        nodes.themeSelect.addEventListener("change", async () => {
+            clearErrors();
+            setStatus("Saving theme...");
+            try {
+                const theme = normalizeTheme(await invoke("set_client_theme", { theme: nodes.themeSelect.value }));
+                applyTheme(theme);
+                setStatus("Theme saved.");
+            } catch (error) {
+                applyTheme(state.theme);
+                showPageError(String(error));
+                clearStatus();
+            }
+        });
+    }
+
+    function bindThemeRefresh() {
+        window.addEventListener("focus", () => {
+            void loadTheme();
+        });
+
+        document.addEventListener("visibilitychange", () => {
+            if (!document.hidden) {
+                void loadTheme();
+            }
+        });
+    }
 
     function bindModal() {
         nodes.openModal.addEventListener("click", openModal);
@@ -119,6 +157,15 @@
         }
     }
 
+    async function loadTheme() {
+        try {
+            const theme = normalizeTheme(await invoke("get_client_theme"));
+            applyTheme(theme);
+        } catch (_error) {
+            applyTheme("light");
+        }
+    }
+
     function renderServers() {
         if (!state.servers.length) {
             nodes.list.innerHTML = `
@@ -192,6 +239,18 @@
 
     function clearStatus() {
         nodes.status.textContent = "";
+    }
+
+    function normalizeTheme(theme) {
+        return THEMES.has(theme) ? theme : "light";
+    }
+
+    function applyTheme(theme) {
+        state.theme = normalizeTheme(theme);
+        document.documentElement.dataset.theme = state.theme;
+        if (nodes.themeSelect) {
+            nodes.themeSelect.value = state.theme;
+        }
     }
 
     function escapeHtml(value) {

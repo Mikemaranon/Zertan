@@ -1,0 +1,22 @@
+.activity-panel-body {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    min-height: 0;
+    overflow: hidden;
+}
+
+.activity-list {
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 4px;
+    overscroll-behavior: contain;
+}
+
+.activity-filters {
+    margin-bottom: 16px;
+}
+
+.activity-filter {
+    padding: 9px 12px;
+    font-weight: 700;
+}

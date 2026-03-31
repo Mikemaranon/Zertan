@@ -156,6 +156,10 @@ cd C:\Users\xxx\Desktop\codes\Zertan
 python deploy\builds\build.py --version x.y.z
 ```
 
+In one command:
+```powershell
+.\.venv\Scripts\python.exe deploy\builds\build.py --version x.y.z
+```
 ---
 
 ## Notes

@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Zertan Server Console</title>
+    <script>
+        (function () {
+            const themes = new Set(["light", "dark", "graphite", "sage", "north-sea"]);
+            const storageKey = "zertan.server_console.theme";
+            let theme = "light";
+
+            try {
+                const storedTheme = window.localStorage.getItem(storageKey);
+                if (themes.has(storedTheme)) {
+                    theme = storedTheme;
+                }
+            } catch (_error) {
+                // Ignore storage errors so the console can still render.
+            }
+
+            document.documentElement.dataset.theme = theme;
+            window.__SERVER_CONSOLE_THEME__ = theme;
+        })();
+    </script>
+    <style>
+__CLIENT_CSS__
+__SERVER_CSS__
+    </style>
+</head>
+<body>
+__SHELL_HTML__
+    <script>
+window.__SERVER_CONSOLE_BOOTSTRAP__ = __BOOTSTRAP__;
+__SCRIPT__
+    </script>
+</body>
+</html>

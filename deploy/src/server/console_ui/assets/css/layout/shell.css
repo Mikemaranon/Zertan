@@ -1,0 +1,73 @@
+.console-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 24;
+    width: var(--server-console-sidebar-width);
+    height: 100vh;
+    padding: 28px 22px;
+    background: var(--server-console-shell-bg);
+    border-right: 1px solid var(--border);
+    overflow: hidden;
+}
+
+.console-sidebar__content {
+    display: grid;
+    gap: 22px;
+    height: 100%;
+    min-height: 0;
+    grid-template-rows: auto auto auto minmax(0, 1fr);
+}
+
+.console-mobile-header {
+    display: none;
+}
+
+.menu-toggle {
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    width: 52px;
+    height: 52px;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: var(--server-console-panel-bg);
+    box-shadow: var(--server-console-shadow-panel);
+    cursor: pointer;
+}
+
+.menu-toggle span {
+    display: block;
+    width: 20px;
+    height: 2px;
+    margin: 0 auto;
+    border-radius: 999px;
+    background: var(--text);
+}
+
+.menu-panel {
+    display: none;
+}
+
+.menu-panel__content {
+    display: grid;
+    gap: 12px;
+}
+
+.theme-control {
+    gap: 10px;
+}
+
+.theme-control span {
+    font-size: 0.82rem;
+}
+
+.theme-control select {
+    min-width: 0;
+}
+
+.theme-control--mobile {
+    margin-bottom: 4px;
+}

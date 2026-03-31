@@ -1,4 +1,5 @@
 import { assetPathToUrl, escapeHtml, focusFieldForDesktop, getCurrentUser, request } from "../core/api.js";
+import { bindThemeSelect, fillThemeSelect, getBootstrapTheme } from "../core/theme.js";
 
 export function bindProfileModal() {
     const modal = document.getElementById("profile-modal");
@@ -27,6 +28,7 @@ export function bindProfileModal() {
     const confirmPasswordInput = document.getElementById("profile-confirm-password");
     const avatarNode = document.getElementById("profile-avatar");
     const currentUserData = document.getElementById("current-user-data");
+    const themeSelect = document.getElementById("profile-theme-select");
 
     let currentUser = getCurrentUser();
     let statsLoaded = false;
@@ -37,6 +39,7 @@ export function bindProfileModal() {
             return;
         }
         isClosing = false;
+        fillThemeSelect(themeSelect, getBootstrapTheme());
         renderUser();
         resetFormState();
         modal.hidden = false;
@@ -282,5 +285,11 @@ export function bindProfileModal() {
         } finally {
             avatarInput.value = "";
         }
+    });
+
+    bindThemeSelect(themeSelect, {
+        onApplied(appliedTheme) {
+            fillThemeSelect(themeSelect, appliedTheme);
+        },
     });
 }

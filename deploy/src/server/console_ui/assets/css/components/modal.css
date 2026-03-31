@@ -1,0 +1,41 @@
+.detail-sections {
+    gap: 18px;
+}
+
+.detail-block {
+    padding: 18px 20px;
+    gap: 12px;
+}
+
+.detail-block pre {
+    margin: 0;
+    padding: 14px;
+    border-radius: var(--radius-small);
+    background: var(--server-console-code-bg);
+    color: var(--server-console-code-text);
+    overflow-x: auto;
+    font-family: "SFMono-Regular", "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    font-size: 0.85rem;
+    line-height: 1.45;
+}
+
+.detail-inline-grid {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.detail-inline {
+    padding: 14px 16px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-small);
+    background: var(--server-console-panel-bg-soft);
+}
+
+.dashboard-modal__body {
+    background: var(--primary-panel-gradient-strong);
+}
+
+.dashboard-modal__hero {
+    gap: 18px;
+}

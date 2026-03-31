@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Zertan Server Console</title>
+    <style>
+__CLIENT_CSS__
+__SERVER_CSS__
+    </style>
+</head>
+<body>
+    <main class="window">
+        <aside class="console-sidebar">
+            <div class="console-sidebar__content">
+                <section class="brand">
+                    <p class="eyebrow">Zertan server</p>
+                    <h1>Administration console</h1>
+                    <p>Desktop-first runtime control surface with real status, API visibility, and quick operational actions.</p>
+                </section>
+
+                <section class="sidebar-card sidebar-card--instance">
+                    <p class="sidebar-label">Current instance</p>
+                    <div class="filter-chips" id="sidebar-badges"></div>
+                </section>
+
+                <nav id="nav-list-desktop" class="nav-list" aria-label="Console sections"></nav>
+            </div>
+        </aside>
+
+        <header class="console-mobile-header">
+            <div class="console-mobile-header__topbar">
+                <section class="brand brand--mobile">
+                    <p class="eyebrow">Zertan server</p>
+                    <h1>Administration console</h1>
+                </section>
+
+                <button
+                    id="nav-toggle"
+                    class="menu-toggle"
+                    type="button"
+                    aria-expanded="false"
+                    aria-controls="nav-menu"
+                    aria-label="Open navigation menu"
+                >
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
+
+            <div id="nav-menu" class="menu-panel" hidden>
+                <div class="menu-panel__content">
+                    <p class="sidebar-label">Navigate</p>
+                    <nav id="nav-list-mobile" class="nav-list" aria-label="Console sections"></nav>
+                </div>
+            </div>
+        </header>
+
+        <section class="console-main">
+            <div id="main-content" class="content-region"></div>
+        </section>
+    </main>
+
+    <div id="floating-panel-root"></div>
+
+    <div id="detail-modal" class="profile-modal" hidden>
+        <div id="detail-modal-backdrop" class="profile-modal__backdrop"></div>
+        <div class="profile-modal__dialog dashboard-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="detail-modal-title">
+            <button id="detail-modal-close" class="profile-modal__close" type="button" aria-label="Close details">Close</button>
+            <div class="dashboard-modal__body">
+                <section class="dashboard-modal__hero">
+                    <div class="dashboard-modal__identity">
+                        <span id="detail-modal-avatar" class="profile-avatar dashboard-modal__avatar" aria-hidden="true">Z</span>
+                        <div>
+                            <p class="eyebrow" id="detail-modal-eyebrow">Details</p>
+                            <h2 id="detail-modal-title">Console detail</h2>
+                            <p id="detail-modal-subtitle" class="muted">Inspect the selected item in detail.</p>
+                        </div>
+                    </div>
+                    <div id="detail-modal-meta-grid" class="dashboard-modal__meta-grid"></div>
+                </section>
+                <section id="detail-modal-sections" class="detail-sections"></section>
+            </div>
+        </div>
+    </div>
+
+    <script>
+window.__SERVER_CONSOLE_BOOTSTRAP__ = __BOOTSTRAP__;
+__SCRIPT__
+    </script>
+</body>
+</html>

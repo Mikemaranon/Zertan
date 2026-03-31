@@ -12,7 +12,7 @@
 
 .button--primary {
     background: var(--primary);
-    color: white;
+    color: var(--text-inverse);
 }
 
 .button--primary:hover {
@@ -26,13 +26,13 @@
 }
 
 .button--danger {
-    background: rgba(199, 90, 90, 0.08);
+    background: var(--danger-soft-bg);
     color: var(--danger);
-    border-color: rgba(199, 90, 90, 0.24);
+    border-color: var(--danger-soft-border);
 }
 
 .button--danger:hover {
-    background: rgba(199, 90, 90, 0.14);
+    background: var(--danger-soft-bg-strong);
 }
 
 .button--small {

@@ -15,21 +15,21 @@
 }
 
 .badge--active {
-    background: rgba(103, 166, 224, 0.14);
+    background: var(--primary-soft-bg);
     color: var(--primary-strong);
 }
 
 .badge--pending {
-    background: rgba(118, 138, 160, 0.14);
-    color: #4e657b;
+    background: var(--badge-pending-bg);
+    color: var(--badge-pending-text);
 }
 
 .badge--in-progress {
-    background: rgba(103, 166, 224, 0.16);
+    background: var(--primary-soft-bg);
     color: var(--primary-strong);
 }
 
 .badge--completed {
-    background: rgba(84, 152, 120, 0.14);
-    color: #3c7a5e;
+    background: var(--success-chip-bg);
+    color: var(--success-soft-text);
 }

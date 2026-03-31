@@ -1,0 +1,119 @@
+:root {
+    color-scheme: light;
+    --server-console-sidebar-width: 272px;
+    --server-console-mobile-header-offset: 88px;
+    --server-console-mobile-content-offset: 108px;
+    --server-console-card-radius: 24px;
+    --server-console-panel-radius: 18px;
+    --server-console-control-radius: 14px;
+    --server-console-chip-radius: 999px;
+    --server-console-shadow-card: var(--shadow-strong);
+    --server-console-shadow-panel: var(--shadow);
+    --server-console-shell-bg: var(--surface-sidebar);
+    --server-console-panel-bg: var(--surface-overlay-strong);
+    --server-console-panel-bg-soft: var(--surface-overlay-soft);
+    --server-console-panel-border: var(--border-strong);
+    --server-console-label-text: var(--sidebar-title);
+    --server-console-menu-shadow: var(--shadow-float);
+    --server-console-code-bg: var(--log-diff-bg);
+    --server-console-code-text: var(--log-diff-text);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    min-height: 100%;
+}
+
+html {
+    font-size: calc(16px * var(--app-font-scale));
+}
+
+body {
+    min-height: 100vh;
+    overflow: hidden;
+    font-family: var(--font);
+    color: var(--text);
+    background:
+        radial-gradient(circle at top left, var(--primary-soft-bg-strong), transparent 34%),
+        linear-gradient(180deg, var(--bg-top) 0%, var(--bg) 100%);
+}
+
+button,
+input {
+    font: inherit;
+}
+
+h1,
+h2,
+h3,
+h4,
+p {
+    margin: 0;
+}
+
+.window {
+    min-height: 100vh;
+    background: transparent;
+}
+
+.console-main {
+    min-width: 0;
+    height: 100vh;
+    margin-left: var(--server-console-sidebar-width);
+    padding: 24px;
+    overflow: hidden;
+}
+
+.content-region {
+    min-width: 0;
+    height: 100%;
+    overflow: hidden;
+}
+
+.brand,
+.content-stack,
+.panel-stack,
+.stats-grid,
+.runtime-list,
+.directory-grid,
+.directory-list,
+.activity-list,
+.detail-sections,
+.detail-block,
+.endpoint-list,
+.feature-list {
+    display: grid;
+    gap: 16px;
+}
+
+.brand {
+    gap: 10px;
+}
+
+.brand--mobile p:last-child {
+    display: none;
+}
+
+.eyebrow {
+    color: var(--primary-strong);
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+}
+
+.brand h1 {
+    font-size: 1.5rem;
+    line-height: 1.12;
+    letter-spacing: -0.03em;
+}
+
+.brand p {
+    color: var(--muted);
+    line-height: 1.5;
+}

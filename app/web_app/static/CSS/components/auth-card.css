@@ -1,9 +1,9 @@
 .auth-card {
     padding: 36px;
     border-radius: 24px;
-    background: rgba(255, 255, 255, 0.94);
-    border: 1px solid rgba(211, 220, 231, 0.9);
-    box-shadow: 0 24px 48px rgba(28, 53, 76, 0.1);
+    background: var(--auth-card-bg);
+    border: 1px solid var(--profile-panel-divider);
+    box-shadow: var(--shadow-strong);
 }
 
 .auth-card h1 {
@@ -13,13 +13,13 @@
 }
 
 .auth-card--secondary {
-    background: rgba(241, 247, 253, 0.95);
+    background: var(--auth-card-secondary-bg);
 }
 
 .auth-brand {
     margin-bottom: 28px;
     padding-bottom: 22px;
-    border-bottom: 1px solid rgba(211, 220, 231, 0.82);
+    border-bottom: 1px solid var(--auth-brand-border);
 }
 
 .auth-brand__signature {

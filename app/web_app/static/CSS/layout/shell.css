@@ -11,7 +11,7 @@
     display: flex;
     flex-direction: column;
     padding: calc(32px * var(--app-density)) calc(24px * var(--app-density));
-    background: #f9fcff;
+    background: var(--surface-sidebar);
     border-right: 1px solid var(--border);
     overflow: hidden;
     z-index: 30;
@@ -52,7 +52,7 @@
     align-items: center;
     gap: 10px;
     margin: 0 0 2px;
-    color: #95a3b4;
+    color: var(--sidebar-title);
     font-size: 0.72rem;
     font-weight: 700;
     letter-spacing: 0.08em;
@@ -63,7 +63,7 @@
     content: "";
     flex: 1 1 auto;
     height: 1px;
-    background: rgba(149, 163, 180, 0.5);
+    background: var(--sidebar-title-line);
 }
 
 .sidebar-nav a {
@@ -113,7 +113,7 @@
 .user-chip__avatar--image {
     display: block;
     object-fit: cover;
-    border: 1px solid rgba(81, 96, 111, 0.14);
+    border: 1px solid var(--border-accent-soft);
 }
 
 .user-chip__meta {

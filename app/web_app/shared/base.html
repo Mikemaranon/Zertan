@@ -4,6 +4,68 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ page_title }} | Zertan</title>
+    <script>
+        (function () {
+            const storageKey = "zertan.theme";
+            const migrationKey = "zertan.theme.version";
+            const updatedAtKey = "zertan.theme.updated_at";
+            const migrationVersion = "2";
+            const themes = new Set(["light", "dark", "graphite", "sage", "north-sea"]);
+            const nativeTheme = typeof window.__ZERTAN_TAURI_THEME === "string" ? window.__ZERTAN_TAURI_THEME : "";
+            const nativeUpdatedAt = typeof window.__ZERTAN_TAURI_THEME_UPDATED_AT === "string"
+                ? window.__ZERTAN_TAURI_THEME_UPDATED_AT
+                : "";
+            let theme = "";
+            let updatedAt = "";
+
+            try {
+                const storedVersion = window.localStorage.getItem(migrationKey);
+                const storedTheme = window.localStorage.getItem(storageKey);
+                const storedUpdatedAt = window.localStorage.getItem(updatedAtKey) || "";
+                const resolvedStoredTheme =
+                    storedVersion !== migrationVersion && storedTheme === "graphite"
+                        ? "dark"
+                        : (themes.has(storedTheme) ? storedTheme : "");
+                const resolvedNativeTheme = themes.has(nativeTheme) ? nativeTheme : "";
+
+                if (resolvedStoredTheme && resolvedNativeTheme) {
+                    if (storedUpdatedAt && nativeUpdatedAt) {
+                        theme = storedUpdatedAt >= nativeUpdatedAt ? resolvedStoredTheme : resolvedNativeTheme;
+                        updatedAt = storedUpdatedAt >= nativeUpdatedAt ? storedUpdatedAt : nativeUpdatedAt;
+                    } else if (storedUpdatedAt) {
+                        theme = resolvedStoredTheme;
+                        updatedAt = storedUpdatedAt;
+                    } else if (nativeUpdatedAt) {
+                        theme = resolvedNativeTheme;
+                        updatedAt = nativeUpdatedAt;
+                    } else {
+                        theme = resolvedNativeTheme;
+                    }
+                } else if (resolvedStoredTheme) {
+                    theme = resolvedStoredTheme;
+                    updatedAt = storedUpdatedAt;
+                } else if (resolvedNativeTheme) {
+                    theme = resolvedNativeTheme;
+                    updatedAt = nativeUpdatedAt;
+                }
+            } catch (_error) {
+                theme = themes.has(nativeTheme) ? nativeTheme : "";
+                updatedAt = nativeUpdatedAt;
+            }
+
+            const resolvedTheme = theme || "light";
+            const resolvedUpdatedAt = updatedAt || new Date().toISOString();
+            document.documentElement.dataset.theme = resolvedTheme;
+
+            try {
+                window.localStorage.setItem(storageKey, resolvedTheme);
+                window.localStorage.setItem(migrationKey, migrationVersion);
+                window.localStorage.setItem(updatedAtKey, resolvedUpdatedAt);
+            } catch (_error) {
+                // Ignore storage failures during first paint.
+            }
+        })();
+    </script>
     <link rel="stylesheet" href="/static/CSS/core/tokens.css?v={{ asset_version }}">
     <link rel="stylesheet" href="/static/CSS/core/reset.css?v={{ asset_version }}">
     <link rel="stylesheet" href="/static/CSS/core/base.css?v={{ asset_version }}">
@@ -162,6 +224,12 @@
                         <div class="profile-summary__meta-section">
                             <span class="muted">Groups</span>
                             <div id="profile-groups" class="profile-summary__groups"></div>
+                        </div>
+                        <div class="profile-summary__meta-section">
+                            <span class="muted">Theme</span>
+                            <div class="profile-theme-control">
+                                <select id="profile-theme-select" aria-label="Select theme"></select>
+                            </div>
                         </div>
                     </div>
                     <div id="profile-avatar-error" class="error-message"></div>

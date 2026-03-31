@@ -131,9 +131,9 @@
     display: grid;
     gap: 8px;
     padding: 16px 18px;
-    border: 1px solid rgba(103, 166, 224, 0.24);
+    border: 1px solid var(--primary-panel-border);
     border-radius: var(--radius-small);
-    background: linear-gradient(180deg, #f7fbff 0%, #eef5fb 100%);
+    background: var(--primary-panel-gradient);
 }
 
 .live-exam-note p {
@@ -153,7 +153,7 @@
     overflow-y: auto;
     overscroll-behavior: contain;
     padding: 32px;
-    background: linear-gradient(180deg, #f8fbfe 0%, #f3f7fb 100%);
+    background: var(--primary-panel-gradient-strong);
 }
 
 .live-exam-builder-summary {
@@ -189,19 +189,19 @@
     padding: 14px 16px;
     border: 1px solid var(--border);
     border-radius: var(--radius-small);
-    background: rgba(237, 243, 249, 0.58);
+    background: var(--surface-muted);
 }
 
 .selection-chip[data-group="group"] .selection-chip__group {
-    color: #2f7fd8;
+    color: var(--selection-chip-tag);
 }
 
 .selection-chip[data-group="user"] .selection-chip__group {
-    color: #5482b4;
+    color: var(--selection-chip-user);
 }
 
 .selection-chip[data-group="excluded-user"] .selection-chip__group {
-    color: #be4d4d;
+    color: var(--selection-chip-excluded);
 }
 
 @media (max-width: 1024px) {

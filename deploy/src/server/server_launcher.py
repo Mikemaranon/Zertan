@@ -1,4 +1,5 @@
 import argparse
+import importlib.util
 import os
 import secrets
 import socket
@@ -49,6 +50,30 @@ def resolve_bundle_root():
 
 def resolve_app_root(project_root=None):
     return Path(project_root or resolve_bundle_root()) / "app"
+
+
+def resolve_console_ui_asset_root(project_root=None):
+    if getattr(sys, "frozen", False):
+        return Path(project_root or resolve_bundle_root()) / "console_ui" / "assets"
+    return Path(__file__).resolve().parent / "console_ui" / "assets"
+
+
+def load_server_console_ui_module():
+    try:
+        from . import server_console_ui
+
+        return server_console_ui
+    except ImportError:
+        try:
+            import server_console_ui
+
+            return server_console_ui
+        except ImportError:
+            module_path = Path(__file__).resolve().with_name("server_console_ui.py")
+            spec = importlib.util.spec_from_file_location("server_console_ui", module_path)
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            return module
 
 
 def prepare_import_paths(project_root=None):
@@ -129,6 +154,7 @@ def create_desktop_app(project_root=None):
 
     from flask import Flask
     from server import Server
+    ApiRequestConsoleLog = load_server_console_ui_module().ApiRequestConsoleLog
 
     app_root = resolve_app_root(project_root)
     app = Flask(
@@ -137,6 +163,8 @@ def create_desktop_app(project_root=None):
         static_folder=str(app_root / "web_app" / "static"),
     )
     backend = Server(app, run_server=False)
+    backend.api_request_console_log = ApiRequestConsoleLog()
+    backend.api_request_console_log.install(app, backend.user_manager)
     return app, backend
 
 
@@ -215,74 +243,54 @@ def run_headless_loop(*, server_thread, display_host, port):
         stop_server(server_thread)
 
 
-def show_server_status_window(*, display_host, port, server_thread):
+def show_server_status_window(*, display_host, port, server_thread, backend):
     try:
         import webview
     except ImportError as exc:
         raise RuntimeError("pywebview is not available for the Zertan Server status window.") from exc
 
-    html = f"""\
-    <!doctype html>
-    <html lang="en">
-      <head>
-        <meta charset="utf-8">
-        <style>
-          :root {{
-            color-scheme: light;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-          }}
-          body {{
-            margin: 0;
-            min-height: 100vh;
-            display: grid;
-            place-items: center;
-            background: #f6f8fb;
-            color: #1f2937;
-          }}
-          main {{
-            width: 100%;
-            box-sizing: border-box;
-            padding: 24px;
-            text-align: center;
-          }}
-          h1 {{
-            margin: 0 0 10px;
-            font-size: 22px;
-            font-weight: 700;
-          }}
-          p {{
-            margin: 0;
-            font-size: 15px;
-            color: #4b5563;
-          }}
-        </style>
-      </head>
-      <body>
-        <main>
-          <h1>Server is up!</h1>
-          <p>Running in {display_host}:{port}</p>
-        </main>
-      </body>
-    </html>
-    """
+    server_console_ui = load_server_console_ui_module()
+    ServerConsoleBridge = server_console_ui.ServerConsoleBridge
+    build_server_console_html = server_console_ui.build_server_console_html
 
     def on_close():
         stop_server(server_thread)
 
+    app_root = resolve_app_root()
+    runtime_config = backend.runtime_config
+    base_url = f"http://{fallback_display_host(runtime_config['host'])}:{port}"
+    bridge = ServerConsoleBridge(
+        backend=backend,
+        api_request_log=backend.api_request_console_log,
+        runtime_config=runtime_config,
+        display_host=display_host,
+        port=port,
+        base_url=base_url,
+        data_dir=os.environ["ZERTAN_DATA_DIR"],
+        server_thread=server_thread,
+        stop_server_callback=lambda: stop_server(server_thread),
+    )
+    html = build_server_console_html(
+        app_root=app_root,
+        initial_snapshot=bridge.get_console_snapshot(),
+        asset_root=resolve_console_ui_asset_root(),
+    )
+
     window = webview.create_window(
         APP_NAME,
         html=html,
-        width=360,
-        height=160,
-        resizable=False,
+        js_api=bridge,
+        width=1420,
+        height=940,
+        resizable=True,
     )
     window.events.closed += on_close
     webview.start()
 
 
-def run_with_gui_fallback(*, display_host, port, server_thread):
+def run_with_gui_fallback(*, display_host, port, server_thread, backend):
     try:
-        show_server_status_window(display_host=display_host, port=port, server_thread=server_thread)
+        show_server_status_window(display_host=display_host, port=port, server_thread=server_thread, backend=backend)
         return
     except Exception as exc:
         print(f"Server status window is unavailable: {exc}")
@@ -315,7 +323,7 @@ def main(argv=None):
         run_headless_loop(server_thread=server_thread, display_host=display_host, port=chosen_port)
         return
 
-    run_with_gui_fallback(display_host=display_host, port=chosen_port, server_thread=server_thread)
+    run_with_gui_fallback(display_host=display_host, port=chosen_port, server_thread=server_thread, backend=backend)
 
 
 if __name__ == "__main__":

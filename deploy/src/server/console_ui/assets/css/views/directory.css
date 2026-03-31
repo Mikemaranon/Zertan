@@ -1,0 +1,23 @@
+.directory-grid {
+    grid-template-columns: minmax(0, 1.3fr) minmax(300px, 0.9fr);
+    gap: 18px;
+    align-items: start;
+    min-height: 0;
+    height: 100%;
+}
+
+.directory-search-card {
+    position: relative;
+    overflow: visible;
+}
+
+.directory-search {
+    display: grid;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.directory-search .helper {
+    color: var(--muted);
+    font-size: 0.9rem;
+}

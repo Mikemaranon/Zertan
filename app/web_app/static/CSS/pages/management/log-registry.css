@@ -23,7 +23,7 @@
     border: 1px solid var(--border-subtle, #d9e2ec);
     border-radius: 18px;
     padding: 1.25rem;
-    background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
+    background: var(--log-card-bg);
     display: grid;
     gap: 0.9rem;
 }
@@ -56,7 +56,7 @@
     border: 1px solid var(--border-subtle, #d9e2ec);
     border-radius: 16px;
     padding: 1rem;
-    background: #f8fbff;
+    background: var(--log-meta-card-bg);
     display: grid;
     gap: 0.35rem;
 }
@@ -65,7 +65,7 @@
     border: 1px solid var(--border-subtle, #d9e2ec);
     border-radius: 18px;
     padding: 1.25rem;
-    background: #ffffff;
+    background: var(--log-entry-bg);
     display: grid;
     gap: 0.9rem;
 }
@@ -87,23 +87,23 @@
     font-size: 0.78rem;
     font-weight: 700;
     letter-spacing: 0.04em;
-    background: #dbeafe;
-    color: #0f4c81;
+    background: var(--log-action-bg);
+    color: var(--log-action-text);
 }
 
 .log-registry-entry__action--create {
-    background: #dff6e7;
-    color: #146c43;
+    background: var(--log-action-create-bg);
+    color: var(--log-action-create-text);
 }
 
 .log-registry-entry__action--delete {
-    background: #fde8e8;
-    color: #b42318;
+    background: var(--log-action-delete-bg);
+    color: var(--log-action-delete-text);
 }
 
 .log-registry-entry__action--update {
-    background: #e8f1fb;
-    color: #175cd3;
+    background: var(--log-action-update-bg);
+    color: var(--log-action-update-text);
 }
 
 .log-registry-entry__footer {
@@ -122,8 +122,8 @@
     margin: 0;
     padding: 1rem;
     border-radius: 16px;
-    background: #0f172a;
-    color: #e2e8f0;
+    background: var(--log-diff-bg);
+    color: var(--log-diff-text);
     overflow: auto;
     font-size: 0.85rem;
     line-height: 1.5;
@@ -140,15 +140,15 @@
 }
 
 .log-diff-line--add {
-    color: #86efac;
+    color: var(--log-diff-add);
 }
 
 .log-diff-line--remove {
-    color: #fca5a5;
+    color: var(--log-diff-remove);
 }
 
 .log-diff-line--context {
-    color: #7dd3fc;
+    color: var(--log-diff-context);
 }
 
 .log-registry-diff-modal__dialog {

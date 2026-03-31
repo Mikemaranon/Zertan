@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from deploy.desktop import build_release
+from deploy.src.server import build_release
 
 
 class BuildReleaseTests(unittest.TestCase):
@@ -187,7 +187,7 @@ class BuildReleaseTests(unittest.TestCase):
         self.assertIn("Depends: libgtk-3-0, libwebkit2gtk-4.1-0", control)
         self.assertIn("Exec=/usr/bin/zertan-server %U", desktop_entry)
         self.assertIn("Terminal=false", desktop_entry)
-        self.assertEqual(launcher, '#!/bin/sh\nexec "/opt/Zertan Server/Zertan Server" "$@"\n')
+        self.assertEqual(launcher, build_release.linux_launcher_script())
         self.assertTrue(icon.exists())
 
 

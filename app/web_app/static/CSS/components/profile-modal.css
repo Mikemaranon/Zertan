@@ -18,7 +18,7 @@ body.modal-open {
 .profile-modal__backdrop {
     position: absolute;
     inset: 0;
-    background: rgba(19, 34, 52, 0.44);
+    background: var(--overlay);
     opacity: 0;
     transition: opacity 0.24s ease;
 }
@@ -30,8 +30,8 @@ body.modal-open {
     max-height: calc(100dvh - 48px);
     border-radius: 28px;
     background: var(--surface);
-    border: 1px solid rgba(198, 211, 225, 0.88);
-    box-shadow: 0 28px 56px rgba(16, 34, 52, 0.2);
+    border: 1px solid var(--border-strong);
+    box-shadow: var(--shadow-modal);
     overflow: hidden;
     opacity: 0;
     transform: translateY(88px);
@@ -75,11 +75,11 @@ body.modal-open {
     padding: 0 14px;
     border-radius: 999px;
     border: 1px solid var(--border);
-    background: rgba(255, 255, 255, 0.9);
+    background: var(--toggle-surface-bg);
     color: var(--text);
     font-weight: 600;
     cursor: pointer;
-    box-shadow: 0 8px 18px rgba(16, 34, 52, 0.08);
+    box-shadow: var(--shadow-chip);
 }
 
 .confirm-modal__dialog {
@@ -131,7 +131,7 @@ body.modal-open {
 .profile-summary {
     display: grid;
     gap: 28px;
-    background: linear-gradient(180deg, #f6fbff 0%, #eef4fa 100%);
+    background: var(--profile-summary-bg);
 }
 
 .profile-summary__header {
@@ -171,12 +171,12 @@ body.modal-open {
     width: 92px;
     height: 92px;
     border-radius: 50%;
-    background: #dfeefe;
+    background: var(--profile-avatar-bg);
     color: var(--primary-strong);
     font-size: 1.65rem;
     font-weight: 700;
     overflow: hidden;
-    border: 1px solid rgba(102, 168, 224, 0.3);
+    border: 1px solid var(--profile-avatar-border);
 }
 
 .profile-avatar__image {
@@ -191,8 +191,8 @@ body.modal-open {
     gap: 8px;
     padding: 18px 20px;
     border-radius: var(--radius-small);
-    border: 1px solid rgba(198, 211, 225, 0.88);
-    background: rgba(255, 255, 255, 0.78);
+    border: 1px solid var(--border-strong);
+    background: var(--surface-overlay-soft);
 }
 
 .profile-summary__stats strong,
@@ -226,22 +226,26 @@ body.modal-open {
 }
 
 .profile-summary__group-chip {
-    border: 1px solid rgba(141, 177, 214, 0.48);
-    background: rgba(225, 237, 248, 0.82);
-    color: #2f5d8f;
+    border: 1px solid var(--profile-group-chip-border);
+    background: var(--profile-group-chip-bg);
+    color: var(--profile-group-chip-text);
     font-weight: 600;
 }
 
 .profile-summary__group-empty {
-    border: 1px dashed rgba(171, 186, 203, 0.72);
-    background: rgba(244, 247, 250, 0.92);
+    border: 1px dashed var(--profile-group-empty-border);
+    background: var(--profile-group-empty-bg);
     color: var(--muted);
 }
 
 .profile-edit-panel {
     display: grid;
     align-content: start;
-    border-left: 1px solid rgba(211, 220, 231, 0.9);
+    border-left: 1px solid var(--profile-panel-divider);
+}
+
+.profile-theme-control {
+    min-width: 0;
 }
 
 .profile-edit-panel[data-mode="placeholder"] {
@@ -284,7 +288,7 @@ body.modal-open {
 .profile-brand-placeholder__divider {
     width: 1px;
     align-self: stretch;
-    background: rgba(102, 118, 138, 0.24);
+    background: var(--profile-brand-divider);
     flex-shrink: 0;
 }
 
@@ -323,7 +327,7 @@ body.modal-open {
 
     #profile-modal .profile-edit-panel {
         border-left: 0;
-        border-top: 1px solid rgba(211, 220, 231, 0.9);
+        border-top: 1px solid var(--profile-panel-divider);
     }
 
     #profile-modal .profile-edit-panel[data-mode="placeholder"] {

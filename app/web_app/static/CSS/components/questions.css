@@ -88,9 +88,9 @@
 
 .drag-bank.is-active {
     padding: calc(12px * var(--app-density));
-    border: 1px dashed rgba(102, 168, 224, 0.55);
+    border: 1px dashed var(--question-drag-bank-border);
     border-radius: var(--radius-small);
-    background: #f5faff;
+    background: var(--question-drag-bank-bg);
 }
 
 .assigned-label {
@@ -115,10 +115,10 @@
     pointer-events: none;
     max-width: min(320px, calc(100vw - 32px));
     padding: calc(14px * var(--app-density)) calc(16px * var(--app-density));
-    border: 1px solid rgba(102, 168, 224, 0.45);
+    border: 1px solid var(--question-drag-ghost-border);
     border-radius: var(--radius-small);
-    background: rgba(255, 255, 255, 0.96);
-    box-shadow: 0 16px 32px rgba(22, 50, 74, 0.18);
+    background: var(--question-drag-ghost-bg);
+    box-shadow: var(--question-drag-ghost-shadow);
     color: var(--text);
 }
 
@@ -133,7 +133,7 @@ body.drag-drop-dragging {
 }
 
 .drop-zone.assigned {
-    background: #eef7ff;
+    background: var(--question-drop-zone-bg);
     align-content: start;
 }
 
@@ -157,8 +157,8 @@ body.drag-drop-dragging {
     width: calc(18px * var(--app-density));
     height: calc(18px * var(--app-density));
     border-radius: 50%;
-    background: rgba(102, 168, 224, 0.88);
-    border: 2px solid white;
+    background: var(--question-hotspot-marker);
+    border: 2px solid var(--text-inverse);
     transform: translate(-50%, -50%);
     pointer-events: none;
 }
@@ -198,13 +198,13 @@ body.drag-drop-dragging {
 }
 
 .feedback-box.success {
-    border-color: rgba(42, 139, 87, 0.4);
-    background: rgba(42, 139, 87, 0.08);
+    border-color: var(--success-soft-border);
+    background: var(--success-soft-bg);
 }
 
 .feedback-box.error {
-    border-color: rgba(199, 90, 90, 0.35);
-    background: rgba(199, 90, 90, 0.08);
+    border-color: var(--danger-feedback-border);
+    background: var(--danger-soft-bg);
 }
 
 @media (max-width: 720px) {

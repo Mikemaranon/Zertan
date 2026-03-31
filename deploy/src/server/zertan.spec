@@ -17,6 +17,7 @@ MACOS_ENTITLEMENTS_PATH = os.environ.get("ZERTAN_MACOS_ENTITLEMENTS_PATH") or No
 project_root = Path(SPECPATH).resolve().parents[2]
 datas = [
     (str(project_root / "app" / "web_app"), "app/web_app"),
+    (str(project_root / "deploy" / "src" / "server" / "console_ui" / "assets"), "console_ui/assets"),
 ]
 hiddenimports = collect_submodules("api_m.domains") + collect_submodules("webview")
 runtime_hooks = []
