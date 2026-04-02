@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from support_m import get_runtime_config
+from support_m.runtime_config import get_runtime_config
 
 from .connection_info_service import ConnectionInfoService
 from .exam_attempt_service import AttemptService, LiveExamService

@@ -2,11 +2,11 @@
 
 from flask import Flask
 
-from api_m import ApiManager
+from api_m.api_manager import ApiManager
 from app_routes import AppRoutes
-from data_m import DBManager
-from services_m import ServiceManager
-from support_m import get_runtime_config
+from data_m.db_manager import DBManager
+from services_m.service_manager import ServiceManager
+from support_m.runtime_config import get_runtime_config
 from user_m import UserManager
 
 

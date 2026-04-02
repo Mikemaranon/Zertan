@@ -1,85 +1,123 @@
 # Tests
 
-This directory contains two kinds of files:
+This directory is organized by domain so API, exam, system, infrastructure, and packaging responsibilities do not live in one flat list of files.
 
-- automated tests that are safe to run repeatedly
-- manual data-generation utilities used to seed mock content for UI and workflow validation
+## Structure
 
-Only files named `test_*.py` are part of the normal automated test suite.
+- `tests/users/`
+  Covers authentication, user management, admin user flows, and shared auth helpers.
+- `tests/exams/`
+  Covers exam execution, question logic, packages, statistics, live exams, and log registry behavior.
+- `tests/system/`
+  Covers route protection, connection info, runtime config parsing, and stored-path helpers.
+- `tests/infrastructure/`
+  Covers API bootstrap, database runtime behavior, DB manager wiring, and lifecycle checks.
+- `tests/packaging/`
+  Covers desktop/build/release helpers and console UI generation.
+- `tests/manual/`
+  Contains manual data-generation utilities. These are not part of the automated suite.
+- `tests/_support/`
+  Shared helpers for domain runners.
+- `tests/all_tests.py`
+  Master runner that executes every domain in order.
 
-## Automated tests
+## Domain runners
 
-### `test_attempt_service.py`
+Each automated domain has its own `domain.py` file. That module exposes:
 
-Verifies the attempt payload pagination logic for formal exams, including page slicing and out-of-range page clamping.
+- one function per test file in the domain
+- one function to run the whole domain
 
-### `test_live_exam_service.py`
+Examples:
 
-Verifies live exam assignment behavior, especially how users are resolved from direct selections, groups, and exclusions.
+```bash
+PYTHONPATH=app/web_server .venv/bin/python -m tests.users.domain
+PYTHONPATH=app/web_server .venv/bin/python -m tests.exams.domain
+PYTHONPATH=app/web_server .venv/bin/python -m tests.system.domain
+```
 
-### `test_package_service.py`
+## Master runner
 
-Verifies exam package validation rules, including required package structure and tolerance for irrelevant extra files.
+To execute all domains in sequence:
 
-### `test_question_logic.py`
+```bash
+PYTHONPATH=app/web_server .venv/bin/python -m tests.all_tests
+```
 
-Verifies question normalization and evaluation behavior across supported question types, including answer visibility rules.
+## Discovery mode
 
-### `test_question_payload_parser.py`
+The classic unittest discovery flow still works:
 
-Verifies question payload parsing and asset upload handling, including multipart uploads and hot spot image validation.
+```bash
+PYTHONPATH=app/web_server .venv/bin/python -m unittest discover -s tests
+```
 
-### `test_user_manager.py`
+## Automated coverage map
 
-Verifies authentication, role hierarchy, session lifecycle, and profile update validation in the user manager.
+### `tests/users/`
 
-### `test_app_routes.py`
+- `test_admin_api.py`
+- `test_auth_user_api.py`
+- `test_base_api.py`
+- `test_user_manager.py`
 
-Verifies protected page routing behavior, including login redirects, feature gating, role gating, and safe return path handling.
+### `tests/exams/`
 
-### `test_api_manager.py`
+- `test_attempt_service.py`
+- `test_attempts_api.py`
+- `test_exam_scope_rules.py`
+- `test_exams_api.py`
+- `test_global_exam_permissions.py`
+- `test_live_exam_service.py`
+- `test_live_exams_api.py`
+- `test_log_registry.py`
+- `test_log_registry_service.py`
+- `test_package_service.py`
+- `test_question_logic.py`
+- `test_question_payload_parser.py`
+- `test_questions_api.py`
+- `test_statistics_api.py`
+- `test_system_and_import_export_api.py`
 
-Verifies API bootstrap behavior, including domain discovery and registration of core and domain routes.
+### `tests/system/`
 
-### `test_infrastructure_lifecycle.py`
+- `test_app_routes.py`
+- `test_connection_info_service.py`
+- `test_runtime_config.py`
+- `test_storage_paths.py`
 
-Verifies the infrastructure lifecycle wiring after the singleton removal, including explicit instance creation and shared database usage for logging.
+### `tests/infrastructure/`
 
-### `test_database_runtime.py`
+- `test_api_manager.py`
+- `test_database_runtime.py`
+- `test_db_manager.py`
+- `test_infrastructure_lifecycle.py`
 
-Verifies first-start bootstrap rules, confirms critical SQLite indexes exist, and checks that question retrieval now uses batched repository queries instead of per-question lookups.
+### `tests/packaging/`
 
-## Manual test data utilities
+- `test_build_release.py`
+- `test_client_build_release.py`
+- `test_desktop_launcher.py`
+- `test_server_console_ui.py`
 
-### `generate_synthetic_exam.py`
+## Manual utilities
+
+### `tests/manual/generate_synthetic_exam.py`
 
 Creates a synthetic exam bank directly in the SQLite database for manual UI testing. It is intended for pagination, filtering, study mode, and exam mode validation with large question sets.
 
-Default behavior:
+Example:
 
-- creates exam code `ZT-400`
-- creates 400 questions total
-- creates 100 questions of each supported type:
-  `single_select`, `multiple_choice`, `hot_spot`, `drag_drop`
+```bash
+.venv/bin/python tests/manual/generate_synthetic_exam.py --code ZT-400 --count-per-type 100
+```
+
+### `tests/manual/seed_mock_global_stats.py`
+
+Seeds mock users, groups, and submitted attempts for manual dashboard and platform statistics validation.
 
 Example:
 
 ```bash
-.venv/bin/python tests/generate_synthetic_exam.py --code ZT-400 --count-per-type 100
-```
-
-If the exam code already exists:
-
-```bash
-.venv/bin/python tests/generate_synthetic_exam.py --code ZT-400 --count-per-type 100 --replace
-```
-
-### `seed_mock_global_stats.py`
-
-Seeds mock users, groups, and submitted attempts for manual dashboard and platform statistics validation. It is intended for chart-heavy admin and analytics views rather than unit testing.
-
-Example:
-
-```bash
-.venv/bin/python tests/seed_mock_global_stats.py
+.venv/bin/python tests/manual/seed_mock_global_stats.py
 ```

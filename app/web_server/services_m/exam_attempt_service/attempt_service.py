@@ -1,4 +1,5 @@
 import random
+from contextlib import nullcontext
 
 from ..question_logic_service import QuestionLogicService
 from .constants import QUESTIONS_PER_PAGE
@@ -31,23 +32,24 @@ class AttemptService:
             random.shuffle(question_ids)
 
         selected_ids = question_ids[:requested_count]
-        attempt_id = self.db.attempts.create(
-            exam_id=exam_id,
-            user_id=user_id,
-            criteria=criteria,
-            question_count=requested_count,
-            random_order=random_order,
-            time_limit_minutes=criteria.get("time_limit_minutes"),
-        )
-        snapshots = []
-        for full_question in self.db.questions.get_many(selected_ids, include_answers=True):
-            snapshots.append(
-                {
-                    "question_id": full_question["id"],
-                    "snapshot": self.question_logic.build_public_question(full_question, include_solution=True),
-                }
+        with self._transaction():
+            attempt_id = self.db.attempts.create(
+                exam_id=exam_id,
+                user_id=user_id,
+                criteria=criteria,
+                question_count=requested_count,
+                random_order=random_order,
+                time_limit_minutes=criteria.get("time_limit_minutes"),
             )
-        self.db.attempts.add_questions(attempt_id, snapshots)
+            snapshots = []
+            for full_question in self.db.questions.get_many(selected_ids, include_answers=True):
+                snapshots.append(
+                    {
+                        "question_id": full_question["id"],
+                        "snapshot": self.question_logic.build_public_question(full_question, include_solution=True),
+                    }
+                )
+            self.db.attempts.add_questions(attempt_id, snapshots)
         return attempt_id
 
     def get_attempt_payload(self, attempt_id, page_number=None):
@@ -110,45 +112,47 @@ class AttemptService:
         stored_questions = {
             item["attempt_question_id"]: item for item in self.db.attempts.get_attempt_questions(attempt_id)
         }
-        for answer in answers:
-            attempt_question_id = int(answer["attempt_question_id"])
-            question = stored_questions.get(attempt_question_id)
-            if not question:
-                continue
-            response = answer.get("response")
-            omitted = response in (None, {}, [])
-            self.db.attempts.save_response(
-                attempt_question_id=attempt_question_id,
-                attempt_id=attempt_id,
-                question_id=question["question_id"],
-                response=response,
-                omitted=omitted,
-            )
+        with self._transaction():
+            for answer in answers:
+                attempt_question_id = int(answer["attempt_question_id"])
+                question = stored_questions.get(attempt_question_id)
+                if not question:
+                    continue
+                response = answer.get("response")
+                omitted = response in (None, {}, [])
+                self.db.attempts.save_response(
+                    attempt_question_id=attempt_question_id,
+                    attempt_id=attempt_id,
+                    question_id=question["question_id"],
+                    response=response,
+                    omitted=omitted,
+                )
 
     def submit_attempt(self, attempt_id):
         questions = self.db.attempts.get_attempt_questions(attempt_id)
-        correct_count = 0
-        incorrect_count = 0
-        omitted_count = 0
+        with self._transaction():
+            correct_count = 0
+            incorrect_count = 0
+            omitted_count = 0
 
-        for item in questions:
-            evaluation = self.question_logic.evaluate_question_response(item["snapshot"], item["response"])
-            self.db.attempts.finalize_answer(
-                attempt_question_id=item["attempt_question_id"],
-                is_correct=evaluation["is_correct"],
-                score=evaluation["score"],
-                omitted=evaluation["omitted"],
-            )
-            if evaluation["omitted"]:
-                omitted_count += 1
-            elif evaluation["is_correct"]:
-                correct_count += 1
-            else:
-                incorrect_count += 1
+            for item in questions:
+                evaluation = self.question_logic.evaluate_question_response(item["snapshot"], item["response"])
+                self.db.attempts.finalize_answer(
+                    attempt_question_id=item["attempt_question_id"],
+                    is_correct=evaluation["is_correct"],
+                    score=evaluation["score"],
+                    omitted=evaluation["omitted"],
+                )
+                if evaluation["omitted"]:
+                    omitted_count += 1
+                elif evaluation["is_correct"]:
+                    correct_count += 1
+                else:
+                    incorrect_count += 1
 
-        total = len(questions) or 1
-        score_percent = round((correct_count / total) * 100, 2)
-        self.db.attempts.mark_submitted(attempt_id, correct_count, incorrect_count, omitted_count, score_percent)
+            total = len(questions) or 1
+            score_percent = round((correct_count / total) * 100, 2)
+            self.db.attempts.mark_submitted(attempt_id, correct_count, incorrect_count, omitted_count, score_percent)
         return self.get_result_payload(attempt_id)
 
     def get_result_payload(self, attempt_id):
@@ -172,3 +176,9 @@ class AttemptService:
             "attempt": attempt,
             "questions": detailed,
         }
+
+    def _transaction(self):
+        transaction = getattr(self.db, "transaction", None)
+        if callable(transaction):
+            return transaction()
+        return nullcontext()

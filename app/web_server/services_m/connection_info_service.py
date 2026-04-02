@@ -4,7 +4,7 @@ import socket
 import urllib.error
 import urllib.request
 
-from support_m import get_runtime_config
+from support_m.runtime_config import get_runtime_config
 
 
 class ConnectionInfoService:

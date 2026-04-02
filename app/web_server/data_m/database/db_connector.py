@@ -2,7 +2,7 @@
 
 import sqlite3
 
-from support_m import get_runtime_config
+from support_m.runtime_config import get_runtime_config
 
 
 class DBConnector:

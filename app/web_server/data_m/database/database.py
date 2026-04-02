@@ -2,13 +2,14 @@
 
 from contextlib import contextmanager
 from pathlib import Path
+from threading import local
 
 try:
     import fcntl
 except ImportError:  # pragma: no cover - Windows fallback
     fcntl = None
 
-from support_m import get_runtime_config
+from support_m.runtime_config import get_runtime_config
 
 from ..utils.integrity import DatabaseIntegrityManager
 from ..utils.migration import DatabaseMigrationManager
@@ -21,6 +22,7 @@ class Database:
     def __init__(self, *, connector=None, runtime_config=None):
         self.runtime_config = dict(runtime_config or get_runtime_config())
         self.connector = connector or DBConnector(db_path=self.runtime_config["db_path"])
+        self._transaction_state = local()
         self.project_root = self.runtime_config["app_root"]
         self.upload_root = self.runtime_config["media_root"]
         self.init_lock_path = self._build_init_lock_path(self.runtime_config["db_path"])
@@ -57,71 +59,116 @@ class Database:
                 if fcntl is not None:
                     fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
 
-    def execute(self, query, params=(), *, fetchone=False, fetchall=False):
-        conn = self.connector.connect()
-        cursor = conn.cursor()
+    def _get_transaction_connection(self):
+        return getattr(self._transaction_state, "connection", None)
 
+    def _get_transaction_depth(self):
+        return getattr(self._transaction_state, "depth", 0)
+
+    @contextmanager
+    def _connection_context(self):
+        transaction_connection = self._get_transaction_connection()
+        if transaction_connection is not None:
+            yield transaction_connection, False
+            return
+
+        connection = self.connector.connect()
         try:
-            cursor.execute(query, params)
-            conn.commit()
-
-            op = query.strip().split()[0].upper()
-            if fetchone:
-                data = cursor.fetchone()
-            elif fetchall:
-                data = cursor.fetchall()
-            else:
-                data = None
-            return op, data
-        except Exception as exc:
-            conn.rollback()
-            raise exc
+            yield connection, True
         finally:
-            cursor.close()
-            self.connector.close(conn)
+            self.connector.close(connection)
+
+    @contextmanager
+    def transaction(self):
+        transaction_connection = self._get_transaction_connection()
+        if transaction_connection is not None:
+            self._transaction_state.depth = self._get_transaction_depth() + 1
+            try:
+                yield transaction_connection
+            finally:
+                self._transaction_state.depth -= 1
+            return
+
+        connection = self.connector.connect()
+        self._transaction_state.connection = connection
+        self._transaction_state.depth = 1
+        try:
+            yield connection
+        except Exception:
+            connection.rollback()
+            raise
+        else:
+            connection.commit()
+        finally:
+            self._transaction_state.connection = None
+            self._transaction_state.depth = 0
+            self.connector.close(connection)
+
+    def execute(self, query, params=(), *, fetchone=False, fetchall=False):
+        with self._connection_context() as (connection, owns_connection):
+            cursor = connection.cursor()
+            try:
+                cursor.execute(query, params)
+                if owns_connection:
+                    connection.commit()
+
+                op = query.strip().split()[0].upper()
+                if fetchone:
+                    data = cursor.fetchone()
+                elif fetchall:
+                    data = cursor.fetchall()
+                else:
+                    data = None
+                return op, data
+            except Exception as exc:
+                if owns_connection:
+                    connection.rollback()
+                raise exc
+            finally:
+                cursor.close()
 
     def execute_insert(self, query, params=()):
-        conn = self.connector.connect()
-        cursor = conn.cursor()
-
-        try:
-            cursor.execute(query, params)
-            conn.commit()
-            return cursor.lastrowid
-        except Exception as exc:
-            conn.rollback()
-            raise exc
-        finally:
-            cursor.close()
-            self.connector.close(conn)
+        with self._connection_context() as (connection, owns_connection):
+            cursor = connection.cursor()
+            try:
+                cursor.execute(query, params)
+                if owns_connection:
+                    connection.commit()
+                return cursor.lastrowid
+            except Exception as exc:
+                if owns_connection:
+                    connection.rollback()
+                raise exc
+            finally:
+                cursor.close()
 
     def executemany(self, query, seq_of_params):
-        conn = self.connector.connect()
-        cursor = conn.cursor()
-
-        try:
-            cursor.executemany(query, seq_of_params)
-            conn.commit()
-        except Exception as exc:
-            conn.rollback()
-            raise exc
-        finally:
-            cursor.close()
-            self.connector.close(conn)
+        with self._connection_context() as (connection, owns_connection):
+            cursor = connection.cursor()
+            try:
+                cursor.executemany(query, seq_of_params)
+                if owns_connection:
+                    connection.commit()
+            except Exception as exc:
+                if owns_connection:
+                    connection.rollback()
+                raise exc
+            finally:
+                cursor.close()
 
     def execute_script(self, script):
-        conn = self.connector.connect()
-        cursor = conn.cursor()
-
-        try:
-            cursor.executescript(script)
-            conn.commit()
-        except Exception as exc:
-            conn.rollback()
-            raise exc
-        finally:
-            cursor.close()
-            self.connector.close(conn)
+        with self._connection_context() as (connection, owns_connection):
+            cursor = connection.cursor()
+            try:
+                cursor.executescript(script)
+                if owns_connection:
+                    connection.commit()
+            except Exception as exc:
+                if owns_connection:
+                    connection.rollback()
+                raise exc
+            finally:
+                cursor.close()
 
     def _init_db(self):
         from ..db_methods.t_questions import QuestionsTable

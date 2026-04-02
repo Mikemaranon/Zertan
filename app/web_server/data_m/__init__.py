@@ -1,8 +1,13 @@
 # data_m/__init__.py
 
-# Export core components
-from .db_manager import DBManager
-
 __all__ = [
-    "DBManager"
+    "DBManager",
 ]
+
+
+def __getattr__(name):
+    if name == "DBManager":
+        from .db_manager import DBManager
+
+        return DBManager
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

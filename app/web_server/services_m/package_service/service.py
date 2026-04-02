@@ -2,10 +2,11 @@ import json
 import shutil
 import tempfile
 import zipfile
+from contextlib import nullcontext
 from pathlib import Path
 from uuid import uuid4
 
-from support_m import build_media_path, resolve_stored_path
+from support_m.storage_paths import build_media_path, resolve_stored_path
 
 from .archive_validation import PackageArchiveValidator
 from .import_scope import PackageImportScopeResolver
@@ -109,28 +110,29 @@ class PackageService:
             if any(existing["code"].lower() == exam_payload["code"].lower() for existing in existing_exams):
                 raise ValueError("An exam with this code already exists.")
 
-            exam_id = self.db.exams.create(
-                exam_payload,
-                created_by,
-                allowed_group_ids=allowed_group_ids,
-                allow_global=allow_global,
-            )
-
             target_dir = self.upload_root / "imports" / exam_payload["code"].lower()
             shutil.rmtree(target_dir, ignore_errors=True)
             target_dir.mkdir(parents=True, exist_ok=True)
             stored_asset_paths = self._store_package_assets(package_data["asset_files"], target_dir)
 
-            for question_document in package_data["question_documents"]:
-                normalized = dict(question_document["normalized_payload"])
-                normalized["assets"] = self._rewrite_question_assets(question_document["raw_payload"], stored_asset_paths)
-                normalized["source_json_path"] = f"questions/{question_document['file_name']}"
-                question_id = self.db.questions.create(exam_id, normalized)
-                created_questions.append(self.db.questions.get(question_id, include_answers=True))
+            with self._transaction():
+                exam_id = self.db.exams.create(
+                    exam_payload,
+                    created_by,
+                    allowed_group_ids=allowed_group_ids,
+                    allow_global=allow_global,
+                )
 
-            actor = self._build_actor(created_by)
-            exam = self.db.exams.get(exam_id)
-            self._record_import_logs(actor, exam, created_questions)
+                for question_document in package_data["question_documents"]:
+                    normalized = dict(question_document["normalized_payload"])
+                    normalized["assets"] = self._rewrite_question_assets(question_document["raw_payload"], stored_asset_paths)
+                    normalized["source_json_path"] = f"questions/{question_document['file_name']}"
+                    question_id = self.db.questions.create(exam_id, normalized)
+                    created_questions.append(self.db.questions.get(question_id, include_answers=True))
+
+                actor = self._build_actor(created_by)
+                exam = self.db.exams.get(exam_id)
+                self._record_import_logs(actor, exam, created_questions)
 
             return exam_id
         except Exception:
@@ -238,3 +240,9 @@ class PackageService:
                 after_question=question,
                 details="Question imported from package",
             )
+
+    def _transaction(self):
+        transaction = getattr(self.db, "transaction", None)
+        if callable(transaction):
+            return transaction()
+        return nullcontext()

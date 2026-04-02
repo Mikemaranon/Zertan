@@ -6,7 +6,7 @@ from pathlib import Path
 from flask import current_app, request
 
 from api_m.domains.base_api import BaseAPI
-from support_m import resolve_stored_path
+from support_m.storage_paths import resolve_stored_path
 
 
 class ExamsAPI(BaseAPI):

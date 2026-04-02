@@ -48,3 +48,6 @@ class DBManager:
             )
 
         return data
+
+    def transaction(self):
+        return self.db.transaction()

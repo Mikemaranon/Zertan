@@ -1,3 +1,5 @@
+from contextlib import nullcontext
+
 from .attempt_service import AttemptService
 
 
@@ -50,20 +52,21 @@ class LiveExamService:
         if not eligible_users:
             raise ValueError("The selected users and groups do not produce any active assignees.")
 
-        live_exam_id = self.db.live_exams.create(
-            {
-                "exam_id": exam_id,
-                "title": title,
-                "description": description,
-                "instructions": instructions,
-                "question_count": question_count,
-                "time_limit_minutes": time_limit_minutes,
-                "criteria": criteria,
-            },
-            created_by,
-        )
-        self.db.live_exams.set_assignments(live_exam_id, eligible_users)
-        return self.db.live_exams.get(live_exam_id)
+        with self._transaction():
+            live_exam_id = self.db.live_exams.create(
+                {
+                    "exam_id": exam_id,
+                    "title": title,
+                    "description": description,
+                    "instructions": instructions,
+                    "question_count": question_count,
+                    "time_limit_minutes": time_limit_minutes,
+                    "criteria": criteria,
+                },
+                created_by,
+            )
+            self.db.live_exams.set_assignments(live_exam_id, eligible_users)
+            return self.db.live_exams.get(live_exam_id)
 
     def close_live_exam(self, live_exam_id):
         live_exam = self.db.live_exams.get(live_exam_id)
@@ -77,10 +80,11 @@ class LiveExamService:
         live_exam = self.db.live_exams.get(live_exam_id)
         if not live_exam:
             raise ValueError("Live exam not found.")
-        attempt_ids = self.db.live_exams.list_attempt_ids(live_exam_id)
-        for attempt_id in attempt_ids:
-            self.db.attempts.delete(attempt_id)
-        self.db.live_exams.delete(live_exam_id)
+        with self._transaction():
+            attempt_ids = self.db.live_exams.list_attempt_ids(live_exam_id)
+            for attempt_id in attempt_ids:
+                self.db.attempts.delete(attempt_id)
+            self.db.live_exams.delete(live_exam_id)
 
     def start_assignment(self, assignment_id, user):
         assignment = self.db.live_exams.get_assignment(assignment_id)
@@ -108,13 +112,14 @@ class LiveExamService:
                 "live_exam_title": assignment["live_exam_title"],
             }
         )
-        attempt_id = self.attempt_service.create_attempt(
-            assignment["exam_id"],
-            assignment["user_id"],
-            criteria,
-        )
-        self.db.live_exams.attach_attempt(assignment["assignment_id"], attempt_id)
-        return attempt_id
+        with self._transaction():
+            attempt_id = self.attempt_service.create_attempt(
+                assignment["exam_id"],
+                assignment["user_id"],
+                criteria,
+            )
+            self.db.live_exams.attach_attempt(assignment["assignment_id"], attempt_id)
+            return attempt_id
 
     def mark_completed_for_attempt(self, attempt_id):
         self.db.live_exams.mark_assignment_completed_by_attempt(attempt_id)
@@ -209,3 +214,9 @@ class LiveExamService:
             seen.add(item)
             normalized.append(item)
         return normalized
+
+    def _transaction(self):
+        transaction = getattr(self.db, "transaction", None)
+        if callable(transaction):
+            return transaction()
+        return nullcontext()
