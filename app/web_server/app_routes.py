@@ -4,7 +4,7 @@ from pathlib import Path
 
 from flask import abort, current_app, jsonify, redirect, render_template, request, send_from_directory, url_for
 
-from support_m.page_renderer import ProtectedPageRenderer
+from .support_m.page_renderer import ProtectedPageRenderer
 
 
 ROUTE_DEFINITIONS = (

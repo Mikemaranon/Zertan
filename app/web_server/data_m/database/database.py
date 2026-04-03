@@ -9,7 +9,7 @@ try:
 except ImportError:  # pragma: no cover - Windows fallback
     fcntl = None
 
-from support_m.runtime_config import get_runtime_config
+from ...support_m.runtime_config import get_runtime_config
 
 from ..utils.integrity import DatabaseIntegrityManager
 from ..utils.migration import DatabaseMigrationManager

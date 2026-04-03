@@ -4,7 +4,7 @@ from uuid import uuid4
 
 from werkzeug.utils import secure_filename
 
-from support_m.storage_paths import build_media_path
+from ...support_m.storage_paths import build_media_path
 
 
 class QuestionPayloadParser:

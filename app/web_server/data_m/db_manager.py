@@ -21,6 +21,7 @@ from .utils.log_repository import LogRepository
 class DBManager:
     def __init__(self, *, db=None, logger=None, runtime_config=None):
         self.db = db or Database(runtime_config=runtime_config)
+        self.db.manager = self
         self.logger = logger or LogRepository(self.db)
 
         self.users = UsersTable(self.db)

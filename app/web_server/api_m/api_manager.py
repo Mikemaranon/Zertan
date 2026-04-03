@@ -1,6 +1,6 @@
 from flask import current_app, jsonify
 
-from .domain_registry import register_domain_apis
+from .utils.domain_registry import register_domain_apis
 
 
 class ApiManager:

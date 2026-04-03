@@ -6,7 +6,7 @@ from contextlib import nullcontext
 from pathlib import Path
 from uuid import uuid4
 
-from support_m.storage_paths import build_media_path, resolve_stored_path
+from ...support_m.storage_paths import build_media_path, resolve_stored_path
 
 from .archive_validation import PackageArchiveValidator
 from .import_scope import PackageImportScopeResolver
@@ -15,13 +15,43 @@ from .import_scope import PackageImportScopeResolver
 class PackageService:
     MAX_PACKAGE_SIZE = 5 * 1024 * 1024
 
-    def __init__(self, db_manager, project_root, media_root=None, log_registry=None):
+    def __init__(self, db_manager, project_root, media_root=None, log_registry=None, exam_policy=None):
         self.db = db_manager
         self.project_root = Path(project_root)
         self.upload_root = Path(media_root) if media_root else self.project_root / "web_server" / "data_m" / "assets"
         self.archive_validator = PackageArchiveValidator(self.db)
         self.scope_resolver = PackageImportScopeResolver(self.db)
         self.log_registry = log_registry
+        self.exam_policy = exam_policy
+
+    def import_exam_for_user(
+        self,
+        uploaded_file,
+        *,
+        actor_user,
+        explicit_group_ids=None,
+        explicit_scope_mode=None,
+    ):
+        context = self._build_import_context(actor_user)
+        exam_id = self.import_exam(
+            uploaded_file,
+            actor_user["id"],
+            group_ids=explicit_group_ids,
+            scope_mode=explicit_scope_mode,
+            allowed_group_ids=context["allowed_group_ids"],
+            allow_global=context["allow_global"],
+        )
+        return {"exam": self.db.exams.get(exam_id)}
+
+    def export_exam_for_user(self, exam_id, *, actor_user):
+        exam = self._get_manageable_exam(actor_user, exam_id)
+        zip_path, temp_dir = self.export_exam(exam_id)
+        return {
+            "exam": exam,
+            "zip_path": zip_path,
+            "temp_dir": temp_dir,
+            "download_name": zip_path.name,
+        }
 
     def export_exam(self, exam_id):
         exam = self.db.exams.get(exam_id)
@@ -246,3 +276,23 @@ class PackageService:
         if callable(transaction):
             return transaction()
         return nullcontext()
+
+    def _build_import_context(self, actor_user):
+        if not self.exam_policy:
+            raise RuntimeError("PackageService requires exam policy support for user-scoped imports.")
+        return {
+            "allowed_group_ids": self.exam_policy.list_exam_scope_group_ids_for_user(actor_user),
+            "allow_global": self.exam_policy.user_is_administrator(actor_user),
+        }
+
+    def _get_manageable_exam(self, actor_user, exam_id):
+        if not self.exam_policy:
+            raise RuntimeError("PackageService requires exam policy support for user-scoped exports.")
+        exam, failure = self.exam_policy.get_accessible_exam(actor_user, exam_id)
+        if failure == "not_found":
+            raise LookupError("Exam not found.")
+        if failure == "forbidden":
+            raise PermissionError("Forbidden")
+        if not self.exam_policy.user_can_manage_exam(actor_user, exam):
+            raise PermissionError("Forbidden")
+        return exam

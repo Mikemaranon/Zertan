@@ -5,8 +5,8 @@ from pathlib import Path
 
 from flask import current_app, request
 
-from api_m.domains.base_api import BaseAPI
-from support_m.storage_paths import resolve_stored_path
+from ...support_m.storage_paths import resolve_stored_path
+from .base_api import BaseAPI
 
 
 class ExamsAPI(BaseAPI):
@@ -44,9 +44,7 @@ class ExamsAPI(BaseAPI):
         allow_global_scope = self.user_is_administrator(user)
         for exam in self.db.exams.list_all(user_id=user["id"], is_administrator=self.user_is_administrator(user)):
             enriched_exam = dict(exam)
-            enriched_exam["can_manage"] = self.user_manager.user_has_role(user, "examiner") and self.user_can_manage_exam(user, exam)
-            enriched_exam["can_edit_questions"] = self.user_manager.user_has_role(user, "reviewer") and self.user_can_manage_exam(user, exam)
-            enriched_exam["can_export_package"] = self.user_manager.user_has_role(user, "examiner") and self.user_can_manage_exam(user, exam)
+            enriched_exam.update(self.build_exam_permissions(user, exam))
             exams.append(enriched_exam)
         return self.ok(
             {
@@ -94,9 +92,7 @@ class ExamsAPI(BaseAPI):
         if exam_error:
             return exam_error
         exam["builder_meta"] = self.db.exams.list_builder_metadata(exam_id)
-        exam["can_manage"] = self.user_manager.user_has_role(user, "examiner") and self.user_can_manage_exam(user, exam)
-        exam["can_edit_questions"] = self.user_manager.user_has_role(user, "reviewer") and self.user_can_manage_exam(user, exam)
-        exam["can_export_package"] = self.user_manager.user_has_role(user, "examiner") and self.user_can_manage_exam(user, exam)
+        exam.update(self.build_exam_permissions(user, exam))
         return self.ok({"exam": exam})
 
     def update_exam(self, exam_id):
@@ -164,9 +160,7 @@ class ExamsAPI(BaseAPI):
             for question in self.db.questions.list_for_exam(exam_id, include_answers=False)
         ]
         exam["builder_meta"] = self.db.exams.list_builder_metadata(exam_id)
-        exam["can_manage"] = self.user_manager.user_has_role(user, "examiner") and self.user_can_manage_exam(user, exam)
-        exam["can_edit_questions"] = self.user_manager.user_has_role(user, "reviewer") and self.user_can_manage_exam(user, exam)
-        exam["can_export_package"] = self.user_manager.user_has_role(user, "examiner") and self.user_can_manage_exam(user, exam)
+        exam.update(self.build_exam_permissions(user, exam))
         return self.ok({"exam": exam, "questions": questions})
 
     def get_builder_meta(self, exam_id):

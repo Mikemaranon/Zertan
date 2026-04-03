@@ -2,8 +2,8 @@
 
 from flask import current_app, request
 
-from api_m.question_payload_parser import QuestionPayloadParser
-from api_m.domains.base_api import BaseAPI
+from ..utils.question_payload_parser import QuestionPayloadParser
+from .base_api import BaseAPI
 
 
 class QuestionsAPI(BaseAPI):
@@ -52,8 +52,7 @@ class QuestionsAPI(BaseAPI):
             {
                 "exam": {
                     **exam,
-                    "can_edit_questions": self.user_manager.user_has_role(user, "reviewer") and self.user_can_manage_exam(user, exam),
-                    "can_delete_questions": self.user_manager.user_has_role(user, "examiner") and self.user_can_manage_exam(user, exam),
+                    **self.build_question_permissions(user, exam),
                 },
                 "questions": items,
             }

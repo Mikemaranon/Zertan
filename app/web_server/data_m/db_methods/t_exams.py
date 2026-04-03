@@ -1,7 +1,10 @@
 # db_methods/t_exams.py
 
-import json
-from urllib.parse import urlparse
+from ..utils import (
+    normalize_exam_group_ids,
+    normalize_exam_payload,
+    validate_exam_scope_group_ids,
+)
 
 
 class ExamsTable:
@@ -90,7 +93,13 @@ class ExamsTable:
         return self._row_to_exam(row, scope_groups_map.get(exam_id, []))
 
     def create(self, payload, created_by, allowed_group_ids=None, allow_global=True):
-        normalized = self._normalize_payload(payload, allowed_group_ids=allowed_group_ids, allow_global=allow_global)
+        normalized_group_ids = validate_exam_scope_group_ids(
+            self.db,
+            payload.get("group_ids", []),
+            allowed_group_ids=allowed_group_ids,
+            allow_global=allow_global,
+        )
+        normalized = normalize_exam_payload(payload, group_ids=normalized_group_ids)
         exam_id = self.db.execute_insert(
             """
             INSERT INTO exams (code, title, provider, description, official_url, difficulty, status, created_by)
@@ -112,7 +121,13 @@ class ExamsTable:
         return exam_id
 
     def update(self, exam_id, payload, allowed_group_ids=None, allow_global=True):
-        normalized = self._normalize_payload(payload, allowed_group_ids=allowed_group_ids, allow_global=allow_global)
+        normalized_group_ids = validate_exam_scope_group_ids(
+            self.db,
+            payload.get("group_ids", []),
+            allowed_group_ids=allowed_group_ids,
+            allow_global=allow_global,
+        )
+        normalized = normalize_exam_payload(payload, group_ids=normalized_group_ids)
         self.db.execute(
             """
             UPDATE exams
@@ -137,7 +152,7 @@ class ExamsTable:
         self.db.execute("DELETE FROM exams WHERE id = ?", (exam_id,))
 
     def set_group_scope(self, exam_id, group_ids):
-        normalized_group_ids = self._normalize_group_ids(group_ids)
+        normalized_group_ids = normalize_exam_group_ids(group_ids)
         self.db.execute("DELETE FROM exam_group_assignments WHERE exam_id = ?", (exam_id,))
         if not normalized_group_ids:
             return
@@ -254,72 +269,6 @@ class ExamsTable:
         if row:
             return row["id"]
         return self.db.execute_insert(f"INSERT INTO {table} (name) VALUES (?)", (value.strip(),))
-
-    def _normalize_payload(self, payload, allowed_group_ids=None, allow_global=True):
-        official_url = str(payload.get("official_url", "") or "").strip()
-        if official_url:
-            parsed = urlparse(official_url)
-            if parsed.scheme not in {"http", "https"} or not parsed.netloc:
-                raise ValueError("Official exam URL must be a valid http or https address.")
-
-        group_ids = self._validate_scope_group_ids(
-            payload.get("group_ids", []),
-            allowed_group_ids=allowed_group_ids,
-            allow_global=allow_global,
-        )
-
-        return {
-            "code": str(payload["code"]).strip(),
-            "title": str(payload["title"]).strip(),
-            "provider": str(payload["provider"]).strip(),
-            "description": str(payload.get("description", "") or "").strip(),
-            "official_url": official_url,
-            "difficulty": str(payload.get("difficulty", "intermediate") or "intermediate").strip(),
-            "status": str(payload.get("status", "draft") or "draft").strip(),
-            "tags": [tag.strip() for tag in payload.get("tags", []) if str(tag).strip()],
-            "group_ids": group_ids,
-        }
-
-    def _validate_scope_group_ids(self, values, allowed_group_ids=None, allow_global=True):
-        normalized_group_ids = self._normalize_group_ids(values)
-        if not normalized_group_ids:
-            if allow_global:
-                return []
-            raise ValueError("Select at least one group for this exam.")
-
-        _, rows = self.db.execute(
-            f"""
-            SELECT id
-            FROM user_groups
-            WHERE id IN ({",".join("?" for _ in normalized_group_ids)})
-            """,
-            tuple(normalized_group_ids),
-            fetchall=True,
-        )
-        existing_group_ids = {row["id"] for row in rows}
-        if len(existing_group_ids) != len(normalized_group_ids):
-            raise ValueError("One or more selected groups do not exist.")
-
-        if allowed_group_ids is not None:
-            allowed = {group_id for group_id in self._normalize_group_ids(allowed_group_ids)}
-            if any(group_id not in allowed for group_id in normalized_group_ids):
-                raise ValueError("One or more selected groups are outside your allowed scope.")
-
-        return normalized_group_ids
-
-    def _normalize_group_ids(self, values):
-        normalized = []
-        seen = set()
-        for value in values or []:
-            try:
-                group_id = int(value)
-            except (TypeError, ValueError):
-                continue
-            if group_id < 1 or group_id in seen:
-                continue
-            seen.add(group_id)
-            normalized.append(group_id)
-        return normalized
 
     def _scope_groups_by_exam_ids(self, exam_ids):
         if not exam_ids:

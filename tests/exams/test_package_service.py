@@ -21,52 +21,40 @@ from app.web_server.data_m import DBManager
 from app.web_server.services_m.package_service import PackageService
 
 
-class _FakeExamsTable:
-    def _normalize_payload(self, payload):
-        return {
-            "code": str(payload["code"]).strip(),
-            "title": str(payload["title"]).strip(),
-            "provider": str(payload["provider"]).strip(),
-            "description": str(payload.get("description", "") or "").strip(),
-            "official_url": str(payload.get("official_url", "") or "").strip(),
-            "difficulty": str(payload.get("difficulty", "intermediate") or "intermediate").strip(),
-            "status": str(payload.get("status", "draft") or "draft").strip(),
-            "tags": [str(tag).strip() for tag in payload.get("tags", []) if str(tag).strip()],
-        }
-
-    def _normalize_group_ids(self, group_ids):
-        normalized = []
-        for value in group_ids or []:
-            try:
-                normalized_value = int(value)
-            except (TypeError, ValueError):
-                continue
-            if normalized_value > 0:
-                normalized.append(normalized_value)
-        return normalized
-
-
 class _FakeDbManager:
     def __init__(self, group_rows=None):
-        self.exams = _FakeExamsTable()
         self._group_rows = list(group_rows or [])
+        self.groups = _FakeGroupsTable(self._group_rows)
 
-    def execute(self, query, params=(), *, fetchone=False, fetchall=False):
-        lowered = " ".join(query.lower().split())
-        if "from user_groups" in lowered:
-            requested_codes = {str(value).lower() for value in params}
-            rows = [
-                {"id": row["id"], "code": row["code"]}
-                for row in self._group_rows
-                if row["code"].lower() in requested_codes
-            ]
-            return rows if fetchall else (rows[0] if rows else None)
-        raise AssertionError(f"Unexpected query in test double: {query}")
+
+class _FakeGroupsTable:
+    def __init__(self, group_rows):
+        self._group_rows = list(group_rows)
+
+    def list_existing_ids(self, group_ids):
+        requested_ids = {int(value) for value in group_ids}
+        return [row["id"] for row in self._group_rows if row["id"] in requested_ids]
+
+    def list_by_codes(self, group_codes):
+        requested_codes = {str(value).lower() for value in group_codes}
+        return [
+            {"id": row["id"], "code": row["code"]}
+            for row in self._group_rows
+            if row["code"].lower() in requested_codes
+        ]
 
 
 class PackageServiceValidationTests(unittest.TestCase):
     def setUp(self):
-        self.service = PackageService(_FakeDbManager(), ROOT / "app")
+        self.service = PackageService(
+            _FakeDbManager(
+                group_rows=[
+                    {"id": 10, "code": "alpha-team"},
+                    {"id": 11, "code": "beta-team"},
+                ]
+            ),
+            ROOT / "app",
+        )
         self.root_name = "ai102-package"
 
     def test_accepts_valid_package_even_with_extra_files(self):
@@ -165,6 +153,14 @@ class PackageServiceValidationTests(unittest.TestCase):
                     **self._exam_payload(),
                     "group_codes": ["ai-team", "missing-team"],
                 },
+            )
+
+    def test_resolve_import_group_ids_rejects_groups_outside_allowed_scope(self):
+        with self.assertRaisesRegex(ValueError, "outside your allowed scope"):
+            self.service._resolve_import_group_ids(
+                self._exam_payload(),
+                explicit_group_ids=["10", "11"],
+                allowed_group_ids=[10],
             )
 
     def test_validate_package_archive_rejects_missing_question_assets(self):

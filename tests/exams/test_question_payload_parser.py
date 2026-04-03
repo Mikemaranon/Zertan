@@ -14,7 +14,7 @@ WEB_SERVER_ROOT = ROOT / "app" / "web_server"
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(WEB_SERVER_ROOT))
 
-from app.web_server.api_m.question_payload_parser import QuestionPayloadParser
+from app.web_server.api_m.utils.question_payload_parser import QuestionPayloadParser
 
 
 class QuestionPayloadParserTests(unittest.TestCase):

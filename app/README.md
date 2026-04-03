@@ -135,7 +135,7 @@ From the repository root:
 ```bash
 python3 -m venv .venv
 .venv/bin/python -m pip install -r app/requirements.txt
-PYTHONPATH=app/web_server ZERTAN_DEBUG=1 .venv/bin/python app/web_server/main.py
+ZERTAN_DEBUG=1 .venv/bin/python app/web_server/main.py
 ```
 
 Production-style local run on a fresh database:
@@ -143,7 +143,6 @@ Production-style local run on a fresh database:
 ```bash
 SECRET_KEY="$(python3 -c 'import secrets; print(secrets.token_urlsafe(48))')" \
 ZERTAN_BOOTSTRAP_ADMIN_PASSWORD='ChangeThisAdminPassword' \
-PYTHONPATH=app/web_server \
 .venv/bin/python app/web_server/main.py
 ```
 
@@ -158,7 +157,7 @@ gunicorn --chdir app/web_server --bind 0.0.0.0:5050 wsgi:app
 Run all automated tests:
 
 ```bash
-PYTHONPATH=app/web_server .venv/bin/python -m unittest discover -s tests
+.venv/bin/python -m unittest discover -s tests
 ```
 
 Coverage focus today:

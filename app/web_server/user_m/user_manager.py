@@ -5,8 +5,8 @@ import datetime
 import jwt
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from data_m import DBManager
-from support_m import get_runtime_config
+from ..data_m import DBManager
+from ..support_m import get_runtime_config
 
 
 class UserManager:

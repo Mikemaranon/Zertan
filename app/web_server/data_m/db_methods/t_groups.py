@@ -68,6 +68,48 @@ class GroupsTable:
         )
         return [row["group_id"] for row in rows]
 
+    def list_existing_ids(self, group_ids):
+        normalized_group_ids = self._normalize_integer_ids(group_ids)
+        if not normalized_group_ids:
+            return []
+        placeholders = ",".join("?" for _ in normalized_group_ids)
+        _, rows = self.db.execute(
+            f"""
+            SELECT id
+            FROM user_groups
+            WHERE id IN ({placeholders})
+            ORDER BY id
+            """,
+            tuple(normalized_group_ids),
+            fetchall=True,
+        )
+        return [row["id"] for row in rows]
+
+    def list_by_codes(self, group_codes):
+        normalized_codes = self._normalize_group_codes(group_codes)
+        if not normalized_codes:
+            return []
+        placeholders = ",".join("?" for _ in normalized_codes)
+        _, rows = self.db.execute(
+            f"""
+            SELECT id, code, name, status
+            FROM user_groups
+            WHERE lower(code) IN ({placeholders})
+            ORDER BY id
+            """,
+            tuple(code.lower() for code in normalized_codes),
+            fetchall=True,
+        )
+        return [
+            {
+                "id": row["id"],
+                "code": row["code"],
+                "name": row["name"],
+                "status": row["status"],
+            }
+            for row in rows
+        ]
+
     def set_memberships_for_user(self, user_id, group_ids):
         if not self.db.execute("SELECT id FROM users WHERE id = ?", (user_id,), fetchone=True)[1]:
             return []
@@ -157,19 +199,38 @@ class GroupsTable:
         return normalized
 
     def _normalize_group_ids(self, group_ids):
+        normalized = self._normalize_integer_ids(group_ids)
+        if not normalized:
+            return []
+        existing_group_ids = set(self.list_existing_ids(normalized))
+        return [group_id for group_id in normalized if group_id in existing_group_ids]
+
+    def _normalize_integer_ids(self, values):
         normalized = []
         seen = set()
-        for value in group_ids or []:
+        for value in values or []:
             try:
-                group_id = int(value)
+                normalized_id = int(value)
             except (TypeError, ValueError):
                 continue
-            if group_id < 1 or group_id in seen:
+            if normalized_id < 1 or normalized_id in seen:
                 continue
-            if not self.db.execute("SELECT id FROM user_groups WHERE id = ?", (group_id,), fetchone=True)[1]:
+            seen.add(normalized_id)
+            normalized.append(normalized_id)
+        return normalized
+
+    def _normalize_group_codes(self, group_codes):
+        normalized = []
+        seen = set()
+        for value in group_codes or []:
+            code = str(value or "").strip()
+            if not code:
                 continue
-            seen.add(group_id)
-            normalized.append(group_id)
+            lowered = code.lower()
+            if lowered in seen:
+                continue
+            seen.add(lowered)
+            normalized.append(code)
         return normalized
 
     def _members_by_group_ids(self, group_ids):

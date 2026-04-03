@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 from posixpath import normpath
 
+from ..exam_definition_service import normalize_exam_payload
 from ..question_logic_service import normalize_question_payload
 
 
@@ -214,7 +215,7 @@ class PackageArchiveValidator:
 
     def _normalize_exam_payload(self, payload):
         try:
-            normalized = self.db.exams._normalize_payload(payload)
+            normalized = normalize_exam_payload(payload)
         except KeyError as exc:
             field = exc.args[0]
             raise ValueError(f"exam.json is missing the required field '{field}'.") from exc

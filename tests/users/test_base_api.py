@@ -81,14 +81,78 @@ class _FakeDb:
         self.exams = _FakeExams()
 
 
+class _FakeExamPolicy:
+    def __init__(self, db, user_manager):
+        self.db = db
+        self.user_manager = user_manager
+
+    def user_is_administrator(self, user):
+        return self.user_manager.user_has_role(user, "administrator")
+
+    def list_exam_scope_options_for_user(self, user):
+        user_id = None if self.user_is_administrator(user) else user["id"]
+        return self.db.groups.list_scope_options_for_user(user_id)
+
+    def list_exam_scope_group_ids_for_user(self, user):
+        if self.user_is_administrator(user):
+            return [group["id"] for group in self.db.groups.list_scope_options_for_user(None)]
+        return self.db.groups.list_ids_for_user(user["id"])
+
+    def user_can_access_exam(self, user, exam_id):
+        return self.db.exams.user_can_access(
+            exam_id,
+            None if self.user_is_administrator(user) else user["id"],
+            is_administrator=self.user_is_administrator(user),
+        )
+
+    def user_can_manage_exam(self, user, exam):
+        if not exam:
+            return False
+        if self.user_is_administrator(user):
+            return True
+        if not exam.get("group_ids") or not self.user_manager.user_has_role(user, "reviewer"):
+            return False
+        allowed_group_ids = set(self.list_exam_scope_group_ids_for_user(user))
+        return set(exam.get("group_ids", [])).issubset(allowed_group_ids)
+
+    def get_accessible_exam(self, user, exam_id):
+        exam = self.db.exams.get(exam_id)
+        if not exam:
+            return None, "not_found"
+        if not self.user_can_access_exam(user, exam_id):
+            return None, "forbidden"
+        return exam, None
+
+    def build_exam_permissions(self, user, exam):
+        can_manage = self.user_manager.user_has_role(user, "examiner") and self.user_can_manage_exam(user, exam)
+        return {
+            "can_manage": can_manage,
+            "can_edit_questions": self.user_manager.user_has_role(user, "reviewer") and self.user_can_manage_exam(user, exam),
+            "can_export_package": can_manage,
+        }
+
+    def build_question_permissions(self, user, exam):
+        return {
+            "can_edit_questions": self.user_manager.user_has_role(user, "reviewer") and self.user_can_manage_exam(user, exam),
+            "can_delete_questions": self.user_manager.user_has_role(user, "examiner") and self.user_can_manage_exam(user, exam),
+        }
+
+
 class BaseApiTests(unittest.TestCase):
     def setUp(self):
         self.app = Flask(__name__)
         self.db = _FakeDb()
-        self.services = SimpleNamespace()
+        self.user_manager = _FakeUserManager()
+        self.services = SimpleNamespace(exam_policy=_FakeExamPolicy(self.db, self.user_manager))
 
     def test_auth_user_returns_unauthorized_for_missing_user(self):
-        api = BaseAPI(self.app, _FakeUserManager(checked_user=None), self.db, self.services)
+        user_manager = _FakeUserManager(checked_user=None)
+        api = BaseAPI(
+            self.app,
+            user_manager,
+            self.db,
+            SimpleNamespace(exam_policy=_FakeExamPolicy(self.db, user_manager)),
+        )
 
         with self.app.app_context():
             user, error = api.auth_user(SimpleNamespace())
@@ -98,11 +162,12 @@ class BaseApiTests(unittest.TestCase):
         self.assertEqual(error[0].get_json()["error"], "Unauthorized")
 
     def test_auth_user_enforces_minimum_role(self):
+        user_manager = _FakeUserManager(checked_user={"id": 7, "role": "reviewer"})
         api = BaseAPI(
             self.app,
-            _FakeUserManager(checked_user={"id": 7, "role": "reviewer"}),
+            user_manager,
             self.db,
-            self.services,
+            SimpleNamespace(exam_policy=_FakeExamPolicy(self.db, user_manager)),
         )
 
         with self.app.app_context():
@@ -114,7 +179,13 @@ class BaseApiTests(unittest.TestCase):
 
     def test_auth_user_returns_authenticated_user_when_role_is_sufficient(self):
         checked_user = {"id": 9, "role": "administrator"}
-        api = BaseAPI(self.app, _FakeUserManager(checked_user=checked_user), self.db, self.services)
+        user_manager = _FakeUserManager(checked_user=checked_user)
+        api = BaseAPI(
+            self.app,
+            user_manager,
+            self.db,
+            SimpleNamespace(exam_policy=_FakeExamPolicy(self.db, user_manager)),
+        )
 
         with self.app.app_context():
             user, error = api.auth_user(SimpleNamespace(), min_role="examiner")
@@ -123,11 +194,12 @@ class BaseApiTests(unittest.TestCase):
         self.assertIsNone(error)
 
     def test_feature_enabled_and_scope_helpers_respect_admin_status(self):
+        user_manager = _FakeUserManager(checked_user={"id": 7, "role": "user"})
         api = BaseAPI(
             self.app,
-            _FakeUserManager(checked_user={"id": 7, "role": "user"}),
+            user_manager,
             self.db,
-            self.services,
+            SimpleNamespace(exam_policy=_FakeExamPolicy(self.db, user_manager)),
         )
 
         self.assertTrue(api.feature_enabled("global_stats_page"))

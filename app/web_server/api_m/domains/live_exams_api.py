@@ -2,7 +2,7 @@
 
 from flask import request
 
-from api_m.domains.base_api import BaseAPI
+from .base_api import BaseAPI
 
 
 class LiveExamsAPI(BaseAPI):

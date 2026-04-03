@@ -79,14 +79,14 @@ class SystemAndImportExportApiTests(unittest.TestCase):
 
     def test_system_connection_info_and_alias_management(self):
         with patch(
-            "services_m.connection_info_service.ConnectionInfoService.get_connection_info",
+            "app.web_server.services_m.connection_info_service.ConnectionInfoService.get_connection_info",
             return_value={
                 "connection": {"listen_host": "0.0.0.0", "listen_port": 5050},
                 "primary_endpoint": {"url": "http://127.0.0.1:5050"},
                 "aliases": [],
             },
         ), patch(
-            "services_m.connection_info_service.ConnectionInfoService._verify_endpoint",
+            "app.web_server.services_m.connection_info_service.ConnectionInfoService._verify_endpoint",
             return_value={"status": "verified", "message": "Confirmed", "resolved_ips": ["127.0.0.1"]},
         ):
             with self.app.test_client() as client:
@@ -117,7 +117,7 @@ class SystemAndImportExportApiTests(unittest.TestCase):
 
     def test_alias_management_validates_input_duplicates_and_missing_aliases(self):
         with patch(
-            "services_m.connection_info_service.ConnectionInfoService._verify_endpoint",
+            "app.web_server.services_m.connection_info_service.ConnectionInfoService._verify_endpoint",
             return_value={"status": "verified", "message": "Confirmed", "resolved_ips": ["127.0.0.1"]},
         ):
             with self.app.test_client() as client:

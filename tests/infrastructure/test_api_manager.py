@@ -13,7 +13,7 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(WEB_SERVER_ROOT))
 
 from app.web_server.api_m.api_manager import ApiManager
-from app.web_server.api_m.domain_registry import discover_domain_api_classes
+from app.web_server.api_m.utils.domain_registry import discover_domain_api_classes
 
 
 class _FakeUserManager:
@@ -25,7 +25,8 @@ class _FakeDbManager:
 
 
 class _FakeServiceManager(SimpleNamespace):
-    pass
+    def __init__(self):
+        super().__init__(exam_policy=object())
 
 
 class ApiManagerTests(unittest.TestCase):

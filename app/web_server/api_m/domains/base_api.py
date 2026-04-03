@@ -2,7 +2,7 @@
 
 from flask import jsonify
 
-from user_m import UserManager
+from ...user_m import UserManager
 
 
 class BaseAPI:
@@ -11,6 +11,7 @@ class BaseAPI:
         self.user_manager = user_manager
         self.db = db
         self.services = services
+        self.exam_policy = self._require_service("exam_policy")
 
     def ok(self, data, code=200):
         return jsonify(data), code
@@ -31,37 +32,36 @@ class BaseAPI:
         return bool(feature and feature["enabled"])
 
     def user_is_administrator(self, user):
-        return self.user_manager.user_has_role(user, "administrator")
+        return self.exam_policy.user_is_administrator(user)
 
     def list_exam_scope_options_for_user(self, user):
-        return self.db.groups.list_scope_options_for_user(None if self.user_is_administrator(user) else user["id"])
+        return self.exam_policy.list_exam_scope_options_for_user(user)
 
     def list_exam_scope_group_ids_for_user(self, user):
-        if self.user_is_administrator(user):
-            return [group["id"] for group in self.db.groups.list_scope_options_for_user(None)]
-        return self.db.groups.list_ids_for_user(user["id"])
+        return self.exam_policy.list_exam_scope_group_ids_for_user(user)
 
     def user_can_access_exam(self, user, exam_id):
-        return self.db.exams.user_can_access(
-            exam_id,
-            None if self.user_is_administrator(user) else user["id"],
-            is_administrator=self.user_is_administrator(user),
-        )
+        return self.exam_policy.user_can_access_exam(user, exam_id)
 
     def user_can_manage_exam(self, user, exam):
-        if not exam:
-            return False
-        if self.user_is_administrator(user):
-            return True
-        if not exam.get("group_ids") or not self.user_manager.user_has_role(user, "reviewer"):
-            return False
-        allowed_group_ids = set(self.list_exam_scope_group_ids_for_user(user))
-        return set(exam.get("group_ids", [])).issubset(allowed_group_ids)
+        return self.exam_policy.user_can_manage_exam(user, exam)
 
     def get_accessible_exam(self, user, exam_id):
-        exam = self.db.exams.get(exam_id)
-        if not exam:
+        exam, failure = self.exam_policy.get_accessible_exam(user, exam_id)
+        if failure == "not_found":
             return None, self.error("Exam not found.", 404)
-        if not self.user_can_access_exam(user, exam_id):
+        if failure == "forbidden":
             return None, self.error("Forbidden", 403)
         return exam, None
+
+    def build_exam_permissions(self, user, exam):
+        return self.exam_policy.build_exam_permissions(user, exam)
+
+    def build_question_permissions(self, user, exam):
+        return self.exam_policy.build_question_permissions(user, exam)
+
+    def _require_service(self, service_name):
+        service = getattr(self.services, service_name, None)
+        if service is None:
+            raise AttributeError(f"services manager is missing required service '{service_name}'.")
+        return service

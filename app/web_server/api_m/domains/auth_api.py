@@ -6,8 +6,8 @@ from uuid import uuid4
 from flask import current_app, jsonify, make_response, request
 from werkzeug.utils import secure_filename
 
-from api_m.domains.base_api import BaseAPI
-from support_m.storage_paths import build_media_path
+from ...support_m.storage_paths import build_media_path
+from .base_api import BaseAPI
 
 
 class AuthAPI(BaseAPI):
