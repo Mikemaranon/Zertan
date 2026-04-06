@@ -1,5 +1,6 @@
 import sys
 import unittest
+from contextlib import nullcontext
 from pathlib import Path
 
 
@@ -49,6 +50,111 @@ class _FakeDbManager:
         self.attempts = _FakeAttemptsTable()
 
 
+class _SubmittedFakeAttemptsTable(_FakeAttemptsTable):
+    def get_attempt(self, attempt_id):
+        attempt = super().get_attempt(attempt_id)
+        if attempt:
+            attempt["status"] = "submitted"
+        return attempt
+
+
+class _SubmittedFakeDbManager:
+    def __init__(self):
+        self.attempts = _SubmittedFakeAttemptsTable()
+
+
+class _BuilderFakeAttemptsTable:
+    def __init__(self):
+        self.created_payload = None
+        self.stored_snapshots = []
+
+    def create(self, exam_id, user_id, criteria, question_count, random_order=True, time_limit_minutes=None):
+        self.created_payload = {
+            "exam_id": exam_id,
+            "user_id": user_id,
+            "criteria": criteria,
+            "question_count": question_count,
+            "random_order": random_order,
+            "time_limit_minutes": time_limit_minutes,
+        }
+        return 901
+
+    def add_questions(self, attempt_id, question_snapshots):
+        self.stored_snapshots = list(question_snapshots)
+
+
+class _BuilderFakeQuestionsTable:
+    def list_filtered_ids(self, exam_id, filters):
+        if filters.get("difficulty") == "advanced":
+            return [1002]
+        return [1001, 1002, 1003]
+
+    def get_many(self, question_ids, include_answers=True):
+        return [
+            {
+                "id": question_id,
+                "exam_id": 7,
+                "type": "single_select",
+                "title": f"Question {question_id}",
+                "statement": f"Prompt {question_id}",
+                "difficulty": "intermediate",
+                "tags": ["azure"],
+                "topics": ["ai"],
+                "assets": [],
+                "options": [
+                    {"key": "A", "text": "Correct", "is_correct": True},
+                    {"key": "B", "text": "Incorrect", "is_correct": False},
+                ],
+                "config": {},
+            }
+            for question_id in question_ids
+        ]
+
+
+class _BuilderFakeStatisticsTable:
+    def user_exam_error_focus_candidates(self, user_id, exam_id, failure_percentage_threshold=40, limit=None):
+        all_candidates = [
+            {
+                "question_id": 1002,
+                "question_title": "Question 1002",
+                "question_statement": "Prompt 1002",
+                "failure_count": 3,
+                "failure_percentage": 75.0,
+            },
+            {
+                "question_id": 1001,
+                "question_title": "Question 1001",
+                "question_statement": "Prompt 1001",
+                "failure_count": 2,
+                "failure_percentage": 50.0,
+            },
+        ]
+        candidates = [item for item in all_candidates if item["failure_percentage"] >= failure_percentage_threshold]
+        if limit is None:
+            return candidates
+        return candidates[:limit]
+
+
+class _BuilderFakeExamsTable:
+    def list_builder_metadata(self, exam_id):
+        return {
+            "question_types": ["single_select"],
+            "tags": ["azure"],
+            "topics": ["ai"],
+        }
+
+
+class _BuilderFakeDbManager:
+    def __init__(self):
+        self.attempts = _BuilderFakeAttemptsTable()
+        self.questions = _BuilderFakeQuestionsTable()
+        self.statistics = _BuilderFakeStatisticsTable()
+        self.exams = _BuilderFakeExamsTable()
+
+    def transaction(self):
+        return nullcontext()
+
+
 def _build_attempt_question(order):
     return {
         "attempt_question_id": order,
@@ -95,6 +201,75 @@ class AttemptServicePaginationTests(unittest.TestCase):
 
         self.assertEqual(payload["current_page"], 3)
         self.assertEqual([item["question_order"] for item in payload["questions"]], [11, 12])
+
+
+class AttemptServiceSubmissionTests(unittest.TestCase):
+    def test_rejects_resubmitting_a_submitted_attempt(self):
+        service = AttemptService(_SubmittedFakeDbManager())
+
+        with self.assertRaisesRegex(ValueError, "Attempt is already submitted."):
+            service.submit_attempt(55)
+
+
+class AttemptServiceErrorFocusTests(unittest.TestCase):
+    def setUp(self):
+        self.db = _BuilderFakeDbManager()
+        self.service = AttemptService(self.db)
+
+    def test_error_focus_attempt_uses_ranked_personalized_candidates(self):
+        attempt_id = self.service.create_attempt(
+            7,
+            3,
+            {
+                "selection_mode": "error_focus",
+                "question_count": 2,
+                "random_order": False,
+            },
+        )
+
+        self.assertEqual(attempt_id, 901)
+        self.assertEqual(
+            [item["question_id"] for item in self.db.attempts.stored_snapshots],
+            [1002, 1001],
+        )
+        self.assertEqual(self.db.attempts.created_payload["criteria"]["selection_mode"], "error_focus")
+        self.assertEqual(
+            self.db.attempts.created_payload["criteria"]["error_focus"]["failure_percentage_threshold"],
+            40,
+        )
+
+    def test_error_focus_respects_existing_filters(self):
+        self.service.create_attempt(
+            7,
+            3,
+            {
+                "selection_mode": "error_focus",
+                "question_count": 1,
+                "random_order": False,
+                "difficulty": "advanced",
+            },
+        )
+
+        self.assertEqual(
+            [item["question_id"] for item in self.db.attempts.stored_snapshots],
+            [1002],
+        )
+
+    def test_builder_meta_includes_error_focus_preview(self):
+        payload = self.service.build_builder_meta(7, 3)
+
+        self.assertEqual(payload["question_types"], ["single_select"])
+        self.assertTrue(payload["error_focus"]["available"])
+        self.assertEqual(payload["error_focus"]["available_question_count"], 2)
+        self.assertEqual(payload["error_focus"]["failure_percentage_threshold"], 40)
+        self.assertEqual(payload["error_focus"]["preview_questions"][0]["question_id"], 1002)
+
+    def test_error_focus_builder_meta_respects_failure_percentage_threshold(self):
+        payload = self.service.build_builder_meta(7, 3, failure_percentage_threshold=60)
+
+        self.assertEqual(payload["error_focus"]["failure_percentage_threshold"], 60)
+        self.assertEqual(payload["error_focus"]["available_question_count"], 1)
+        self.assertEqual(payload["error_focus"]["preview_questions"][0]["question_id"], 1002)
 
 
 if __name__ == "__main__":

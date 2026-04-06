@@ -1,4 +1,5 @@
 import { escapeHtml, request } from "../core/api.js";
+import { bindAttemptModeModal } from "../components/attempt-mode-modal.js";
 
 export async function initCatalogPage() {
     const container = document.getElementById("catalog-list");
@@ -30,10 +31,41 @@ export async function initCatalogPage() {
             <p class="muted">${exam.question_count} questions</p>
             <div class="button-row">
                 <a class="button button--primary" href="/exams/${exam.id}">Open study mode</a>
-                <a class="button button--secondary" href="/exams/${exam.id}/builder">Build exam</a>
+                <button class="button button--secondary" type="button" data-build-exam data-exam-id="${exam.id}">Build exam</button>
             </div>
         </article>
     `;
         })
         .join("");
+
+    container.querySelectorAll("[data-build-exam]").forEach((button) => {
+        button.addEventListener("click", async () => {
+            const examId = Number(button.getAttribute("data-exam-id"));
+            if (!examId) {
+                return;
+            }
+
+            const originalLabel = button.textContent;
+            button.disabled = true;
+            button.textContent = "Loading...";
+
+            try {
+                const payload = await request(`/api/exams/${examId}/builder-meta`);
+                const modal = bindAttemptModeModal({
+                    examId,
+                    errorFocusMeta: payload.builder_meta?.error_focus,
+                    loadErrorFocusMeta: async (failurePercentageThreshold) => {
+                        const response = await request(
+                            `/api/exams/${examId}/builder-meta?failure_percentage_threshold=${encodeURIComponent(String(failurePercentageThreshold))}`
+                        );
+                        return response.builder_meta?.error_focus || {};
+                    },
+                });
+                modal.open(button);
+            } finally {
+                button.disabled = false;
+                button.textContent = originalLabel;
+            }
+        });
+    });
 }

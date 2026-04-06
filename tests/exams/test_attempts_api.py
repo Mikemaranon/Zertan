@@ -138,6 +138,16 @@ class AttemptsApiTests(unittest.TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.get_json()["error"], "Attempt is already submitted.")
 
+    def test_submitted_attempt_rejects_resubmit(self):
+        self.db.attempts.mark_submitted(self.attempt_id, 0, 0, 1, 0)
+
+        with self.app.test_client() as client:
+            self._login(client, "attempt.owner")
+            response = client.post(f"/api/attempts/{self.attempt_id}/submit", json={})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.get_json()["error"], "Attempt is already submitted.")
+
     def _create_user(self, login_name, display_name, *, role):
         self.db.users.create(
             login_name,

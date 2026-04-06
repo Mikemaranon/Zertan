@@ -62,10 +62,15 @@ class AttemptsAPI(BaseAPI):
             return self.error("Attempt not found.", 404)
         if not self._can_access_attempt(user, payload["attempt"]["user_id"], payload["attempt"]["exam_id"]):
             return self.error("Forbidden", 403)
+        if payload["attempt"]["status"] != "in_progress":
+            return self.error("Attempt is already submitted.", 400)
         answers = (request.get_json() or {}).get("answers", [])
         if answers:
             self.services.attempts.save_answers(attempt_id, answers)
-        result = self.services.attempts.submit_attempt(attempt_id)
+        try:
+            result = self.services.attempts.submit_attempt(attempt_id)
+        except ValueError as exc:
+            return self.error(str(exc), 400)
         self.services.live_exams.mark_completed_for_attempt(attempt_id)
         return self.ok(result)
 

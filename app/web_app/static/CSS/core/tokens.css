@@ -56,8 +56,8 @@ html[data-theme="light"] {
     --sidebar-width: 248px;
     --mobile-header-height: 76px;
     --font: "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
-    --app-font-scale: 0.9;
-    --app-density: 0.94;
+    --app-font-scale: 0.82;
+    --app-density: 0.86;
 
     --auth-card-bg: rgba(255, 255, 255, 0.94);
     --auth-card-secondary-bg: rgba(241, 247, 253, 0.95);
@@ -809,16 +809,16 @@ html[data-theme="north-sea"] {
 
 @media (max-width: 1024px) {
     :root {
-        --app-font-scale: 0.86;
-        --app-density: 0.9;
+        --app-font-scale: 0.79;
+        --app-density: 0.83;
         --mobile-header-height: 72px;
     }
 }
 
 @media (max-width: 720px) {
     :root {
-        --app-font-scale: 0.74;
-        --app-density: 0.88;
+        --app-font-scale: 0.68;
+        --app-density: 0.8;
         --mobile-header-height: 64px;
     }
 }

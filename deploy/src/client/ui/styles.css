@@ -26,7 +26,7 @@
     --radius-card: 24px;
     --radius-control: 14px;
     --font-body: "Segoe UI", "SF Pro Text", "Helvetica Neue", sans-serif;
-    --client-scale: 0.9;
+    --client-scale: 0.82;
 }
 
 html[data-theme="dark"] {

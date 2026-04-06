@@ -1,5 +1,6 @@
 import { escapeHtml, request } from "../core/api.js";
 import { createAddableSelect } from "../components/addable-select.js";
+import { bindAttemptModeModal } from "../components/attempt-mode-modal.js";
 import { renderPagination } from "../components/pagination.js";
 import {
     attachQuestionConfig,
@@ -39,9 +40,22 @@ export async function initExamDetailPage(pageContext) {
         </div>
         <div class="button-row">
             <a class="button button--secondary" href="/catalog">Catalog</a>
-            <a class="button button--primary" href="/exams/${exam.id}/builder">Start exam mode</a>
+            <button id="open-attempt-mode-modal" class="button button--primary" type="button">Create attempt</button>
         </div>
     `;
+    const attemptModeModal = bindAttemptModeModal({
+        examId: exam.id,
+        errorFocusMeta: exam.builder_meta?.error_focus,
+        loadErrorFocusMeta: async (failurePercentageThreshold) => {
+            const payload = await request(
+                `/api/exams/${exam.id}/builder-meta?failure_percentage_threshold=${encodeURIComponent(String(failurePercentageThreshold))}`
+            );
+            return payload.builder_meta?.error_focus || {};
+        },
+    });
+    header.querySelector("#open-attempt-mode-modal")?.addEventListener("click", (event) => {
+        attemptModeModal.open(event.currentTarget);
+    });
 
     filters.innerHTML = `
         <div id="filter-content-field"></div>

@@ -17,8 +17,12 @@ export async function initManagementPage() {
     const importForm = document.getElementById("import-form");
     const examError = document.getElementById("exam-form-error");
     const importError = document.getElementById("import-error");
+    const examFormModalTitle = document.getElementById("exam-form-modal-title");
+    const examFormModalSubtitle = document.getElementById("exam-form-modal-subtitle");
     const examScopeMode = document.getElementById("exam-scope-mode");
     const importScopeMode = document.getElementById("import-scope-mode");
+    const openExamFormButton = document.getElementById("open-exam-form-modal");
+    const openImportFormButton = document.getElementById("open-import-form-modal");
     const examGroupPicker = createGroupScopePicker(document.getElementById("exam-group-picker"), {
         searchLabel: "Search groups",
         searchPlaceholder: "Search by name or code",
@@ -31,6 +35,47 @@ export async function initManagementPage() {
         selectedLabel: "Included groups",
         emptySearchMessage: "Type a group name or code to search available groups.",
     });
+    const examFormModal = bindManagedModal({
+        modalId: "exam-form-modal",
+        backdropId: "exam-form-modal-backdrop",
+        closeButtonId: "exam-form-modal-close",
+        cancelButtonId: "exam-form-reset",
+        onClose: () => resetForm(examGroupPicker),
+    });
+    const importFormModal = bindManagedModal({
+        modalId: "import-form-modal",
+        backdropId: "import-form-modal-backdrop",
+        closeButtonId: "import-form-modal-close",
+        cancelButtonId: "import-form-cancel",
+        onClose: () => resetImportForm(importGroupPicker),
+    });
+
+    function openCreateExamModal(trigger = null) {
+        resetForm(examGroupPicker);
+        setExamFormPresentation({
+            titleNode: examFormModalTitle,
+            subtitleNode: examFormModalSubtitle,
+            mode: "create",
+        });
+        examFormModal.open(trigger);
+        focusField("exam-code");
+    }
+
+    function openEditExamModal(exam, trigger = null) {
+        fillForm(exam, examGroupPicker);
+        setExamFormPresentation({
+            titleNode: examFormModalTitle,
+            subtitleNode: examFormModalSubtitle,
+            mode: "edit",
+        });
+        examFormModal.open(trigger);
+        focusField("exam-code");
+    }
+
+    function openImportModal(trigger = null) {
+        resetImportForm(importGroupPicker);
+        importFormModal.open(trigger);
+    }
 
     async function loadExams() {
         const data = await request("/api/exams");
@@ -80,9 +125,7 @@ export async function initManagementPage() {
             button.addEventListener("click", async (event) => {
                 const examId = event.currentTarget.closest("[data-exam-id]").dataset.examId;
                 const payload = await request(`/api/exams/${examId}`);
-                fillForm(payload.exam, examGroupPicker);
-                examForm.scrollIntoView({ behavior: "smooth", block: "start" });
-                focusFieldForDesktop(document.getElementById("exam-code"));
+                openEditExamModal(payload.exam, event.currentTarget);
             });
         });
 
@@ -115,13 +158,18 @@ export async function initManagementPage() {
                     }
                     await loadExams();
                 } catch (error) {
-                    examError.textContent = error.message;
+                    if (examError) {
+                        examError.textContent = error.message;
+                    }
                 }
             });
         });
     }
 
     if (examForm && examError) {
+        openExamFormButton?.addEventListener("click", (event) => {
+            openCreateExamModal(event.currentTarget);
+        });
         examScopeMode?.addEventListener("change", () => {
             updateScopeFieldVisibility("exam-scope-mode", "exam-groups-field", "exam-group-picker");
         });
@@ -152,16 +200,24 @@ export async function initManagementPage() {
                     body: payload,
                 });
                 resetForm(examGroupPicker);
+                examFormModal.close();
                 await loadExams();
             } catch (error) {
                 examError.textContent = error.message;
             }
         });
 
-        document.getElementById("exam-form-reset").addEventListener("click", () => resetForm(examGroupPicker));
+        setExamFormPresentation({
+            titleNode: examFormModalTitle,
+            subtitleNode: examFormModalSubtitle,
+            mode: "create",
+        });
     }
 
     if (importForm && importError) {
+        openImportFormButton?.addEventListener("click", (event) => {
+            openImportModal(event.currentTarget);
+        });
         importScopeMode?.addEventListener("change", () => {
             updateScopeFieldVisibility("import-scope-mode", "import-groups-field", "import-group-picker");
         });
@@ -200,8 +256,8 @@ export async function initManagementPage() {
                     method: "POST",
                     formData,
                 });
-                fileInput.value = "";
-                importGroupPicker?.setValues([]);
+                resetImportForm(importGroupPicker);
+                importFormModal.close();
                 await loadExams();
             } catch (error) {
                 importError.textContent = error.message;
@@ -223,14 +279,43 @@ function fillForm(exam, examGroupPicker) {
     document.getElementById("exam-status").value = exam.status || "draft";
     document.getElementById("exam-tags").value = (exam.tags || []).join(", ");
     document.getElementById("exam-scope-mode").value = exam.scope_mode || (exam.is_global_scope ? "global" : "groups");
+    const errorNode = document.getElementById("exam-form-error");
+    if (errorNode) {
+        errorNode.textContent = "";
+    }
     examGroupPicker?.setValues(exam.group_ids || []);
+    examGroupPicker?.clearSearch();
     updateScopeFieldVisibility("exam-scope-mode", "exam-groups-field", "exam-group-picker");
 }
 
 function resetForm(examGroupPicker) {
+    const form = document.getElementById("exam-form");
+    if (!form) {
+        return;
+    }
     document.getElementById("exam-id").value = "";
-    document.getElementById("exam-form").reset();
+    form.reset();
+    const errorNode = document.getElementById("exam-form-error");
+    if (errorNode) {
+        errorNode.textContent = "";
+    }
     examGroupPicker?.setValues([]);
+    examGroupPicker?.clearSearch();
+    updateScopeDefaults();
+}
+
+function resetImportForm(importGroupPicker) {
+    const form = document.getElementById("import-form");
+    if (!form) {
+        return;
+    }
+    form.reset();
+    const errorNode = document.getElementById("import-error");
+    if (errorNode) {
+        errorNode.textContent = "";
+    }
+    importGroupPicker?.setValues([]);
+    importGroupPicker?.clearSearch();
     updateScopeDefaults();
 }
 
@@ -312,4 +397,83 @@ function readScopeGroupIds(modeNode, picker) {
         return [];
     }
     return picker.getValues();
+}
+
+function setExamFormPresentation({ titleNode, subtitleNode, mode }) {
+    if (titleNode) {
+        titleNode.textContent = mode === "edit" ? "Update exam" : "Create exam";
+    }
+    if (subtitleNode) {
+        subtitleNode.textContent = mode === "edit"
+            ? "Update metadata for the selected certification bank."
+            : "Manage metadata for structured certification banks.";
+    }
+}
+
+function bindManagedModal({ modalId, backdropId, closeButtonId, cancelButtonId, onClose }) {
+    const modal = document.getElementById(modalId);
+    const backdrop = document.getElementById(backdropId);
+    const closeButton = document.getElementById(closeButtonId);
+    const cancelButton = cancelButtonId ? document.getElementById(cancelButtonId) : null;
+    if (!modal || !backdrop || !closeButton) {
+        return { open() {}, close() {} };
+    }
+
+    let isClosing = false;
+    let lastTrigger = null;
+
+    function open(trigger = null) {
+        if (!modal.hidden && modal.dataset.state === "open") {
+            return;
+        }
+        lastTrigger = trigger instanceof HTMLElement ? trigger : document.activeElement;
+        isClosing = false;
+        modal.hidden = false;
+        modal.dataset.state = "closed";
+        document.body.classList.add("modal-open");
+        window.requestAnimationFrame(() => {
+            window.requestAnimationFrame(() => {
+                modal.dataset.state = "open";
+            });
+        });
+    }
+
+    function close() {
+        if (modal.hidden || isClosing) {
+            return;
+        }
+        isClosing = true;
+        modal.dataset.state = "closing";
+        document.body.classList.remove("modal-open");
+        window.setTimeout(() => {
+            modal.hidden = true;
+            modal.dataset.state = "closed";
+            isClosing = false;
+            if (typeof onClose === "function") {
+                onClose();
+            }
+            if (lastTrigger instanceof HTMLElement && lastTrigger.isConnected) {
+                lastTrigger.focus({ preventScroll: true });
+            }
+        }, 300);
+    }
+
+    closeButton.addEventListener("click", close);
+    backdrop.addEventListener("click", close);
+    cancelButton?.addEventListener("click", close);
+
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && !modal.hidden) {
+            close();
+        }
+    });
+
+    return { open, close };
+}
+
+function focusField(id) {
+    window.setTimeout(() => {
+        const field = document.getElementById(id);
+        focusFieldForDesktop(field, { select: true });
+    }, 140);
 }

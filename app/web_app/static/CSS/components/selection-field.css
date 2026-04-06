@@ -266,6 +266,24 @@
     padding-bottom: 4px;
 }
 
+.builder-mode-banner {
+    display: grid;
+    gap: 8px;
+    padding: 16px 18px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-small);
+    background: var(--surface-muted);
+}
+
+.builder-mode-banner strong {
+    color: var(--text);
+}
+
+.builder-mode-banner span {
+    color: var(--muted);
+    line-height: 1.6;
+}
+
 .selection-chip {
     display: inline-flex;
     align-items: center;

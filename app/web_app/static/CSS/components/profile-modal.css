@@ -112,6 +112,154 @@ body.modal-open {
     margin-top: 8px;
 }
 
+.attempt-mode-modal__dialog {
+    width: min(760px, 100%);
+}
+
+.attempt-mode-modal__body {
+    display: grid;
+    gap: 24px;
+    padding: 40px;
+}
+
+.attempt-mode-modal__header {
+    align-items: start;
+    margin: 0;
+    padding-right: 56px;
+}
+
+.attempt-mode-modal__header h2 {
+    margin: 0;
+}
+
+.attempt-mode-modal__header .muted {
+    margin: 10px 0 0;
+    line-height: 1.6;
+}
+
+.attempt-mode-modal__options {
+    display: grid;
+    gap: 14px;
+}
+
+.attempt-mode-option {
+    display: grid;
+    gap: 10px;
+    width: 100%;
+    padding: 18px 20px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-small);
+    background: var(--surface-muted);
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.attempt-mode-option:hover {
+    border-color: var(--primary);
+    background: var(--surface);
+}
+
+.attempt-mode-option.is-selected {
+    border-color: var(--primary);
+    background: var(--surface);
+    box-shadow: var(--focus-ring);
+}
+
+.attempt-mode-option.is-disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.attempt-mode-option__layout {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+}
+
+.attempt-mode-option--expanded .attempt-mode-option__layout {
+    grid-template-columns: 1fr;
+}
+
+.attempt-mode-option__content {
+    display: grid;
+    gap: 10px;
+    min-width: 0;
+}
+
+.attempt-mode-option__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.attempt-mode-option__description {
+    color: var(--text);
+    font-weight: 600;
+}
+
+.attempt-mode-option__details {
+    color: var(--muted);
+    line-height: 1.6;
+}
+
+.attempt-mode-option__config {
+    display: grid;
+    justify-items: end;
+    align-content: start;
+    gap: 8px;
+    min-width: 132px;
+}
+
+.attempt-mode-option--expanded .attempt-mode-option__config {
+    justify-items: start;
+}
+
+.attempt-mode-option:not([data-attempt-mode-option="error_focus"]) .attempt-mode-option__config {
+    display: none;
+}
+
+.attempt-mode-option__config-control {
+    display: grid;
+    grid-template-columns: minmax(0, 84px) auto;
+    align-items: center;
+    gap: 10px;
+}
+
+.attempt-mode-option__config-control input {
+    text-align: right;
+}
+
+.attempt-mode-option__config-suffix {
+    color: var(--muted);
+    font-weight: 600;
+}
+
+.attempt-mode-option__config-copy {
+    color: var(--muted);
+    font-size: 0.92rem;
+    line-height: 1.5;
+    text-align: right;
+    max-width: 160px;
+}
+
+.attempt-mode-option--expanded .attempt-mode-option__config-copy {
+    text-align: left;
+    max-width: none;
+}
+
+.attempt-mode-modal__footer {
+    display: grid;
+    gap: 16px;
+}
+
+.attempt-mode-modal__footer .button-row {
+    justify-content: flex-end;
+}
+
 .profile-modal__layout {
     flex: 1 1 auto;
     display: grid;
@@ -316,6 +464,10 @@ body.modal-open {
     #profile-modal .profile-modal__dialog {
         overflow-y: auto;
         overflow-x: hidden;
+    }
+
+    #attempt-mode-modal .attempt-mode-modal__body {
+        padding: 28px;
     }
 
     #profile-modal .profile-summary,

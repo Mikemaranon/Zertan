@@ -2,7 +2,13 @@ import random
 from contextlib import nullcontext
 
 from ..question_logic_service import QuestionLogicService
-from .constants import QUESTIONS_PER_PAGE
+from .constants import (
+    ATTEMPT_SELECTION_MODE_ERROR_FOCUS,
+    ATTEMPT_SELECTION_MODE_STANDARD,
+    ERROR_FOCUS_DEFAULT_FAILURE_PERCENTAGE_THRESHOLD,
+    ERROR_FOCUS_PREVIEW_LIMIT,
+    QUESTIONS_PER_PAGE,
+)
 
 
 class AttemptService:
@@ -11,14 +17,19 @@ class AttemptService:
         self.question_logic = question_logic or QuestionLogicService()
 
     def create_attempt(self, exam_id, user_id, criteria):
-        filters = {
-            "tags": criteria.get("tags", {"include": [], "exclude": []}),
-            "topics": criteria.get("topics", {"include": [], "exclude": []}),
-            "question_types": criteria.get("question_types", {"include": [], "exclude": []}),
-            "difficulty": criteria.get("difficulty"),
-        }
-        question_ids = self.db.questions.list_filtered_ids(exam_id, filters)
+        filters = self._build_filters(criteria)
+        selection_mode = self._normalize_selection_mode(criteria.get("selection_mode"))
+        error_focus_config = self._build_error_focus_config(criteria)
+        question_ids = self._resolve_question_ids(
+            exam_id,
+            user_id,
+            filters,
+            selection_mode=selection_mode,
+            error_focus_config=error_focus_config,
+        )
         if not question_ids:
+            if selection_mode == ATTEMPT_SELECTION_MODE_ERROR_FOCUS:
+                raise ValueError("No historical mistakes match the selected criteria.")
             raise ValueError("No questions match the selected criteria.")
 
         requested_count = int(criteria.get("question_count") or len(question_ids))
@@ -32,11 +43,15 @@ class AttemptService:
             random.shuffle(question_ids)
 
         selected_ids = question_ids[:requested_count]
+        stored_criteria = dict(criteria or {})
+        stored_criteria["selection_mode"] = selection_mode
+        if selection_mode == ATTEMPT_SELECTION_MODE_ERROR_FOCUS:
+            stored_criteria["error_focus"] = error_focus_config
         with self._transaction():
             attempt_id = self.db.attempts.create(
                 exam_id=exam_id,
                 user_id=user_id,
-                criteria=criteria,
+                criteria=stored_criteria,
                 question_count=requested_count,
                 random_order=random_order,
                 time_limit_minutes=criteria.get("time_limit_minutes"),
@@ -129,6 +144,12 @@ class AttemptService:
                 )
 
     def submit_attempt(self, attempt_id):
+        attempt = self.db.attempts.get_attempt(attempt_id)
+        if not attempt:
+            raise ValueError("Attempt not found.")
+        if attempt["status"] != "in_progress":
+            raise ValueError("Attempt is already submitted.")
+
         questions = self.db.attempts.get_attempt_questions(attempt_id)
         with self._transaction():
             correct_count = 0
@@ -176,6 +197,79 @@ class AttemptService:
             "attempt": attempt,
             "questions": detailed,
         }
+
+    def build_builder_personalization(self, exam_id, user_id, *, failure_percentage_threshold=None):
+        error_focus_config = self._build_error_focus_config(
+            {"error_focus": {"failure_percentage_threshold": failure_percentage_threshold}}
+        )
+        candidates = self.db.statistics.user_exam_error_focus_candidates(
+            user_id,
+            exam_id,
+            failure_percentage_threshold=error_focus_config["failure_percentage_threshold"],
+        )
+        return {
+            "selection_mode": ATTEMPT_SELECTION_MODE_ERROR_FOCUS,
+            "available": bool(candidates),
+            "available_question_count": len(candidates),
+            "failure_percentage_threshold": error_focus_config["failure_percentage_threshold"],
+            "preview_questions": candidates[:ERROR_FOCUS_PREVIEW_LIMIT],
+        }
+
+    def build_builder_meta(self, exam_id, user_id, *, failure_percentage_threshold=None):
+        builder_meta = self.db.exams.list_builder_metadata(exam_id)
+        builder_meta["error_focus"] = self.build_builder_personalization(
+            exam_id,
+            user_id,
+            failure_percentage_threshold=failure_percentage_threshold,
+        )
+        return builder_meta
+
+    def _build_filters(self, criteria):
+        return {
+            "tags": criteria.get("tags", {"include": [], "exclude": []}),
+            "topics": criteria.get("topics", {"include": [], "exclude": []}),
+            "question_types": criteria.get("question_types", {"include": [], "exclude": []}),
+            "difficulty": criteria.get("difficulty"),
+        }
+
+    def _normalize_selection_mode(self, selection_mode):
+        value = str(selection_mode or ATTEMPT_SELECTION_MODE_STANDARD).strip().lower()
+        if value in {"", ATTEMPT_SELECTION_MODE_STANDARD}:
+            return ATTEMPT_SELECTION_MODE_STANDARD
+        if value == ATTEMPT_SELECTION_MODE_ERROR_FOCUS:
+            return ATTEMPT_SELECTION_MODE_ERROR_FOCUS
+        raise ValueError("Unknown attempt selection mode.")
+
+    def _build_error_focus_config(self, criteria):
+        payload = criteria.get("error_focus") or {}
+        failure_percentage_threshold = self._normalize_failure_percentage_threshold(payload.get("failure_percentage_threshold"))
+        return {
+            "failure_percentage_threshold": failure_percentage_threshold,
+        }
+
+    def _normalize_failure_percentage_threshold(self, value):
+        if value in (None, ""):
+            return ERROR_FOCUS_DEFAULT_FAILURE_PERCENTAGE_THRESHOLD
+        try:
+            normalized = int(value)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("Failure percentage threshold must be a valid integer.") from exc
+        if normalized < 0 or normalized > 100:
+            raise ValueError("Failure percentage threshold must be between 0 and 100.")
+        return normalized
+
+    def _resolve_question_ids(self, exam_id, user_id, filters, *, selection_mode, error_focus_config):
+        filtered_ids = self.db.questions.list_filtered_ids(exam_id, filters)
+        if selection_mode == ATTEMPT_SELECTION_MODE_STANDARD:
+            return filtered_ids
+
+        filtered_id_set = set(filtered_ids)
+        candidates = self.db.statistics.user_exam_error_focus_candidates(
+            user_id,
+            exam_id,
+            failure_percentage_threshold=error_focus_config["failure_percentage_threshold"],
+        )
+        return [item["question_id"] for item in candidates if item["question_id"] in filtered_id_set]
 
     def _transaction(self):
         transaction = getattr(self.db, "transaction", None)

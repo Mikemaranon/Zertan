@@ -205,6 +205,107 @@ class ExamsApiTests(unittest.TestCase):
         self.assertEqual(attempt["question_count"], 2)
         self.assertEqual(len(attempt_questions), 2)
 
+    def test_builder_meta_includes_error_focus_summary_for_current_user(self):
+        exam_id = self._create_exam("FOCUS-100", group_ids=[self.group_alpha["id"]])
+        question_one = self._create_single_select_question(exam_id, position=1, tag="focus", topic="mistakes")
+        question_two = self._create_single_select_question(exam_id, position=2, tag="focus", topic="mistakes")
+        self._create_submitted_attempt(self.student["id"], exam_id, question_one, is_correct=False)
+        self._create_submitted_attempt(self.student["id"], exam_id, question_one, is_correct=False)
+        self._create_submitted_attempt(self.student["id"], exam_id, question_two, is_correct=False)
+        self._create_submitted_attempt(self.student["id"], exam_id, question_two, is_correct=True)
+
+        with self.app.test_client() as client:
+            self._login(client, "catalog.student")
+            response = client.get(f"/api/exams/{exam_id}/builder-meta")
+
+        self.assertEqual(response.status_code, 200)
+        error_focus = response.get_json()["builder_meta"]["error_focus"]
+        self.assertTrue(error_focus["available"])
+        self.assertEqual(error_focus["available_question_count"], 1)
+        self.assertEqual(error_focus["preview_questions"][0]["question_id"], question_one)
+        self.assertEqual(error_focus["preview_questions"][0]["failure_count"], 2)
+        self.assertEqual(error_focus["preview_questions"][0]["failure_percentage"], 100.0)
+
+    def test_builder_meta_accepts_failure_percentage_threshold_filter(self):
+        exam_id = self._create_exam("FOCUS-150", group_ids=[self.group_alpha["id"]])
+        question_one = self._create_single_select_question(exam_id, position=1, tag="focus", topic="mistakes")
+        question_two = self._create_single_select_question(exam_id, position=2, tag="focus", topic="mistakes")
+        self._create_submitted_attempt(self.student["id"], exam_id, question_one, is_correct=False)
+        self._create_submitted_attempt(self.student["id"], exam_id, question_one, is_correct=False)
+        self._create_submitted_attempt(self.student["id"], exam_id, question_two, is_correct=False)
+        self._create_submitted_attempt(self.student["id"], exam_id, question_two, is_correct=True)
+
+        with self.app.test_client() as client:
+            self._login(client, "catalog.student")
+            response = client.get(f"/api/exams/{exam_id}/builder-meta?failure_percentage_threshold=60")
+
+        self.assertEqual(response.status_code, 200)
+        error_focus = response.get_json()["builder_meta"]["error_focus"]
+        self.assertEqual(error_focus["failure_percentage_threshold"], 60)
+        self.assertEqual(error_focus["available_question_count"], 1)
+        self.assertEqual(error_focus["preview_questions"][0]["question_id"], question_one)
+
+    def test_error_focus_builder_creates_attempt_from_unresolved_mistakes(self):
+        exam_id = self._create_exam("FOCUS-200", group_ids=[self.group_alpha["id"]])
+        question_one = self._create_single_select_question(exam_id, position=1, tag="focus", topic="mistakes")
+        question_two = self._create_single_select_question(exam_id, position=2, tag="focus", topic="mistakes")
+        question_three = self._create_single_select_question(exam_id, position=3, tag="steady", topic="review")
+
+        self._create_submitted_attempt(self.student["id"], exam_id, question_one, is_correct=False)
+        self._create_submitted_attempt(self.student["id"], exam_id, question_one, is_correct=False)
+        self._create_submitted_attempt(self.student["id"], exam_id, question_two, is_correct=False)
+        self._create_submitted_attempt(self.student["id"], exam_id, question_two, is_correct=True)
+        self._create_submitted_attempt(self.student["id"], exam_id, question_three, is_correct=True)
+
+        with self.app.test_client() as client:
+            self._login(client, "catalog.student")
+            response = client.post(
+                f"/api/exams/{exam_id}/builder",
+                json={
+                    "selection_mode": "error_focus",
+                    "question_count": 1,
+                    "random_order": False,
+                },
+            )
+
+        self.assertEqual(response.status_code, 201)
+        attempt_id = response.get_json()["attempt_id"]
+        attempt = self.db.attempts.get_attempt(attempt_id)
+        attempt_questions = self.db.attempts.get_attempt_questions(attempt_id)
+
+        self.assertEqual(attempt["criteria"]["selection_mode"], "error_focus")
+        self.assertEqual(attempt["criteria"]["error_focus"]["failure_percentage_threshold"], 40)
+        self.assertEqual([item["question_id"] for item in attempt_questions], [question_one])
+
+    def test_error_focus_builder_respects_failure_percentage_threshold(self):
+        exam_id = self._create_exam("FOCUS-250", group_ids=[self.group_alpha["id"]])
+        question_one = self._create_single_select_question(exam_id, position=1, tag="focus", topic="mistakes")
+        question_two = self._create_single_select_question(exam_id, position=2, tag="focus", topic="mistakes")
+        self._create_submitted_attempt(self.student["id"], exam_id, question_one, is_correct=False)
+        self._create_submitted_attempt(self.student["id"], exam_id, question_one, is_correct=False)
+        self._create_submitted_attempt(self.student["id"], exam_id, question_two, is_correct=False)
+        self._create_submitted_attempt(self.student["id"], exam_id, question_two, is_correct=True)
+
+        with self.app.test_client() as client:
+            self._login(client, "catalog.student")
+            response = client.post(
+                f"/api/exams/{exam_id}/builder",
+                json={
+                    "selection_mode": "error_focus",
+                    "question_count": 1,
+                    "random_order": False,
+                    "error_focus": {"failure_percentage_threshold": 60},
+                },
+            )
+
+        self.assertEqual(response.status_code, 201)
+        attempt_id = response.get_json()["attempt_id"]
+        attempt = self.db.attempts.get_attempt(attempt_id)
+        attempt_questions = self.db.attempts.get_attempt_questions(attempt_id)
+
+        self.assertEqual(attempt["criteria"]["error_focus"]["failure_percentage_threshold"], 60)
+        self.assertEqual([item["question_id"] for item in attempt_questions], [question_one])
+
     def test_delete_exam_removes_assets_and_cleanup_directories(self):
         exam_id = self._create_exam("DEL-100")
         asset_dir = self.media_root / "questions" / str(exam_id)
@@ -254,6 +355,48 @@ class ExamsApiTests(unittest.TestCase):
         self.assertFalse(asset_path.exists())
         self.assertFalse(import_dir.exists())
         self.assertFalse(export_dir.exists())
+
+    def _create_single_select_question(self, exam_id, *, position, tag, topic):
+        return self.db.questions.create(
+            exam_id,
+            {
+                "type": "single_select",
+                "title": f"Question {position}",
+                "statement": f"Prompt {position}",
+                "explanation": f"Explanation {position}",
+                "difficulty": "intermediate",
+                "status": "active",
+                "position": position,
+                "tags": [tag],
+                "topics": [topic],
+                "options": [
+                    {"key": "A", "text": "Correct", "is_correct": True},
+                    {"key": "B", "text": "Incorrect", "is_correct": False},
+                ],
+            },
+        )
+
+    def _create_submitted_attempt(self, user_id, exam_id, question_id, *, is_correct):
+        attempt_id = self.db.attempts.create(exam_id, user_id, {}, 1, random_order=False)
+        self.db.attempts.add_questions(
+            attempt_id,
+            [
+                {
+                    "question_id": question_id,
+                    "snapshot": self.db.questions.get(question_id, include_answers=True),
+                }
+            ],
+        )
+        attempt_question_id = self.db.attempts.get_attempt_questions(attempt_id)[0]["attempt_question_id"]
+        self.db.attempts.finalize_answer(attempt_question_id, is_correct, 1 if is_correct else 0, False)
+        self.db.attempts.mark_submitted(
+            attempt_id,
+            1 if is_correct else 0,
+            0 if is_correct else 1,
+            0,
+            100.0 if is_correct else 0.0,
+        )
+        return attempt_id
 
     def _create_exam(self, code, group_ids=None):
         return self.db.exams.create(

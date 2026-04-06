@@ -131,6 +131,103 @@ class StatisticsTable:
             for row in rows
         ]
 
+    def user_exam_error_focus_candidates(self, user_id, exam_id, failure_percentage_threshold=40, limit=None):
+        try:
+            failure_percentage_threshold = max(0, min(100, int(failure_percentage_threshold if failure_percentage_threshold is not None else 40)))
+        except (TypeError, ValueError):
+            failure_percentage_threshold = 40
+
+        query = """
+            WITH question_history AS (
+                SELECT
+                    q.id AS question_id,
+                    q.type AS question_type,
+                    q.title AS question_title,
+                    q.statement AS question_statement,
+                    q.position AS question_position,
+                    COUNT(*) AS total_attempts,
+                    SUM(CASE WHEN ans.omitted = 1 OR COALESCE(ans.is_correct, 0) = 0 THEN 1 ELSE 0 END) AS failure_count,
+                    SUM(CASE WHEN ans.is_correct = 1 THEN 1 ELSE 0 END) AS success_count,
+                    MAX(
+                        CASE
+                            WHEN ans.omitted = 1 OR COALESCE(ans.is_correct, 0) = 0
+                            THEN a.id
+                        END
+                    ) AS last_failed_attempt_id,
+                    MAX(
+                        CASE
+                            WHEN ans.is_correct = 1
+                            THEN a.id
+                        END
+                    ) AS last_correct_attempt_id,
+                    MAX(
+                        CASE
+                            WHEN ans.omitted = 1 OR COALESCE(ans.is_correct, 0) = 0
+                            THEN COALESCE(ans.answered_at, a.submitted_at, a.started_at)
+                        END
+                    ) AS last_failed_at,
+                    MAX(
+                        CASE
+                            WHEN ans.is_correct = 1
+                            THEN COALESCE(ans.answered_at, a.submitted_at, a.started_at)
+                        END
+                    ) AS last_correct_at,
+                    MAX(COALESCE(ans.answered_at, a.submitted_at, a.started_at)) AS last_seen_at
+                FROM exam_answers ans
+                JOIN exam_attempts a ON a.id = ans.attempt_id
+                JOIN questions q ON q.id = ans.question_id
+                WHERE a.user_id = ? AND a.exam_id = ? AND a.status = 'submitted'
+                GROUP BY q.id
+            )
+            SELECT
+                question_id,
+                question_type,
+                question_title,
+                question_statement,
+                question_position,
+                total_attempts,
+                failure_count,
+                success_count,
+                CASE
+                    WHEN total_attempts > 0 THEN ROUND((failure_count * 100.0) / total_attempts, 2)
+                    ELSE 0
+                END AS failure_percentage,
+                last_failed_attempt_id,
+                last_correct_attempt_id,
+                last_failed_at,
+                last_correct_at,
+                last_seen_at
+            FROM question_history
+            WHERE total_attempts > 0
+              AND last_failed_at IS NOT NULL
+              AND (last_correct_attempt_id IS NULL OR last_failed_attempt_id > last_correct_attempt_id)
+              AND ((failure_count * 100.0) / total_attempts) >= ?
+            ORDER BY failure_percentage DESC, failure_count DESC, last_failed_attempt_id DESC, last_seen_at DESC, question_position, question_id
+        """
+        params = [user_id, exam_id, failure_percentage_threshold]
+        if limit is not None:
+            query += " LIMIT ?"
+            params.append(max(1, int(limit)))
+
+        _, rows = self.db.execute(query, tuple(params), fetchall=True)
+        return [
+            {
+                "question_id": row["question_id"],
+                "question_type": row["question_type"],
+                "question_title": row["question_title"],
+                "question_statement": row["question_statement"],
+                "question_position": row["question_position"],
+                "total_attempts": row["total_attempts"] or 0,
+                "failure_count": row["failure_count"] or 0,
+                "success_count": row["success_count"] or 0,
+                "failure_percentage": round(row["failure_percentage"] or 0, 2),
+                "last_failed_at": row["last_failed_at"],
+                "last_correct_at": row["last_correct_at"],
+                "last_seen_at": row["last_seen_at"],
+            }
+            for row in rows
+        ]
+
     def exam_overview(self, exam_id):
         _, row = self.db.execute(
             """

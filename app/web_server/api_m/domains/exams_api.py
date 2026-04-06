@@ -159,7 +159,7 @@ class ExamsAPI(BaseAPI):
             self.services.question_logic.build_public_question(question, include_solution=False)
             for question in self.db.questions.list_for_exam(exam_id, include_answers=False)
         ]
-        exam["builder_meta"] = self.db.exams.list_builder_metadata(exam_id)
+        exam["builder_meta"] = self.services.attempts.build_builder_meta(exam_id, user["id"])
         exam.update(self.build_exam_permissions(user, exam))
         return self.ok({"exam": exam, "questions": questions})
 
@@ -170,7 +170,15 @@ class ExamsAPI(BaseAPI):
         exam, exam_error = self.get_accessible_exam(user, exam_id)
         if exam_error:
             return exam_error
-        return self.ok({"builder_meta": self.db.exams.list_builder_metadata(exam_id), "exam": exam})
+        try:
+            builder_meta = self.services.attempts.build_builder_meta(
+                exam_id,
+                user["id"],
+                failure_percentage_threshold=request.args.get("failure_percentage_threshold"),
+            )
+        except ValueError as exc:
+            return self.error(str(exc), 400)
+        return self.ok({"builder_meta": builder_meta, "exam": exam})
 
     def build_attempt(self, exam_id):
         user, error = self.auth_user(request)

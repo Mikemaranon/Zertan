@@ -9,13 +9,27 @@ export async function initAccessInfoPage() {
         primary: document.getElementById("access-primary-endpoint"),
         runtime: document.getElementById("access-runtime-summary"),
         aliases: document.getElementById("access-shared-aliases"),
+        toolbar: document.getElementById("access-alias-toolbar"),
+        openModalButton: document.getElementById("open-access-alias-modal"),
         form: document.getElementById("access-alias-form"),
         error: document.getElementById("access-alias-error"),
     };
+    const aliasModal = bindManagedModal({
+        modalId: "access-alias-modal",
+        backdropId: "access-alias-modal-backdrop",
+        closeButtonId: "access-alias-modal-close",
+        cancelButtonId: "access-alias-cancel",
+        onClose: () => resetAliasForm(nodes),
+    });
 
     if (!nodes.primary || !nodes.runtime || !nodes.aliases) {
         return;
     }
+
+    nodes.openModalButton?.addEventListener("click", (event) => {
+        resetAliasForm(nodes);
+        aliasModal.open(event.currentTarget);
+    });
 
     if (nodes.form) {
         nodes.form.addEventListener("submit", async (event) => {
@@ -33,7 +47,8 @@ export async function initAccessInfoPage() {
                         port: document.getElementById("access-alias-port").value.trim(),
                     },
                 });
-                nodes.form.reset();
+                resetAliasForm(nodes);
+                aliasModal.close();
                 await loadConnectionInfo(state, nodes);
             } catch (error) {
                 if (nodes.error) {
@@ -66,6 +81,7 @@ export async function initAccessInfoPage() {
 async function loadConnectionInfo(state, nodes) {
     const payload = await request("/api/system/connection-info");
     state.payload = payload;
+    syncAliasManagementVisibility(nodes, Boolean(payload.can_manage_aliases));
     renderPrimary(nodes.primary, payload.primary_endpoint);
     renderRuntime(nodes.runtime, payload.connection);
     renderAliases(nodes.aliases, payload.aliases || [], Boolean(payload.can_manage_aliases));
@@ -173,4 +189,83 @@ function statusClassName(status) {
         return "badge--active";
     }
     return "badge--pending";
+}
+
+function syncAliasManagementVisibility(nodes, canManageAliases) {
+    if (nodes.toolbar) {
+        nodes.toolbar.hidden = !canManageAliases;
+    }
+    if (!canManageAliases) {
+        resetAliasForm(nodes);
+    }
+}
+
+function resetAliasForm(nodes) {
+    if (nodes.form) {
+        nodes.form.reset();
+    }
+    if (nodes.error) {
+        nodes.error.textContent = "";
+    }
+}
+
+function bindManagedModal({ modalId, backdropId, closeButtonId, cancelButtonId, onClose }) {
+    const modal = document.getElementById(modalId);
+    const backdrop = document.getElementById(backdropId);
+    const closeButton = document.getElementById(closeButtonId);
+    const cancelButton = cancelButtonId ? document.getElementById(cancelButtonId) : null;
+    if (!modal || !backdrop || !closeButton) {
+        return { open() {}, close() {} };
+    }
+
+    let isClosing = false;
+    let lastTrigger = null;
+
+    function open(trigger = null) {
+        if (!modal.hidden && modal.dataset.state === "open") {
+            return;
+        }
+        lastTrigger = trigger instanceof HTMLElement ? trigger : document.activeElement;
+        isClosing = false;
+        modal.hidden = false;
+        modal.dataset.state = "closed";
+        document.body.classList.add("modal-open");
+        window.requestAnimationFrame(() => {
+            window.requestAnimationFrame(() => {
+                modal.dataset.state = "open";
+            });
+        });
+    }
+
+    function close() {
+        if (modal.hidden || isClosing) {
+            return;
+        }
+        isClosing = true;
+        modal.dataset.state = "closing";
+        document.body.classList.remove("modal-open");
+        window.setTimeout(() => {
+            modal.hidden = true;
+            modal.dataset.state = "closed";
+            isClosing = false;
+            if (typeof onClose === "function") {
+                onClose();
+            }
+            if (lastTrigger instanceof HTMLElement && lastTrigger.isConnected) {
+                lastTrigger.focus({ preventScroll: true });
+            }
+        }, 300);
+    }
+
+    closeButton.addEventListener("click", close);
+    backdrop.addEventListener("click", close);
+    cancelButton?.addEventListener("click", close);
+
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && !modal.hidden) {
+            close();
+        }
+    });
+
+    return { open, close };
 }
