@@ -1,0 +1,37 @@
+{% set page_id = "log-registry" %}
+{% extends "shared/base.html" %}
+{% block page_styles %}
+<link rel="stylesheet" href="/static/CSS/pages/management/log-registry.css">
+{% endblock %}
+{% block content %}
+<section class="panel stack-gap">
+    <div class="section-heading">
+        <div>
+            <h2>Registry scope</h2>
+            <p class="muted">Review exam change history, switch the visible group scope, and export supervisory logs.</p>
+        </div>
+        <div class="button-row log-registry-actions">
+            <button id="log-registry-export-scope" class="button button--secondary" type="button">Export logs</button>
+            <button id="log-registry-delete-scope" class="button button--danger" type="button" hidden>Delete logs</button>
+        </div>
+    </div>
+    <div class="log-registry-toolbar">
+        <label class="log-registry-scope">
+            <span>Group scope</span>
+            <select id="log-registry-group-select"></select>
+        </label>
+        <p id="log-registry-scope-help" class="muted"></p>
+    </div>
+</section>
+
+<section class="panel stack-gap">
+    <div class="section-heading">
+        <div>
+            <h2>Available exams</h2>
+            <p class="muted">Open any exam to inspect every registered content change for that exam.</p>
+        </div>
+    </div>
+    <div id="log-registry-overview-error" class="error-message"></div>
+    <div id="log-registry-exams" class="grid grid--cards"></div>
+</section>
+{% endblock %}

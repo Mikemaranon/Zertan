@@ -1,0 +1,18 @@
+{% set page_id = "exam-runner" %}
+{% extends "shared/base.html" %}
+{% block content %}
+<section class="panel stack-gap">
+    <div id="attempt-summary" class="section-heading"></div>
+    <div id="pagination-top"></div>
+</section>
+
+<section id="runner-questions" class="stack-gap"></section>
+
+<section class="panel stack-gap">
+    <div id="pagination-bottom"></div>
+    <div class="button-row">
+        <button id="save-page-button" class="button button--secondary" type="button">Save current page</button>
+        <button id="submit-attempt-button" class="button button--primary" type="button">Submit exam</button>
+    </div>
+</section>
+{% endblock %}

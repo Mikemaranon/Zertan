@@ -1,0 +1,45 @@
+{% set page_id = "dashboard" %}
+{% extends "shared/base.html" %}
+{% block content %}
+<section class="panel stack-gap">
+    <div class="section-heading">
+        <div>
+            <h2>General dashboard</h2>
+            <p class="muted">Official KPIs are generated only from submitted exam mode attempts.</p>
+        </div>
+        <a class="button button--primary" href="/catalog">Open catalog</a>
+    </div>
+    <div id="dashboard-kpis" class="grid grid--kpis"></div>
+</section>
+
+<section class="grid grid--two">
+    <div class="panel">
+        <div class="section-heading">
+            <div>
+                <h2>Recent attempts</h2>
+                <p class="muted">Latest submitted and in-progress formal exam attempts.</p>
+            </div>
+        </div>
+        <div id="dashboard-attempts" class="list-stack"></div>
+    </div>
+    <div class="panel">
+        <div class="section-heading">
+            <div>
+                <h2>By question type</h2>
+                <p class="muted">Personal success rate across submitted answers.</p>
+            </div>
+        </div>
+        <div id="dashboard-types" class="list-stack"></div>
+    </div>
+</section>
+
+<section class="panel stack-gap">
+    <div class="section-heading">
+        <div>
+            <h2>Success by exam</h2>
+            <p class="muted">Average score and attempt volume across formal submissions.</p>
+        </div>
+    </div>
+    <div id="dashboard-exams" class="grid grid--cards"></div>
+</section>
+{% endblock %}

@@ -1,4 +1,5 @@
 import argparse
+import importlib
 import importlib.util
 import os
 import secrets
@@ -59,21 +60,32 @@ def resolve_console_ui_asset_root(project_root=None):
 
 
 def load_server_console_ui_module():
-    try:
-        from . import server_console_ui
+    import_errors = []
+    module_names = []
 
-        return server_console_ui
-    except ImportError:
+    if __package__:
+        module_names.append(f"{__package__}.server_console_ui")
+    module_names.extend(
+        (
+            "deploy.src.server.server_console_ui",
+            "server_console_ui",
+        )
+    )
+
+    for module_name in dict.fromkeys(module_names):
         try:
-            import server_console_ui
+            return importlib.import_module(module_name)
+        except ImportError as exc:
+            import_errors.append(exc)
 
-            return server_console_ui
-        except ImportError:
-            module_path = Path(__file__).resolve().with_name("server_console_ui.py")
-            spec = importlib.util.spec_from_file_location("server_console_ui", module_path)
-            module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(module)
-            return module
+    if getattr(sys, "frozen", False):
+        raise import_errors[-1]
+
+    module_path = Path(__file__).resolve().with_name("server_console_ui.py")
+    spec = importlib.util.spec_from_file_location("server_console_ui", module_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def prepare_import_paths(project_root=None):
@@ -212,7 +224,7 @@ def fallback_display_host(bind_host):
 
 
 def build_connection_info_service(*, db_manager, runtime_config):
-    from services_m.connection_info_service import ConnectionInfoService
+    from app.web_server.services_m.connection_info_service import ConnectionInfoService
 
     return ConnectionInfoService(db_manager, runtime_config=runtime_config)
 

@@ -20,6 +20,9 @@ RELEASE_ROOT = DEPLOY_ROOT / "release"
 MACOS_CODESIGN_IDENTITY_ENV = "ZERTAN_MACOS_CODESIGN_IDENTITY"
 MACOS_ENTITLEMENTS_PATH_ENV = "ZERTAN_MACOS_ENTITLEMENTS_PATH"
 SERVER_VERSION_ENV = "ZERTAN_SERVER_VERSION"
+ICON_PNG_ENV = "ZERTAN_SERVER_ICON_PNG"
+ICON_ICO_ENV = "ZERTAN_SERVER_ICON_ICO"
+ICON_ICNS_ENV = "ZERTAN_SERVER_ICON_ICNS"
 PRESERVE_RELEASE_ROOT = False
 
 
@@ -163,13 +166,13 @@ def generate_platform_icons():
     paths["root"].mkdir(parents=True, exist_ok=True)
 
     square_png = create_square_icon_png(SOURCE_ICON_PATH, paths["png"])
-    os.environ["ZERTAN_SERVER_ICON_PNG"] = str(square_png)
+    os.environ[ICON_PNG_ENV] = str(square_png)
 
     platform_name = normalize_platform()
     if platform_name == "windows":
-        os.environ["ZERTAN_SERVER_ICON_ICO"] = str(create_windows_icon(square_png, paths["ico"]))
+        os.environ[ICON_ICO_ENV] = str(create_windows_icon(square_png, paths["ico"]))
     elif platform_name == "macos":
-        os.environ["ZERTAN_SERVER_ICON_ICNS"] = str(create_macos_icon(square_png, paths["icns"]))
+        os.environ[ICON_ICNS_ENV] = str(create_macos_icon(square_png, paths["icns"]))
 
     return paths
 

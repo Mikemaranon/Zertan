@@ -19,7 +19,12 @@ datas = [
     (str(project_root / "app" / "web_app"), "app/web_app"),
     (str(project_root / "deploy" / "src" / "server" / "console_ui" / "assets"), "console_ui/assets"),
 ]
-hiddenimports = collect_submodules("api_m.domains") + collect_submodules("webview")
+hiddenimports = (
+    ["deploy.src.server.server_console_ui"]
+    + collect_submodules("deploy.src.server.console_ui")
+    + collect_submodules("api_m.domains")
+    + collect_submodules("webview")
+)
 runtime_hooks = []
 if sys.platform.startswith("linux"):
     runtime_hooks.append(str(project_root / "deploy" / "src" / "server" / "pyi_rth_linux_gi.py"))

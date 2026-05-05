@@ -9,42 +9,13 @@ if str(ROOT) not in sys.path:
 if str(WEB_SERVER_ROOT) not in sys.path:
     sys.path.insert(0, str(WEB_SERVER_ROOT))
 
-from tests._support.runner import exit_code_from_results
-from tests.exams.domain import run_exams
-from tests.infrastructure.domain import run_infrastructure
-from tests.packaging.domain import run_packaging
-from tests.system.domain import run_system
-from tests.users.domain import run_users
-
-
-def users():
-    return run_users()
-
-
-def exams():
-    return run_exams()
-
-
-def system():
-    return run_system()
-
-
-def infrastructure():
-    return run_infrastructure()
-
-
-def packaging():
-    return run_packaging()
+from tests.core._support.runner import exit_code_from_results
+from tests.core.all_tests import run_all as run_core
+from tests.lite.domain import run_lite
 
 
 def run_all():
-    return [
-        users(),
-        exams(),
-        system(),
-        infrastructure(),
-        packaging(),
-    ]
+    return [*run_core(), run_lite()]
 
 
 if __name__ == "__main__":

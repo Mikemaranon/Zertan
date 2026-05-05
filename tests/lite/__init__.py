@@ -1,0 +1,1 @@
+# Lite automated test suite.

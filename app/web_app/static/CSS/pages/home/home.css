@@ -27,6 +27,7 @@ body[data-page="home"] .content-body {
 }
 
 .home-nav__eyebrow,
+.home-connection__eyebrow,
 .home-letter__eyebrow,
 .home-socials__eyebrow {
     margin: 0 0 10px;
@@ -38,6 +39,7 @@ body[data-page="home"] .content-body {
 }
 
 .home-stage__copy h2,
+.home-connection__intro h2,
 .home-nav__intro h2,
 .home-letter h2,
 .home-socials__header h2 {
@@ -55,6 +57,7 @@ body[data-page="home"] .content-body {
 }
 
 .home-nav__intro h2,
+.home-connection__intro h2,
 .home-letter h2,
 .home-socials__header h2 {
     font-size: clamp(1.7rem, 3.6vw, 2.7rem);
@@ -62,6 +65,7 @@ body[data-page="home"] .content-body {
 }
 
 .home-stage__copy p:last-child,
+.home-connection__intro p,
 .home-nav__intro p,
 .home-letter__body p,
 .home-social-card__meta {
@@ -78,6 +82,57 @@ body[data-page="home"] .content-body {
 .home-nav {
     display: grid;
     gap: calc(20px * var(--app-density));
+}
+
+.home-connection {
+    display: grid;
+    gap: calc(18px * var(--app-density));
+}
+
+.home-connection__intro {
+    display: grid;
+    gap: 10px;
+    max-width: 72ch;
+}
+
+.home-connection__intro p {
+    margin: 0;
+}
+
+.home-connection__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: calc(16px * var(--app-density));
+}
+
+.home-connection-card {
+    display: grid;
+    gap: 10px;
+    min-height: 0;
+    padding: 20px 22px;
+    border-radius: 22px;
+    background: var(--home-card-bg);
+    border: 1px solid var(--home-card-border);
+    box-shadow: var(--home-card-shadow);
+}
+
+.home-connection-card__label {
+    color: var(--primary-strong);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-size: 0.74rem;
+    font-weight: 700;
+}
+
+.home-connection-card strong {
+    font-size: 1.12rem;
+    line-height: 1.35;
+    word-break: break-word;
+}
+
+.home-connection-card p,
+.home-connection__meta {
+    margin: 0;
 }
 
 .home-nav__intro {
@@ -221,6 +276,7 @@ body[data-page="home"] .content-body {
 }
 
 @media (max-width: 720px) {
+    .home-connection__grid,
     .home-nav__grid,
     .home-socials__grid {
         grid-template-columns: 1fr;

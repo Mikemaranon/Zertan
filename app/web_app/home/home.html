@@ -23,6 +23,47 @@
     </div>
 </section>
 
+{% if lite_mode and page_context.lite_connection %}
+{% set lite_connection = page_context.lite_connection %}
+<section class="home-connection" aria-labelledby="home-connection-title">
+    <div class="home-connection__intro">
+        <p class="home-connection__eyebrow">Network access</p>
+        <h2 id="home-connection-title">Connect from other devices</h2>
+        <p>{{ lite_connection.share_hint }}</p>
+    </div>
+    <div class="home-connection__grid">
+        <article class="home-connection-card">
+            <span class="home-connection-card__label">Primary IP</span>
+            <strong>{{ lite_connection.primary_ip or "Not detected" }}</strong>
+            <p class="muted">
+                {% if lite_connection.primary_ip %}
+                Use this address from another device on the same network.
+                {% else %}
+                Lite could not detect a LAN IPv4 address on this machine right now.
+                {% endif %}
+            </p>
+        </article>
+        <article class="home-connection-card">
+            <span class="home-connection-card__label">Port</span>
+            <strong>{{ lite_connection.port }}</strong>
+            <p class="muted">Other devices should use this same port when connecting.</p>
+        </article>
+        <article class="home-connection-card">
+            <span class="home-connection-card__label">Connection URL</span>
+            <strong>{{ lite_connection.url or "Unavailable" }}</strong>
+            <p class="muted">Open this address in a browser on another device if the network allows it.</p>
+        </article>
+    </div>
+    {% if lite_connection.detected_ipv4_addresses %}
+    <div class="home-connection__meta">
+        <span class="muted">Detected IPv4 addresses: {{ lite_connection.detected_ipv4_addresses|join(", ") }}</span>
+    </div>
+    {% endif %}
+</section>
+
+<div class="home-divider" aria-hidden="true"></div>
+{% endif %}
+
 <section class="home-nav" aria-labelledby="home-nav-title">
     <div class="home-nav__intro">
         <p class="home-nav__eyebrow">Workspace</p>
@@ -65,7 +106,7 @@
             <p>Create exams, maintain question banks, and handle import and export workflows.</p>
         </a>
         {% endif %}
-        {% if can_admin %}
+        {% if can_admin and not lite_mode %}
         <a class="home-nav-card home-nav-card--admin" href="/admin">
             <span class="home-nav-card__index">
                 {% if feature_access.get("global_stats_page") and feature_access.get("live_exams_page") and can_manage %}06{% elif (feature_access.get("global_stats_page") and feature_access.get("live_exams_page")) or ((feature_access.get("global_stats_page") or feature_access.get("live_exams_page")) and can_manage) %}05{% elif feature_access.get("global_stats_page") or feature_access.get("live_exams_page") or can_manage %}04{% else %}03{% endif %}

@@ -1,0 +1,240 @@
+{% set page_id = "admin" %}
+{% extends "shared/base.html" %}
+{% block page_styles %}
+<link rel="stylesheet" href="/static/CSS/pages/management/admin.css">
+{% endblock %}
+{% block content %}
+<section class="grid grid--two">
+    <div class="panel">
+        <div class="section-heading">
+            <div>
+                <h2>User directory</h2>
+                <p class="muted">Manage platform access, edit user records, and inspect personal dashboards.</p>
+            </div>
+            <button id="admin-user-create" class="button button--primary" type="button" aria-label="Create user">+</button>
+        </div>
+        <div class="admin-directory-tools">
+            <label class="admin-directory-search">
+                <span>Search users</span>
+                <input id="admin-user-search" type="search" placeholder="Search by name, login name, role, or status">
+            </label>
+        </div>
+        <div id="admin-users-scroll" class="admin-users-scroll">
+            <div id="admin-users-list" class="list-stack"></div>
+        </div>
+    </div>
+    <div class="panel">
+        <div class="section-heading">
+            <div>
+                <h2>User groups</h2>
+                <p class="muted">Create reusable user scopes and manage memberships from the admin workspace.</p>
+            </div>
+            <button id="admin-group-create" class="button button--primary" type="button" aria-label="Create group">+</button>
+        </div>
+        <div class="admin-directory-tools">
+            <label class="admin-directory-search">
+                <span>Search groups</span>
+                <input id="admin-group-search" type="search" placeholder="Search by name, description, or member">
+            </label>
+        </div>
+        <div id="admin-groups-scroll" class="admin-users-scroll">
+            <div id="admin-groups-list" class="list-stack"></div>
+        </div>
+    </div>
+</section>
+
+<section class="panel stack-gap">
+    <div class="section-heading">
+        <div>
+            <h2>Workspace access</h2>
+            <p class="muted">Enable or disable domain-level workspaces for every authenticated user.</p>
+        </div>
+    </div>
+    <div id="admin-feature-error" class="error-message"></div>
+    <div id="admin-feature-toggles" class="list-stack"></div>
+</section>
+
+<div id="admin-user-modal" class="profile-modal admin-form-modal" hidden>
+    <div id="admin-user-modal-backdrop" class="profile-modal__backdrop"></div>
+    <div class="profile-modal__dialog admin-form-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="admin-user-modal-title">
+        <button id="admin-user-modal-close" class="profile-modal__close" type="button" aria-label="Close user form">Close</button>
+        <div class="admin-form-modal__body">
+            <form id="admin-user-form" class="form-stack">
+                <div class="section-heading">
+                    <div>
+                        <h2 id="admin-user-modal-title">Create user</h2>
+                        <p class="muted">Manage platform access and role assignments.</p>
+                    </div>
+                </div>
+                <input id="admin-user-id" type="hidden">
+                <label><span>Name</span><input id="admin-display-name" type="text" required></label>
+                <label><span>Login name</span><input id="admin-login-name" type="text" required></label>
+                <label><span>Password</span><input id="admin-password" type="password"></label>
+                <label>
+                    <span>Role</span>
+                    <select id="admin-role">
+                        <option value="user">User</option>
+                        <option value="reviewer">Reviewer</option>
+                        <option value="examiner">Examiner</option>
+                        <option value="administrator">Administrator</option>
+                    </select>
+                </label>
+                <label>
+                    <span>Status</span>
+                    <select id="admin-status">
+                        <option value="active">Active</option>
+                        <option value="disabled">Disabled</option>
+                    </select>
+                </label>
+                <div id="admin-user-groups-field"></div>
+                <div id="admin-error" class="error-message"></div>
+                <div class="button-row">
+                    <button class="button button--primary" type="submit">Save user</button>
+                    <button id="admin-user-form-cancel" class="button button--secondary" type="button">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div id="admin-group-modal" class="profile-modal admin-form-modal" hidden>
+    <div id="admin-group-modal-backdrop" class="profile-modal__backdrop"></div>
+    <div class="profile-modal__dialog admin-form-modal__dialog admin-form-modal__dialog--wide" role="dialog" aria-modal="true" aria-labelledby="admin-group-modal-title">
+        <button id="admin-group-modal-close" class="profile-modal__close" type="button" aria-label="Close group form">Close</button>
+        <div class="admin-form-modal__body">
+            <form id="admin-group-form" class="form-stack">
+                <div class="section-heading">
+                    <div>
+                        <h2 id="admin-group-modal-title">Create group</h2>
+                        <p class="muted">Use login-based search to add members and maintain group definitions.</p>
+                    </div>
+                </div>
+                <input id="admin-group-id" type="hidden">
+                <label><span>Group name</span><input id="admin-group-name" type="text" required></label>
+                <label><span>Description</span><textarea id="admin-group-description" rows="3" placeholder="Optional description"></textarea></label>
+                <div class="admin-group-picker">
+                    <label>
+                        <span>Find users by login name</span>
+                        <input id="admin-group-user-search" type="search" placeholder="Search users by login name">
+                    </label>
+                    <div id="admin-group-user-results" class="admin-picker-results"></div>
+                </div>
+                <div class="selection-field admin-group-members-field">
+                    <div class="selection-field__top">
+                        <span class="selection-field__label">Selected users</span>
+                    </div>
+                    <div id="admin-group-members" class="selection-field__chips"></div>
+                </div>
+                <div id="admin-group-error" class="error-message"></div>
+                <div class="button-row">
+                    <button class="button button--primary" type="submit">Save group</button>
+                    <button id="admin-group-form-cancel" class="button button--secondary" type="button">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div id="admin-group-view-modal" class="profile-modal admin-form-modal" hidden>
+    <div id="admin-group-view-modal-backdrop" class="profile-modal__backdrop"></div>
+    <div class="profile-modal__dialog admin-form-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="admin-group-view-title">
+        <button id="admin-group-view-modal-close" class="profile-modal__close" type="button" aria-label="Close group members">Close</button>
+        <div class="admin-form-modal__body">
+            <section class="form-stack">
+                <div class="section-heading">
+                    <div>
+                        <h2 id="admin-group-view-title">Group members</h2>
+                        <p id="admin-group-view-subtitle" class="muted">Members assigned to this group.</p>
+                    </div>
+                </div>
+                <div class="admin-directory-tools admin-group-view-tools">
+                    <label class="admin-directory-search">
+                        <span>Search users</span>
+                        <input id="admin-group-view-search" type="search" placeholder="Search by name, login name, role, or status">
+                    </label>
+                </div>
+                <div id="admin-group-view-members" class="admin-group-view-list list-stack"></div>
+            </section>
+        </div>
+    </div>
+</div>
+
+<div id="admin-dashboard-modal" class="profile-modal dashboard-modal" hidden>
+    <div id="admin-dashboard-modal-backdrop" class="profile-modal__backdrop"></div>
+    <div class="profile-modal__dialog dashboard-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="admin-dashboard-user-name">
+        <button id="admin-dashboard-modal-close" class="profile-modal__close" type="button" aria-label="Close user dashboard">Close</button>
+        <div class="dashboard-modal__body">
+            <section class="dashboard-modal__hero">
+                <div class="dashboard-modal__identity">
+                    <span id="admin-dashboard-avatar" class="profile-avatar dashboard-modal__avatar" aria-hidden="true"></span>
+                    <div>
+                        <p class="eyebrow">User dashboard</p>
+                        <h2 id="admin-dashboard-user-name">Loading user...</h2>
+                        <p id="admin-dashboard-subtitle" class="muted">Official KPIs are generated only from submitted exam mode attempts.</p>
+                    </div>
+                </div>
+                <div class="dashboard-modal__meta-grid">
+                    <div class="dashboard-modal__meta-card">
+                        <span class="muted">Login name</span>
+                        <strong id="admin-dashboard-login-name"></strong>
+                    </div>
+                    <div class="dashboard-modal__meta-card">
+                        <span class="muted">Role</span>
+                        <strong id="admin-dashboard-role"></strong>
+                    </div>
+                    <div class="dashboard-modal__meta-card">
+                        <span class="muted">Status</span>
+                        <strong id="admin-dashboard-status"></strong>
+                    </div>
+                    <div class="dashboard-modal__meta-card">
+                        <span class="muted">Last login</span>
+                        <strong id="admin-dashboard-last-login"></strong>
+                    </div>
+                </div>
+                <div id="admin-dashboard-error" class="error-message"></div>
+            </section>
+
+            <section class="panel stack-gap">
+                <div class="section-heading">
+                    <div>
+                        <h2>General dashboard</h2>
+                        <p class="muted">Official KPIs are generated only from submitted exam mode attempts.</p>
+                    </div>
+                </div>
+                <div id="admin-dashboard-kpis" class="grid grid--kpis"></div>
+            </section>
+
+            <section class="grid grid--two">
+                <div class="panel">
+                    <div class="section-heading">
+                        <div>
+                            <h2>Recent attempts</h2>
+                            <p class="muted">Latest submitted and in-progress formal exam attempts.</p>
+                        </div>
+                    </div>
+                    <div id="admin-dashboard-attempts" class="list-stack"></div>
+                </div>
+                <div class="panel">
+                    <div class="section-heading">
+                        <div>
+                            <h2>By question type</h2>
+                            <p class="muted">Personal success rate across submitted answers.</p>
+                        </div>
+                    </div>
+                    <div id="admin-dashboard-types" class="list-stack"></div>
+                </div>
+            </section>
+
+            <section class="panel stack-gap">
+                <div class="section-heading">
+                    <div>
+                        <h2>Success by exam</h2>
+                        <p class="muted">Average score and attempt volume across formal submissions.</p>
+                    </div>
+                </div>
+                <div id="admin-dashboard-exams" class="grid grid--cards"></div>
+            </section>
+        </div>
+    </div>
+</div>
+{% endblock %}

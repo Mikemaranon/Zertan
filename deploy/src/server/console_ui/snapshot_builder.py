@@ -18,7 +18,7 @@ class ConsoleSnapshotBuilder:
         data_dir,
         server_thread,
     ):
-        from services_m.connection_info_service import ConnectionInfoService
+        from app.web_server.services_m.connection_info_service import ConnectionInfoService
 
         self.backend = backend
         self.db = backend.DBManager

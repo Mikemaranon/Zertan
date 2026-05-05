@@ -1,0 +1,87 @@
+{% set page_id = "global-stats" %}
+{% extends "shared/base.html" %}
+{% block page_styles %}
+<link rel="stylesheet" href="/static/CSS/pages/home/global-stats.css?v={{ asset_version }}">
+{% endblock %}
+{% block content %}
+<section class="panel stack-gap">
+    <div class="section-heading">
+        <div>
+            <h2>Workspace statistics</h2>
+            <p class="muted">Compare formal exam activity, answer quality, and content difficulty across the visible workspace scope.</p>
+        </div>
+        <a class="button button--secondary" href="/dashboard">Open personal dashboard</a>
+    </div>
+    <div id="global-stats-kpis" class="grid grid--kpis"></div>
+</section>
+
+<section class="panel stack-gap">
+    <div class="section-heading">
+        <div>
+            <h2>Global user comparison</h2>
+            <p class="muted">Compare non-administrator users through grouped KPI bars, and narrow the comparison to a specific group when needed.</p>
+        </div>
+    </div>
+    <div class="global-comparison-layout">
+        <div class="global-comparison-toolbar">
+            <label class="global-comparison-field" for="global-stats-group-select">
+                <span>Group scope</span>
+                <select id="global-stats-group-select" aria-describedby="global-stats-group-hint"></select>
+            </label>
+            <div class="global-comparison-note">
+                <p id="global-stats-group-hint" class="muted">Global stats are limited to the currently visible workspace scope.</p>
+                <p class="muted">Only non-administrator users are represented in the comparison chart.</p>
+            </div>
+        </div>
+        <div id="global-stats-users" class="global-user-chart-shell"></div>
+        <div class="global-comparison-footer">
+            <div>
+                <h3>KPI selection</h3>
+                <p class="muted">The first active KPI defines descending user order. Additional KPIs only add grouped columns.</p>
+            </div>
+            <div id="global-stats-kpi-toggles" class="global-kpi-toggles" aria-label="Toggle KPIs"></div>
+        </div>
+    </div>
+</section>
+
+<section class="grid grid--two">
+    <div class="panel stack-gap">
+        <div class="section-heading">
+            <div>
+                <h2>By question type</h2>
+                <p class="muted">Where the visible workspace performs well and where accuracy drops.</p>
+            </div>
+        </div>
+        <div id="global-stats-types" class="list-stack global-stats-scroll-panel"></div>
+    </div>
+    <div class="panel stack-gap">
+        <div class="section-heading">
+            <div>
+                <h2>Exam performance</h2>
+                <p class="muted">Attempt volume, participating users, and average score by exam.</p>
+            </div>
+        </div>
+        <div id="global-stats-exams" class="list-stack global-stats-scroll-panel"></div>
+    </div>
+</section>
+
+<section class="panel stack-gap">
+    <div class="section-heading">
+        <div>
+            <h2>Hardest topics</h2>
+            <p class="muted">Topics with the lowest official accuracy across submitted attempts.</p>
+        </div>
+    </div>
+    <div id="global-stats-topics" class="grid grid--cards global-stats-scroll-panel global-stats-scroll-panel--cards"></div>
+</section>
+
+<section class="panel stack-gap">
+    <div class="section-heading">
+        <div>
+            <h2>Hardest tags</h2>
+            <p class="muted">Tag-level friction points across the visible workspace scope.</p>
+        </div>
+    </div>
+    <div id="global-stats-tags" class="grid grid--cards global-stats-scroll-panel global-stats-scroll-panel--cards"></div>
+</section>
+{% endblock %}

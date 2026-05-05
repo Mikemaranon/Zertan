@@ -1,0 +1,49 @@
+.card {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-small);
+    background: var(--surface);
+    padding: 20px;
+}
+
+.grid--cards > .card > .button-row:last-child {
+    margin-top: auto;
+}
+
+.card h3 {
+    margin: 0 0 5px;
+}
+
+.card > p {
+    margin: 0;
+}
+
+.kpi-card {
+    padding: 18px;
+    border-radius: var(--radius-small);
+    border: 1px solid var(--border);
+    background: var(--surface-soft);
+}
+
+.kpi-card strong {
+    display: block;
+    margin-top: 8px;
+    font-size: 1.7rem;
+}
+
+.dashboard-attempt-card {
+    position: relative;
+}
+
+.dashboard-attempt-card__badge {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+}
+
+.dashboard-attempts-scroll {
+    overflow-y: auto;
+    padding-right: 6px;
+}

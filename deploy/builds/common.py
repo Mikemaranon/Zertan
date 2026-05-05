@@ -38,6 +38,8 @@ def source_builder_path(component):
         return SRC_ROOT / "client" / "build_release.py"
     if component == "server":
         return SRC_ROOT / "server" / "build_release.py"
+    if component == "lite":
+        return SRC_ROOT / "lite" / "build_release.py"
     raise ValueError(f"Unsupported component: {component}")
 
 
@@ -92,7 +94,7 @@ def build_component(expected_platform, component, version, *, skip_install=False
         "--preserve-release-root",
     ]
 
-    if component == "server":
+    if component in {"server", "lite"}:
         command.extend(["--dist-root", str(output_root / "dist")])
     elif skip_install:
         command.append("--skip-install")

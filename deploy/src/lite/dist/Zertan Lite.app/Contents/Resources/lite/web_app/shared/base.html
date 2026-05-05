@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_title }} | Zertan Lite</title>
+    <script>
+        (function () {
+            const storageKey = "zertan.theme";
+            const migrationKey = "zertan.theme.version";
+            const updatedAtKey = "zertan.theme.updated_at";
+            const migrationVersion = "2";
+            const themes = new Set(["light", "dark", "graphite", "sage", "north-sea"]);
+            const nativeTheme = typeof window.__ZERTAN_TAURI_THEME === "string" ? window.__ZERTAN_TAURI_THEME : "";
+            const nativeUpdatedAt = typeof window.__ZERTAN_TAURI_THEME_UPDATED_AT === "string"
+                ? window.__ZERTAN_TAURI_THEME_UPDATED_AT
+                : "";
+            let theme = "";
+            let updatedAt = "";
+
+            try {
+                const storedVersion = window.localStorage.getItem(migrationKey);
+                const storedTheme = window.localStorage.getItem(storageKey);
+                const storedUpdatedAt = window.localStorage.getItem(updatedAtKey) || "";
+                const resolvedStoredTheme =
+                    storedVersion !== migrationVersion && storedTheme === "graphite"
+                        ? "dark"
+                        : (themes.has(storedTheme) ? storedTheme : "");
+                const resolvedNativeTheme = themes.has(nativeTheme) ? nativeTheme : "";
+
+                if (resolvedStoredTheme && resolvedNativeTheme) {
+                    if (storedUpdatedAt && nativeUpdatedAt) {
+                        theme = storedUpdatedAt >= nativeUpdatedAt ? resolvedStoredTheme : resolvedNativeTheme;
+                        updatedAt = storedUpdatedAt >= nativeUpdatedAt ? storedUpdatedAt : nativeUpdatedAt;
+                    } else if (storedUpdatedAt) {
+                        theme = resolvedStoredTheme;
+                        updatedAt = storedUpdatedAt;
+                    } else if (nativeUpdatedAt) {
+                        theme = resolvedNativeTheme;
+                        updatedAt = nativeUpdatedAt;
+                    } else {
+                        theme = resolvedNativeTheme;
+                    }
+                } else if (resolvedStoredTheme) {
+                    theme = resolvedStoredTheme;
+                    updatedAt = storedUpdatedAt;
+                } else if (resolvedNativeTheme) {
+                    theme = resolvedNativeTheme;
+                    updatedAt = nativeUpdatedAt;
+                }
+            } catch (_error) {
+                theme = themes.has(nativeTheme) ? nativeTheme : "";
+                updatedAt = nativeUpdatedAt;
+            }
+
+            const resolvedTheme = theme || "light";
+            const resolvedUpdatedAt = updatedAt || new Date().toISOString();
+            document.documentElement.dataset.theme = resolvedTheme;
+
+            try {
+                window.localStorage.setItem(storageKey, resolvedTheme);
+                window.localStorage.setItem(migrationKey, migrationVersion);
+                window.localStorage.setItem(updatedAtKey, resolvedUpdatedAt);
+            } catch (_error) {
+                // Ignore storage failures during first paint.
+            }
+        })();
+    </script>
+    <link rel="stylesheet" href="/static/CSS/core/tokens.css?v={{ asset_version }}">
+    <link rel="stylesheet" href="/static/CSS/core/reset.css?v={{ asset_version }}">
+    <link rel="stylesheet" href="/static/CSS/core/base.css?v={{ asset_version }}">
+    <link rel="stylesheet" href="/static/CSS/layout/shell.css?v={{ asset_version }}">
+    <link rel="stylesheet" href="/static/CSS/components/brand.css?v={{ asset_version }}">
+    <link rel="stylesheet" href="/static/CSS/components/buttons.css?v={{ asset_version }}">
+    <link rel="stylesheet" href="/static/CSS/components/cards.css?v={{ asset_version }}">
+    <link rel="stylesheet" href="/static/CSS/components/badges.css?v={{ asset_version }}">
+    <link rel="stylesheet" href="/static/CSS/components/forms.css?v={{ asset_version }}">
+    <link rel="stylesheet" href="/static/CSS/components/meta.css?v={{ asset_version }}">
+    <link rel="stylesheet" href="/static/CSS/components/pagination.css?v={{ asset_version }}">
+    <link rel="stylesheet" href="/static/CSS/components/selection-field.css?v={{ asset_version }}">
+    <link rel="stylesheet" href="/static/CSS/components/questions.css?v={{ asset_version }}">
+    <link rel="stylesheet" href="/static/CSS/components/loading.css?v={{ asset_version }}">
+    <link rel="stylesheet" href="/static/CSS/components/profile-modal.css?v={{ asset_version }}">
+    {% block page_styles %}{% endblock %}
+</head>
+<body data-page="{{ page_id }}" data-lite-mode="true">
+    <div class="app-shell">
+        <aside class="sidebar">
+            <div class="sidebar-topbar">
+                <div class="brand-block">
+                    <a class="brand" href="/home" aria-label="Zertan Lite home">
+                        <img class="brand__logo" src="/static/assets/Zertan.png" alt="Zertan Lite">
+                        <span class="brand__divider" aria-hidden="true"></span>
+                        <span class="brand-copy" aria-label="Single-user certification preparation workspace">
+                            <span>Zertan</span>
+                            <span>Lite</span>
+                            <span>Workspace</span>
+                        </span>
+                    </a>
+                </div>
+                <button
+                    id="sidebar-toggle"
+                    class="sidebar-toggle"
+                    type="button"
+                    aria-expanded="false"
+                    aria-controls="sidebar-menu"
+                    aria-label="Open navigation menu"
+                >
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
+            <div id="sidebar-menu" class="sidebar-menu">
+                <nav class="sidebar-nav">
+                    <a href="/home">Home</a>
+                    <div class="sidebar-nav__section">
+                        <p class="sidebar-nav__title">overview</p>
+                        <a href="/dashboard">Dashboard</a>
+                    </div>
+                    <div class="sidebar-nav__section">
+                        <p class="sidebar-nav__title">study</p>
+                        <a href="/catalog">Exam Catalog</a>
+                        <a href="/management/exams">Exam Management</a>
+                    </div>
+                </nav>
+                <div class="sidebar-footer">
+                    <div class="user-chip user-chip--footer" aria-label="Local workspace user">
+                        <span class="user-chip__avatar">{{ current_user.display_name[:1]|upper }}</span>
+                        <span class="user-chip__meta">
+                            <span class="user-chip__name">{{ current_user.display_name }}</span>
+                            <span class="user-chip__role">local workspace</span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+        <main class="content-shell">
+            <header class="content-header">
+                <div>
+                    <p class="eyebrow">Zertan Lite</p>
+                    <h1>{{ page_title }}</h1>
+                </div>
+                <div class="header-meta">
+                    <span class="muted">Single-user workspace</span>
+                </div>
+            </header>
+            <section class="content-body">
+                {% block content %}{% endblock %}
+            </section>
+        </main>
+    </div>
+
+    <script id="current-user-data" type="application/json">{{ current_user|tojson }}</script>
+    <script id="page-context-data" type="application/json">{{ page_context|default({})|tojson }}</script>
+    <script type="module" src="/static/JS/app.js?v={{ asset_version }}"></script>
+</body>
+</html>

@@ -1,0 +1,34 @@
+.editor-section {
+    display: none;
+    padding: 18px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-small);
+    background: var(--surface-soft);
+}
+
+.editor-section.is-visible {
+    display: grid;
+    gap: 16px;
+}
+
+.inline-grid {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+}
+
+.row-box {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-small);
+    background: var(--surface);
+    padding: 14px 16px;
+}
+
+.hotspot-dropdown-row > label,
+.hotspot-dropdown-row > .inline-grid {
+    margin-bottom: 10px;
+}
+
+.hotspot-dropdown-row > .js-remove-row {
+    margin-top: 5px;
+}

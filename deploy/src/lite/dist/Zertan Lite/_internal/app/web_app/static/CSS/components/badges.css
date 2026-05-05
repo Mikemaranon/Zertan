@@ -1,0 +1,35 @@
+.badge-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.badge {
+    display: inline-flex;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: var(--surface-soft);
+    color: var(--muted);
+    font-size: 0.88rem;
+}
+
+.badge--active {
+    background: var(--primary-soft-bg);
+    color: var(--primary-strong);
+}
+
+.badge--pending {
+    background: var(--badge-pending-bg);
+    color: var(--badge-pending-text);
+}
+
+.badge--in-progress {
+    background: var(--primary-soft-bg);
+    color: var(--primary-strong);
+}
+
+.badge--completed {
+    background: var(--success-chip-bg);
+    color: var(--success-soft-text);
+}

@@ -157,7 +157,7 @@ gunicorn --chdir app/web_server --bind 0.0.0.0:5050 wsgi:app
 Run all automated tests:
 
 ```bash
-.venv/bin/python -m unittest discover -s tests
+.venv/bin/python -m unittest discover -s tests -t .
 ```
 
 Coverage focus today:
@@ -191,6 +191,12 @@ Server packaging assets:
 - [`deploy/src/server/build_release.py`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/src/server/build_release.py)
 - [`deploy/src/server/zertan.spec`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/src/server/zertan.spec)
 
+Lite packaging assets:
+
+- [`deploy/src/lite/lite_launcher.py`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/src/lite/lite_launcher.py)
+- [`deploy/src/lite/build_release.py`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/src/lite/build_release.py)
+- [`deploy/src/lite/zertan-lite.spec`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/src/lite/zertan-lite.spec)
+
 Client packaging assets:
 
 - [`deploy/src/client/package.json`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/src/client/package.json)
@@ -205,6 +211,7 @@ Build orchestration assets:
 - [`deploy/builds/windows`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/builds/windows)
 - [`deploy/builds/linux`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/builds/linux)
 - [`deploy/builds/mac`](/Users/myke/Desktop/codes/Projects/Zertan/deploy/builds/mac)
+- `deploy/builds/build.py --target` now supports `client`, `server`, `lite`, and `all`.
 - Final native artifacts are written into `deploy/builds/<os>/files/`.
 
 ## Troubleshooting

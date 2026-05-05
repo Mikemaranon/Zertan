@@ -1,0 +1,108 @@
+import os
+import sys
+from pathlib import Path
+
+from PyInstaller.utils.hooks import collect_data_files, collect_submodules
+
+
+APP_NAME = "Zertan Lite"
+IS_WINDOWS = sys.platform.startswith("win")
+IS_MACOS = sys.platform == "darwin"
+LITE_VERSION = os.environ.get("ZERTAN_LITE_VERSION") or "0.0.0"
+BUNDLE_BUILD_VERSION = LITE_VERSION.split("-", 1)[0]
+WINDOWS_ICON = os.environ.get("ZERTAN_LITE_ICON_ICO") or None
+MACOS_ICON = os.environ.get("ZERTAN_LITE_ICON_ICNS") or None
+MACOS_CODESIGN_IDENTITY = os.environ.get("ZERTAN_MACOS_CODESIGN_IDENTITY") or None
+MACOS_ENTITLEMENTS_PATH = os.environ.get("ZERTAN_MACOS_ENTITLEMENTS_PATH") or None
+project_root = Path(SPECPATH).resolve().parents[2]
+datas = [
+    (str(project_root / "app" / "web_app"), "app/web_app"),
+    (str(project_root / "lite" / "web_app"), "lite/web_app"),
+]
+hiddenimports = (
+    collect_submodules("app.web_server.api_m.domains")
+    + collect_submodules("lite.web_server")
+    + collect_submodules("webview")
+)
+runtime_hooks = []
+if sys.platform.startswith("linux"):
+    runtime_hooks.append(str(project_root / "deploy" / "src" / "server" / "pyi_rth_linux_gi.py"))
+    hiddenimports += ["optparse"]
+    try:
+        datas += collect_data_files("gi", includes=["**/*.typelib"])
+        hiddenimports += collect_submodules("gi")
+    except Exception:
+        pass
+
+
+a = Analysis(
+    [str(project_root / "deploy" / "src" / "lite" / "lite_launcher.py")],
+    pathex=[str(project_root), str(project_root / "app" / "web_server")],
+    binaries=[],
+    datas=datas,
+    hiddenimports=hiddenimports,
+    hookspath=[],
+    hooksconfig={},
+    runtime_hooks=runtime_hooks,
+    excludes=[],
+    noarchive=False,
+)
+pyz = PYZ(a.pure)
+
+if IS_WINDOWS:
+    exe = EXE(
+        pyz,
+        a.scripts,
+        a.binaries,
+        a.zipfiles,
+        a.datas,
+        [],
+        name=APP_NAME,
+        debug=False,
+        bootloader_ignore_signals=False,
+        strip=False,
+        upx=False,
+        console=False,
+        icon=WINDOWS_ICON,
+    )
+else:
+    exe = EXE(
+        pyz,
+        a.scripts,
+        [],
+        exclude_binaries=True,
+        name=APP_NAME,
+        debug=False,
+        bootloader_ignore_signals=False,
+        strip=False,
+        upx=False,
+        console=not IS_MACOS,
+        codesign_identity=MACOS_CODESIGN_IDENTITY,
+        entitlements_file=MACOS_ENTITLEMENTS_PATH,
+    )
+    coll = COLLECT(
+        exe,
+        a.binaries,
+        a.zipfiles,
+        a.datas,
+        strip=False,
+        upx=False,
+        upx_exclude=[],
+        name=APP_NAME,
+    )
+
+    if IS_MACOS:
+        app = BUNDLE(
+            coll,
+            name=f"{APP_NAME}.app",
+            bundle_identifier="com.zertan.lite",
+            icon=MACOS_ICON,
+            info_plist={
+                "CFBundleDisplayName": APP_NAME,
+                "CFBundleName": APP_NAME,
+                "CFBundleShortVersionString": LITE_VERSION,
+                "CFBundleVersion": BUNDLE_BUILD_VERSION,
+                "LSBackgroundOnly": False,
+                "NSHighResolutionCapable": True,
+            },
+        )
