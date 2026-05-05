@@ -1,9 +1,14 @@
 import { escapeHtml, formatDuration, formatPercent } from "../core/api.js";
+import { clearBusyState, renderErrorState, renderKpiSkeletons, renderCardSkeletons } from "./loading-state.js";
 
 export function renderDashboardView(
     { kpiContainer, attemptsContainer, typeContainer, examContainer },
     { overviewData, personalData }
 ) {
+    clearBusyState(kpiContainer);
+    clearBusyState(attemptsContainer);
+    clearBusyState(typeContainer);
+    clearBusyState(examContainer);
     const kpis = overviewData.kpis || {};
     kpiContainer.innerHTML = [
         createKpi("Exams completed", kpis.exams_completed),
@@ -30,12 +35,39 @@ export function renderDashboardView(
 }
 
 export function renderDashboardLoadingState({ kpiContainer, attemptsContainer, typeContainer, examContainer }) {
-    const loadingMarkup = `<div class="empty-state">Loading dashboard...</div>`;
-    kpiContainer.innerHTML = loadingMarkup;
-    attemptsContainer.innerHTML = loadingMarkup;
+    renderKpiSkeletons(kpiContainer, 7);
+    renderCardSkeletons(attemptsContainer, { count: 4, showBadge: true, chips: 0, actions: 0, compact: true });
     attemptsContainer.style.maxHeight = "";
-    typeContainer.innerHTML = loadingMarkup;
-    examContainer.innerHTML = loadingMarkup;
+    renderCardSkeletons(typeContainer, { count: 4, showBadge: false, chips: 0, actions: 0, compact: true });
+    renderCardSkeletons(examContainer, { count: 3, showBadge: false, chips: 0, actions: 0 });
+}
+
+export function renderDashboardErrorState(
+    { kpiContainer, attemptsContainer, typeContainer, examContainer },
+    error,
+    onRetry
+) {
+    attemptsContainer.style.maxHeight = "";
+    renderErrorState(kpiContainer, {
+        title: "Unable to load dashboard",
+        message: error?.message || "Dashboard data is currently unavailable.",
+        onRetry,
+    });
+    renderErrorState(attemptsContainer, {
+        title: "Recent attempts unavailable",
+        message: "Retry to load the latest formal-attempt activity.",
+        onRetry,
+    });
+    renderErrorState(typeContainer, {
+        title: "Question-type metrics unavailable",
+        message: "Retry to refresh the current personal accuracy breakdown.",
+        onRetry,
+    });
+    renderErrorState(examContainer, {
+        title: "Exam performance unavailable",
+        message: "Retry to load the current exam success summary.",
+        onRetry,
+    });
 }
 
 function renderAttemptCard(attempt) {

@@ -1,6 +1,7 @@
 use std::{
     fs,
     path::{Path, PathBuf},
+    process::Command,
     sync::Mutex,
 };
 
@@ -252,6 +253,12 @@ async fn connect_to_server(
     })
 }
 
+#[tauri::command]
+fn open_external_url(url: String) -> Result<(), String> {
+    let validated = validate_external_url(&url)?;
+    open_url_in_system_browser(&validated)
+}
+
 fn open_workspace_window(
     app: &AppHandle,
     server: &StoredServer,
@@ -431,6 +438,48 @@ fn validate_server_payload(payload: &SaveServerPayload) -> Result<(), String> {
     Ok(())
 }
 
+fn validate_external_url(url: &str) -> Result<Url, String> {
+    let parsed = Url::parse(url.trim()).map_err(|error| format!("Invalid external URL: {error}"))?;
+    match parsed.scheme() {
+        "http" | "https" => {}
+        _ => return Err("Only http and https links are supported.".to_string()),
+    }
+    if parsed.host_str().unwrap_or("").trim().is_empty() {
+        return Err("The external URL must include a valid host.".to_string());
+    }
+    Ok(parsed)
+}
+
+fn open_url_in_system_browser(url: &Url) -> Result<(), String> {
+    let url_string = url.as_str();
+
+    #[cfg(target_os = "macos")]
+    let mut command = {
+        let mut command = Command::new("open");
+        command.arg(url_string);
+        command
+    };
+
+    #[cfg(target_os = "windows")]
+    let mut command = {
+        let mut command = Command::new("cmd");
+        command.args(["/C", "start", "", url_string]);
+        command
+    };
+
+    #[cfg(all(unix, not(target_os = "macos")))]
+    let mut command = {
+        let mut command = Command::new("xdg-open");
+        command.arg(url_string);
+        command
+    };
+
+    command
+        .spawn()
+        .map_err(|error| format!("Could not open the browser for {url_string}: {error}"))?;
+    Ok(())
+}
+
 fn read_store() -> Result<ClientStore, String> {
     let path = store_path()?;
     read_store_from_path(&path)
@@ -487,7 +536,8 @@ pub fn run() {
             set_client_theme,
             save_server,
             delete_server,
-            connect_to_server
+            connect_to_server,
+            open_external_url
         ])
         .run(tauri::generate_context!())
         .expect("error while running Zertan Client");
@@ -605,6 +655,26 @@ mod tests {
         let fallback_script =
             workspace_theme_init_script("unknown", "").expect("fallback script should build");
         assert!(fallback_script.contains("\"light\""));
+    }
+
+    #[test]
+    fn validate_external_url_accepts_http_and_https() {
+        assert!(validate_external_url("https://github.com/Mikemaranon/Zertan").is_ok());
+        assert!(validate_external_url("http://127.0.0.1:5050/home").is_ok());
+    }
+
+    #[test]
+    fn validate_external_url_rejects_unsupported_schemes() {
+        let error = validate_external_url("javascript:alert('x')")
+            .expect_err("javascript URLs should be rejected");
+        assert!(error.contains("http and https"));
+    }
+
+    #[test]
+    fn validate_external_url_rejects_missing_host() {
+        let error = validate_external_url("https://")
+            .expect_err("hostless URLs should be rejected");
+        assert!(error.contains("Invalid external URL"));
     }
 
     fn assert_equal_maybe_empty(value: &str) {

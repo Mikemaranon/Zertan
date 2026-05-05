@@ -112,7 +112,7 @@ class _BuilderFakeQuestionsTable:
 
 
 class _BuilderFakeStatisticsTable:
-    def user_exam_error_focus_candidates(self, user_id, exam_id, failure_percentage_threshold=40, limit=None):
+    def user_exam_error_focus_candidates(self, user_id, exam_id, failure_percentage_threshold=40, minimum_failure_count=2, limit=None):
         all_candidates = [
             {
                 "question_id": 1002,
@@ -128,8 +128,19 @@ class _BuilderFakeStatisticsTable:
                 "failure_count": 2,
                 "failure_percentage": 50.0,
             },
+            {
+                "question_id": 1003,
+                "question_title": "Question 1003",
+                "question_statement": "Prompt 1003",
+                "failure_count": 1,
+                "failure_percentage": 100.0,
+            },
         ]
-        candidates = [item for item in all_candidates if item["failure_percentage"] >= failure_percentage_threshold]
+        candidates = [
+            item
+            for item in all_candidates
+            if item["failure_count"] >= minimum_failure_count and item["failure_percentage"] >= failure_percentage_threshold
+        ]
         if limit is None:
             return candidates
         return candidates[:limit]
@@ -262,6 +273,7 @@ class AttemptServiceErrorFocusTests(unittest.TestCase):
         self.assertTrue(payload["error_focus"]["available"])
         self.assertEqual(payload["error_focus"]["available_question_count"], 2)
         self.assertEqual(payload["error_focus"]["failure_percentage_threshold"], 40)
+        self.assertEqual(payload["error_focus"]["minimum_failure_count"], 2)
         self.assertEqual(payload["error_focus"]["preview_questions"][0]["question_id"], 1002)
 
     def test_error_focus_builder_meta_respects_failure_percentage_threshold(self):
@@ -270,6 +282,14 @@ class AttemptServiceErrorFocusTests(unittest.TestCase):
         self.assertEqual(payload["error_focus"]["failure_percentage_threshold"], 60)
         self.assertEqual(payload["error_focus"]["available_question_count"], 1)
         self.assertEqual(payload["error_focus"]["preview_questions"][0]["question_id"], 1002)
+
+    def test_error_focus_builder_meta_excludes_single_failure_questions(self):
+        payload = self.service.build_builder_meta(7, 3)
+
+        self.assertEqual(
+            [item["question_id"] for item in payload["error_focus"]["preview_questions"]],
+            [1002, 1001],
+        )
 
 
 if __name__ == "__main__":

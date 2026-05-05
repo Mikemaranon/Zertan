@@ -1,4 +1,11 @@
 import { escapeHtml, formatDuration, formatPercent, getCurrentUser, request } from "../core/api.js";
+import {
+    clearBusyState,
+    renderCardSkeletons,
+    renderErrorState,
+    renderKpiSkeletons,
+    renderPanelSkeleton,
+} from "../components/loading-state.js";
 
 const USER_COMPARISON_KPIS = [
     {
@@ -50,8 +57,6 @@ export async function initGlobalStatsPage() {
     const topicContainer = document.getElementById("global-stats-topics");
     const tagContainer = document.getElementById("global-stats-tags");
 
-    const data = await request("/api/statistics/platform");
-    const currentUser = getCurrentUser();
     const pageNodes = {
         kpiContainer,
         examContainer,
@@ -59,36 +64,100 @@ export async function initGlobalStatsPage() {
         topicContainer,
         tagContainer,
     };
-
-    const userComparisonState = {
-        activeMetricKeys: DEFAULT_ACTIVE_USER_KPIS.slice(),
-        currentUserId: Number(data.current_user_id || 0),
-        currentUserRole: String(data.current_user_role || currentUser.role || "user"),
-        selectedGroupId: data.selected_group_id ? Number(data.selected_group_id) : null,
-        availableGroups: data.comparison_groups || [],
-        users: filterComparableUsers(data.platform?.users || []),
-    };
-    userComparisonState.hasScope = userComparisonState.currentUserRole === "administrator"
-        || userComparisonState.availableGroups.length > 0
-        || userComparisonState.selectedGroupId !== null;
     const comparisonControls = ensureUserComparisonControls(usersContainer);
+    const currentUser = getCurrentUser();
 
-    await bindUserComparisonEvents(
-        comparisonControls.usersContainer,
-        comparisonControls.kpiTogglesContainer,
-        comparisonControls.groupSelect,
-        comparisonControls.groupHint,
-        userComparisonState,
-        pageNodes,
-    );
-    populateGroupSelect(
-        comparisonControls.groupSelect,
-        comparisonControls.groupHint,
-        userComparisonState.currentUserRole,
-        userComparisonState.availableGroups,
-        userComparisonState.selectedGroupId,
-    );
-    renderPlatformPanels(pageNodes, data.platform || {}, comparisonControls.usersContainer, comparisonControls.kpiTogglesContainer, userComparisonState);
+    const renderLoadingState = () => {
+        renderKpiSkeletons(kpiContainer, 6);
+        renderPanelSkeleton(comparisonControls.usersContainer, { lines: 6 });
+        renderCardSkeletons(examContainer, { count: 4, showBadge: false, compact: true });
+        renderCardSkeletons(typeContainer, { count: 4, showBadge: false, compact: true });
+        renderCardSkeletons(topicContainer, { count: 4, showBadge: false, compact: true });
+        renderCardSkeletons(tagContainer, { count: 4, showBadge: false, compact: true });
+        if (comparisonControls.kpiTogglesContainer) {
+            comparisonControls.kpiTogglesContainer.innerHTML = `
+                <div class="button-row skeleton-actions">
+                    <span class="skeleton-block skeleton-button skeleton-button--small" style="width:96px;"></span>
+                    <span class="skeleton-block skeleton-button skeleton-button--small" style="width:84px;"></span>
+                    <span class="skeleton-block skeleton-button skeleton-button--small" style="width:110px;"></span>
+                </div>
+            `;
+        }
+    };
+
+    const loadGlobalStats = async (selectedGroupId = null) => {
+        renderLoadingState();
+        try {
+            const data = await request(buildPlatformStatisticsUrl(selectedGroupId));
+            const userComparisonState = {
+                activeMetricKeys: DEFAULT_ACTIVE_USER_KPIS.slice(),
+                currentUserId: Number(data.current_user_id || 0),
+                currentUserRole: String(data.current_user_role || currentUser.role || "user"),
+                selectedGroupId: data.selected_group_id ? Number(data.selected_group_id) : null,
+                availableGroups: data.comparison_groups || [],
+                users: filterComparableUsers(data.platform?.users || []),
+            };
+            userComparisonState.hasScope = userComparisonState.currentUserRole === "administrator"
+                || userComparisonState.availableGroups.length > 0
+                || userComparisonState.selectedGroupId !== null;
+
+            await bindUserComparisonEvents(
+                comparisonControls.usersContainer,
+                comparisonControls.kpiTogglesContainer,
+                comparisonControls.groupSelect,
+                comparisonControls.groupHint,
+                userComparisonState,
+                pageNodes,
+            );
+            populateGroupSelect(
+                comparisonControls.groupSelect,
+                comparisonControls.groupHint,
+                userComparisonState.currentUserRole,
+                userComparisonState.availableGroups,
+                userComparisonState.selectedGroupId,
+            );
+            renderPlatformPanels(
+                pageNodes,
+                data.platform || {},
+                comparisonControls.usersContainer,
+                comparisonControls.kpiTogglesContainer,
+                userComparisonState
+            );
+        } catch (error) {
+            renderErrorState(kpiContainer, {
+                title: "Unable to load workspace statistics",
+                message: error.message,
+                onRetry: () => loadGlobalStats(selectedGroupId),
+            });
+            renderErrorState(comparisonControls.usersContainer, {
+                title: "Comparison chart unavailable",
+                message: "Retry to reload user comparison data.",
+                onRetry: () => loadGlobalStats(selectedGroupId),
+            });
+            renderErrorState(examContainer, {
+                title: "Exam statistics unavailable",
+                message: "Retry to refresh the exam comparison summary.",
+                onRetry: () => loadGlobalStats(selectedGroupId),
+            });
+            renderErrorState(typeContainer, {
+                title: "Question-type statistics unavailable",
+                message: "Retry to refresh the visible workspace breakdown.",
+                onRetry: () => loadGlobalStats(selectedGroupId),
+            });
+            renderErrorState(topicContainer, {
+                title: "Topic statistics unavailable",
+                message: "Retry to refresh the current topic difficulty view.",
+                onRetry: () => loadGlobalStats(selectedGroupId),
+            });
+            renderErrorState(tagContainer, {
+                title: "Tag statistics unavailable",
+                message: "Retry to refresh the current tag difficulty view.",
+                onRetry: () => loadGlobalStats(selectedGroupId),
+            });
+        }
+    };
+
+    await loadGlobalStats();
 }
 
 function ensureUserComparisonControls(usersContainer) {
@@ -171,6 +240,12 @@ async function bindUserComparisonEvents(chartContainer, togglesContainer, groupS
             groupSelect.disabled = true;
             const nextGroupId = parseSelectedGroupId(groupSelect.value);
             try {
+                renderKpiSkeletons(pageNodes.kpiContainer, 6);
+                renderPanelSkeleton(chartContainer, { lines: 6 });
+                renderCardSkeletons(pageNodes.examContainer, { count: 4, showBadge: false, compact: true });
+                renderCardSkeletons(pageNodes.typeContainer, { count: 4, showBadge: false, compact: true });
+                renderCardSkeletons(pageNodes.topicContainer, { count: 4, showBadge: false, compact: true });
+                renderCardSkeletons(pageNodes.tagContainer, { count: 4, showBadge: false, compact: true });
                 const data = await request(buildPlatformStatisticsUrl(nextGroupId));
                 state.selectedGroupId = data.selected_group_id ? Number(data.selected_group_id) : null;
                 state.availableGroups = data.comparison_groups || state.availableGroups;
@@ -195,6 +270,13 @@ async function bindUserComparisonEvents(chartContainer, togglesContainer, groupS
 }
 
 function renderPlatformPanels(pageNodes, platform, usersContainer, togglesContainer, userComparisonState) {
+    clearBusyState(pageNodes.kpiContainer);
+    clearBusyState(pageNodes.examContainer);
+    clearBusyState(pageNodes.typeContainer);
+    clearBusyState(pageNodes.topicContainer);
+    clearBusyState(pageNodes.tagContainer);
+    clearBusyState(usersContainer);
+    clearBusyState(togglesContainer);
     if (!userComparisonState.hasScope) {
         renderNoScopePanels(pageNodes, usersContainer, togglesContainer);
         return;

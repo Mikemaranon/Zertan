@@ -131,11 +131,15 @@ class StatisticsTable:
             for row in rows
         ]
 
-    def user_exam_error_focus_candidates(self, user_id, exam_id, failure_percentage_threshold=40, limit=None):
+    def user_exam_error_focus_candidates(self, user_id, exam_id, failure_percentage_threshold=40, minimum_failure_count=2, limit=None):
         try:
             failure_percentage_threshold = max(0, min(100, int(failure_percentage_threshold if failure_percentage_threshold is not None else 40)))
         except (TypeError, ValueError):
             failure_percentage_threshold = 40
+        try:
+            minimum_failure_count = max(1, int(minimum_failure_count if minimum_failure_count is not None else 2))
+        except (TypeError, ValueError):
+            minimum_failure_count = 2
 
         query = """
             WITH question_history AS (
@@ -201,10 +205,11 @@ class StatisticsTable:
             WHERE total_attempts > 0
               AND last_failed_at IS NOT NULL
               AND (last_correct_attempt_id IS NULL OR last_failed_attempt_id > last_correct_attempt_id)
+              AND failure_count >= ?
               AND ((failure_count * 100.0) / total_attempts) >= ?
             ORDER BY failure_percentage DESC, failure_count DESC, last_failed_attempt_id DESC, last_seen_at DESC, question_position, question_id
         """
-        params = [user_id, exam_id, failure_percentage_threshold]
+        params = [user_id, exam_id, minimum_failure_count, failure_percentage_threshold]
         if limit is not None:
             query += " LIMIT ?"
             params.append(max(1, int(limit)))

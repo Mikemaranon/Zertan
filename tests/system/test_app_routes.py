@@ -136,6 +136,47 @@ class AppRoutesTests(unittest.TestCase):
         self.assertEqual(response.status_code, 403)
         self.assertIn(b"Access denied", response.data)
 
+    def test_exam_management_shows_modal_actions_for_examiner(self):
+        app, _ = self._build_app(
+            user={
+                "id": 5,
+                "display_name": "Examiner",
+                "role": "examiner",
+                "avatar_path": None,
+            }
+        )
+
+        with app.test_client() as client:
+            response = client.get("/management/exams")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Managed exams", response.data)
+        self.assertIn(b'id="open-exam-form-modal"', response.data)
+        self.assertIn(b'id="open-import-form-modal"', response.data)
+        self.assertIn(b'id="exam-form-modal"', response.data)
+        self.assertIn(b'id="import-form-modal"', response.data)
+        self.assertNotIn(b"Create or edit", response.data)
+
+    def test_exam_management_hides_modal_actions_for_reviewer(self):
+        app, _ = self._build_app(
+            user={
+                "id": 13,
+                "display_name": "Reviewer",
+                "role": "reviewer",
+                "avatar_path": None,
+            }
+        )
+
+        with app.test_client() as client:
+            response = client.get("/management/exams")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Managed exams", response.data)
+        self.assertNotIn(b'id="open-exam-form-modal"', response.data)
+        self.assertNotIn(b'id="open-import-form-modal"', response.data)
+        self.assertNotIn(b'id="exam-form-modal"', response.data)
+        self.assertNotIn(b'id="import-form-modal"', response.data)
+
     def test_admin_route_requires_administrator_role(self):
         examiner_app, _ = self._build_app(
             user={

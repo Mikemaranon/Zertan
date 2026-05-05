@@ -30,6 +30,7 @@
         bindModal();
         bindForm();
         bindListActions();
+        bindExternalLinks();
         bindThemeRefresh();
         await loadTheme();
         await loadServers();
@@ -140,6 +141,35 @@
                 } finally {
                     clearStatus();
                 }
+            }
+        });
+    }
+
+    function bindExternalLinks() {
+        document.addEventListener("click", async (event) => {
+            const link = event.target.closest("[data-external-url]");
+            if (!link) {
+                return;
+            }
+
+            event.preventDefault();
+            const url = String(link.dataset.externalUrl || "").trim();
+            if (!url) {
+                return;
+            }
+
+            clearErrors();
+            setStatus("Opening link in your browser...");
+            try {
+                if (typeof invoke === "function") {
+                    await invoke("open_external_url", { url });
+                } else {
+                    window.open(url, "_blank", "noopener,noreferrer");
+                }
+                setStatus("Browser opened.");
+            } catch (error) {
+                showPageError(String(error));
+                clearStatus();
             }
         });
     }

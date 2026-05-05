@@ -1,6 +1,7 @@
 import { escapeHtml, focusFieldForDesktop, request, splitCommaValues } from "../core/api.js";
 import { confirmAction } from "../components/confirm-modal.js";
 import { createGroupScopePicker } from "../components/group-scope-picker.js";
+import { clearBusyState, renderCardSkeletons, renderErrorState } from "../components/loading-state.js";
 
 const MAX_IMPORT_PACKAGE_SIZE = 5 * 1024 * 1024;
 const scopeState = {
@@ -78,92 +79,111 @@ export async function initManagementPage() {
     }
 
     async function loadExams() {
-        const data = await request("/api/exams");
-        scopeState.options = data.scope_options || [];
-        scopeState.permissions = data.scope_permissions || scopeState.permissions;
-        syncScopeControls(examGroupPicker, importGroupPicker);
+        renderCardSkeletons(examList, { count: 5, showBadge: true, chips: 3, actions: 4 });
+        try {
+            const data = await request("/api/exams");
+            scopeState.options = data.scope_options || [];
+            scopeState.permissions = data.scope_permissions || scopeState.permissions;
+            syncScopeControls(examGroupPicker, importGroupPicker);
 
-        examList.innerHTML = data.exams
-            .map((exam) => {
-                const scopeLabel = exam.is_global_scope
-                    ? "Domain"
-                    : (exam.scope_groups || []).map((group) => group.name).join(", ");
-                const officialLink = exam.official_url
-                    ? `
-                <div class="exam-reference">
-                    <a class="meta-link" href="${escapeHtml(exam.official_url)}" target="_blank" rel="noopener noreferrer">Official exam page</a>
-                </div>
-            `
-                    : "";
-                return `
-            <div class="card" data-exam-id="${exam.id}">
-                <div class="section-heading">
-                    <div>
-                        <h3>${escapeHtml(exam.code)} · ${escapeHtml(exam.title)}</h3>
-                        <p class="muted">${escapeHtml(exam.provider)}</p>
+            examList.innerHTML = data.exams
+                .map((exam) => {
+                    const scopeLabel = exam.is_global_scope
+                        ? "Domain"
+                        : (exam.scope_groups || []).map((group) => group.name).join(", ");
+                    const officialLink = exam.official_url
+                        ? `
+                    <div class="exam-reference">
+                        <a class="meta-link" href="${escapeHtml(exam.official_url)}" target="_blank" rel="noopener noreferrer">Official exam page</a>
                     </div>
-                    <span class="badge">${escapeHtml(exam.status)}</span>
+                `
+                        : "";
+                    return `
+                <div class="card" data-exam-id="${exam.id}">
+                    <div class="section-heading">
+                        <div>
+                            <h3>${escapeHtml(exam.code)} · ${escapeHtml(exam.title)}</h3>
+                            <p class="muted">${escapeHtml(exam.provider)}</p>
+                        </div>
+                        <span class="badge">${escapeHtml(exam.status)}</span>
+                    </div>
+                    <p class="muted">${escapeHtml(exam.description || "")}</p>
+                    ${officialLink}
+                    <div class="badge-row">
+                        <span class="badge">${escapeHtml(scopeLabel)}</span>
+                        ${(exam.tags || []).map((tag) => `<span class="badge">${escapeHtml(tag)}</span>`).join("")}
+                    </div>
+                    <div class="button-row exam-management__actions">
+                        ${exam.can_manage ? `<button class="button button--secondary button--small js-edit-exam" type="button">Edit metadata</button>` : ""}
+                        ${exam.can_edit_questions ? `<a class="button button--secondary button--small" href="/management/exams/${exam.id}/questions">Edit questions</a>` : ""}
+                        ${exam.can_export_package ? `<button class="button button--primary button--small js-export-exam" type="button">Export package</button>` : ""}
+                        ${exam.can_manage ? `<button class="button button--danger button--small js-delete-exam" type="button">Delete exam</button>` : ""}
+                    </div>
                 </div>
-                <p class="muted">${escapeHtml(exam.description || "")}</p>
-                ${officialLink}
-                <div class="badge-row">
-                    <span class="badge">${escapeHtml(scopeLabel)}</span>
-                    ${(exam.tags || []).map((tag) => `<span class="badge">${escapeHtml(tag)}</span>`).join("")}
-                </div>
-                <div class="button-row exam-management__actions">
-                    ${exam.can_manage ? `<button class="button button--secondary button--small js-edit-exam" type="button">Edit metadata</button>` : ""}
-                    ${exam.can_edit_questions ? `<a class="button button--secondary button--small" href="/management/exams/${exam.id}/questions">Edit questions</a>` : ""}
-                    ${exam.can_export_package ? `<button class="button button--primary button--small js-export-exam" type="button">Export package</button>` : ""}
-                    ${exam.can_manage ? `<button class="button button--danger button--small js-delete-exam" type="button">Delete exam</button>` : ""}
-                </div>
-            </div>
-        `;
-            })
-            .join("");
+            `;
+                })
+                .join("");
+            clearBusyState(examList);
 
-        examList.querySelectorAll(".js-edit-exam").forEach((button) => {
-            button.addEventListener("click", async (event) => {
-                const examId = event.currentTarget.closest("[data-exam-id]").dataset.examId;
-                const payload = await request(`/api/exams/${examId}`);
-                openEditExamModal(payload.exam, event.currentTarget);
-            });
-        });
-
-        examList.querySelectorAll(".js-export-exam").forEach((button) => {
-            button.addEventListener("click", (event) => {
-                const examId = event.currentTarget.closest("[data-exam-id]").dataset.examId;
-                window.location.href = `/api/import-export/exams/${examId}/export`;
-            });
-        });
-
-        examList.querySelectorAll(".js-delete-exam").forEach((button) => {
-            button.addEventListener("click", async (event) => {
-                const card = event.currentTarget.closest("[data-exam-id]");
-                const examId = card.dataset.examId;
-                const examTitle = card.querySelector("h3")?.textContent?.trim() || "this exam";
-                const confirmed = await confirmAction({
-                    title: "Delete exam",
-                    message: `Delete ${examTitle}? This removes the exam, its questions, attempts, answers, and linked assets.`,
-                    confirmLabel: "Delete exam",
-                    eyebrow: "Management action",
+            examList.querySelectorAll(".js-edit-exam").forEach((button) => {
+                button.addEventListener("click", async (event) => {
+                    const trigger = event.currentTarget;
+                    const examId = trigger.closest("[data-exam-id]").dataset.examId;
+                    const originalLabel = trigger.textContent;
+                    trigger.disabled = true;
+                    trigger.textContent = "Loading...";
+                    try {
+                        const payload = await request(`/api/exams/${examId}`);
+                        openEditExamModal(payload.exam, trigger);
+                    } finally {
+                        trigger.disabled = false;
+                        trigger.textContent = originalLabel;
+                    }
                 });
-                if (!confirmed) {
-                    return;
-                }
-
-                try {
-                    await request(`/api/exams/${examId}`, { method: "DELETE" });
-                    if (document.getElementById("exam-id").value === examId) {
-                        resetForm(examGroupPicker);
-                    }
-                    await loadExams();
-                } catch (error) {
-                    if (examError) {
-                        examError.textContent = error.message;
-                    }
-                }
             });
-        });
+
+            examList.querySelectorAll(".js-export-exam").forEach((button) => {
+                button.addEventListener("click", (event) => {
+                    const examId = event.currentTarget.closest("[data-exam-id]").dataset.examId;
+                    window.location.href = `/api/import-export/exams/${examId}/export`;
+                });
+            });
+
+            examList.querySelectorAll(".js-delete-exam").forEach((button) => {
+                button.addEventListener("click", async (event) => {
+                    const card = event.currentTarget.closest("[data-exam-id]");
+                    const examId = card.dataset.examId;
+                    const examTitle = card.querySelector("h3")?.textContent?.trim() || "this exam";
+                    const confirmed = await confirmAction({
+                        title: "Delete exam",
+                        message: `Delete ${examTitle}? This removes the exam, its questions, attempts, answers, and linked assets.`,
+                        confirmLabel: "Delete exam",
+                        eyebrow: "Management action",
+                    });
+                    if (!confirmed) {
+                        return;
+                    }
+
+                    try {
+                        await request(`/api/exams/${examId}`, { method: "DELETE" });
+                        if (document.getElementById("exam-id").value === examId) {
+                            resetForm(examGroupPicker);
+                        }
+                        await loadExams();
+                    } catch (error) {
+                        if (examError) {
+                            examError.textContent = error.message;
+                        }
+                    }
+                });
+            });
+        } catch (error) {
+            renderErrorState(examList, {
+                title: "Unable to load managed exams",
+                message: error.message,
+                onRetry: loadExams,
+            });
+        }
     }
 
     if (examForm && examError) {

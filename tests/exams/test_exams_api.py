@@ -222,6 +222,7 @@ class ExamsApiTests(unittest.TestCase):
         error_focus = response.get_json()["builder_meta"]["error_focus"]
         self.assertTrue(error_focus["available"])
         self.assertEqual(error_focus["available_question_count"], 1)
+        self.assertEqual(error_focus["minimum_failure_count"], 2)
         self.assertEqual(error_focus["preview_questions"][0]["question_id"], question_one)
         self.assertEqual(error_focus["preview_questions"][0]["failure_count"], 2)
         self.assertEqual(error_focus["preview_questions"][0]["failure_percentage"], 100.0)
@@ -244,6 +245,20 @@ class ExamsApiTests(unittest.TestCase):
         self.assertEqual(error_focus["failure_percentage_threshold"], 60)
         self.assertEqual(error_focus["available_question_count"], 1)
         self.assertEqual(error_focus["preview_questions"][0]["question_id"], question_one)
+
+    def test_builder_meta_excludes_questions_failed_only_once(self):
+        exam_id = self._create_exam("FOCUS-175", group_ids=[self.group_alpha["id"]])
+        question_one = self._create_single_select_question(exam_id, position=1, tag="focus", topic="mistakes")
+        self._create_submitted_attempt(self.student["id"], exam_id, question_one, is_correct=False)
+
+        with self.app.test_client() as client:
+            self._login(client, "catalog.student")
+            response = client.get(f"/api/exams/{exam_id}/builder-meta")
+
+        self.assertEqual(response.status_code, 200)
+        error_focus = response.get_json()["builder_meta"]["error_focus"]
+        self.assertFalse(error_focus["available"])
+        self.assertEqual(error_focus["available_question_count"], 0)
 
     def test_error_focus_builder_creates_attempt_from_unresolved_mistakes(self):
         exam_id = self._create_exam("FOCUS-200", group_ids=[self.group_alpha["id"]])

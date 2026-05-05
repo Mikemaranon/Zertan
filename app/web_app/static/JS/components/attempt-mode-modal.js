@@ -2,6 +2,7 @@ import { escapeHtml } from "../core/api.js";
 
 const MODAL_ID = "attempt-mode-modal";
 const DEFAULT_FAILURE_PERCENTAGE_THRESHOLD = 40;
+const DEFAULT_MINIMUM_FAILURE_COUNT = 2;
 
 export function bindAttemptModeModal({ examId, errorFocusMeta, loadErrorFocusMeta = null }) {
     const state = ensureAttemptModeModal();
@@ -126,9 +127,12 @@ function renderAttemptModeModal(state) {
         ${renderOptionCard({
             mode: "error_focus",
             title: "Error-focused",
-            description: "Build a formal fixed attempt from unresolved questions you miss in submitted attempts for this exam.",
+            description: "Build a formal fixed attempt from unresolved questions you repeatedly miss in submitted attempts for this exam.",
             details: buildErrorFocusDetails(errorFocusMeta),
-            thresholdMarkup: renderErrorFocusThreshold(state.pendingFailurePercentageThreshold),
+            thresholdMarkup: renderErrorFocusThreshold(
+                state.pendingFailurePercentageThreshold,
+                errorFocusMeta.minimum_failure_count
+            ),
             selectedMode: state.selectedMode,
             disabled: false,
         })}
@@ -225,7 +229,7 @@ function renderOptionCard({ mode, title, description, details, thresholdMarkup =
     `;
 }
 
-function renderErrorFocusThreshold(threshold) {
+function renderErrorFocusThreshold(threshold, minimumFailureCount) {
     return `
         <div class="attempt-mode-option__config" data-attempt-mode-threshold-config>
             <div class="attempt-mode-option__config-control">
@@ -240,18 +244,19 @@ function renderErrorFocusThreshold(threshold) {
                 >
                 <span class="attempt-mode-option__config-suffix">%</span>
             </div>
-            <span class="attempt-mode-option__config-copy">At or above this percentage will appear.</span>
+            <span class="attempt-mode-option__config-copy">Only unresolved questions missed at least ${Number(minimumFailureCount || DEFAULT_MINIMUM_FAILURE_COUNT)} times and at or above this percentage will appear.</span>
         </div>
     `;
 }
 
 function buildErrorFocusDetails(errorFocusMeta) {
     const failurePercentageThreshold = Number(errorFocusMeta.failure_percentage_threshold || DEFAULT_FAILURE_PERCENTAGE_THRESHOLD);
+    const minimumFailureCount = Number(errorFocusMeta.minimum_failure_count || DEFAULT_MINIMUM_FAILURE_COUNT);
     const availableQuestionCount = Number(errorFocusMeta.available_question_count || 0);
     if (!availableQuestionCount) {
-        return `No unresolved mistakes currently reach the ${failurePercentageThreshold}% failure threshold.`;
+        return `No unresolved mistakes currently meet both rules: at least ${minimumFailureCount} failed submitted attempts and ${failurePercentageThreshold}% failure.`;
     }
-    return `${availableQuestionCount} unresolved question${availableQuestionCount === 1 ? "" : "s"} currently reach or exceed the ${failurePercentageThreshold}% failure threshold.`;
+    return `${availableQuestionCount} unresolved question${availableQuestionCount === 1 ? "" : "s"} currently meet the minimum ${minimumFailureCount} failed submitted attempts and ${failurePercentageThreshold}% failure threshold.`;
 }
 
 function syncFooter(state) {
@@ -260,7 +265,7 @@ function syncFooter(state) {
     if (selectedMode === "error_focus") {
         state.summaryNode.textContent = state.isLoadingThreshold
             ? "Refreshing the eligible error-focused questions for this percentage..."
-            : "The builder will open in error-focused mode with the standard formal-attempt parameters still available.";
+            : "The builder will open in error-focused mode, keeping the formal builder filters while limiting candidates to repeated unresolved mistakes.";
         return;
     }
     state.summaryNode.textContent = "The builder will open in standard mode so you can define the usual formal-attempt parameters.";
@@ -308,6 +313,9 @@ function normalizeErrorFocusMeta(errorFocusMeta = {}) {
         failure_percentage_threshold: normalizeThresholdValue(
             errorFocusMeta.failure_percentage_threshold ?? DEFAULT_FAILURE_PERCENTAGE_THRESHOLD
         ),
+        minimum_failure_count: normalizeMinimumFailureCount(
+            errorFocusMeta.minimum_failure_count ?? DEFAULT_MINIMUM_FAILURE_COUNT
+        ),
     };
 }
 
@@ -317,6 +325,14 @@ function normalizeThresholdValue(value) {
         return DEFAULT_FAILURE_PERCENTAGE_THRESHOLD;
     }
     return Math.max(0, Math.min(100, Math.round(numeric)));
+}
+
+function normalizeMinimumFailureCount(value) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) {
+        return DEFAULT_MINIMUM_FAILURE_COUNT;
+    }
+    return Math.max(1, Math.round(numeric));
 }
 
 function getSelectedFailureThreshold(state) {

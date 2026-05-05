@@ -114,12 +114,16 @@ body.modal-open {
 
 .attempt-mode-modal__dialog {
     width: min(760px, 100%);
+    min-height: min(620px, calc(100dvh - 48px));
 }
 
 .attempt-mode-modal__body {
-    display: grid;
+    display: flex;
+    flex-direction: column;
     gap: 24px;
     padding: 40px;
+    min-height: 0;
+    height: 100%;
 }
 
 .attempt-mode-modal__header {
@@ -140,6 +144,11 @@ body.modal-open {
 .attempt-mode-modal__options {
     display: grid;
     gap: 14px;
+    flex: 1 1 auto;
+    align-content: start;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 4px;
 }
 
 .attempt-mode-option {
@@ -254,6 +263,8 @@ body.modal-open {
 .attempt-mode-modal__footer {
     display: grid;
     gap: 16px;
+    margin-top: auto;
+    padding-top: 4px;
 }
 
 .attempt-mode-modal__footer .button-row {
@@ -470,6 +481,10 @@ body.modal-open {
         padding: 28px;
     }
 
+    #attempt-mode-modal .attempt-mode-modal__dialog {
+        min-height: min(560px, calc(100dvh - 48px));
+    }
+
     #profile-modal .profile-summary,
     #profile-modal .profile-edit-panel {
         min-height: auto;
@@ -503,6 +518,14 @@ body.modal-open {
     .confirm-modal__actions {
         flex-direction: column-reverse;
         align-items: stretch;
+    }
+
+    #attempt-mode-modal .attempt-mode-modal__dialog {
+        min-height: auto;
+    }
+
+    #attempt-mode-modal .attempt-mode-modal__options {
+        padding-right: 0;
     }
 
     .profile-modal__dialog {

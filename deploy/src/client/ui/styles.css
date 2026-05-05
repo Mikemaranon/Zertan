@@ -180,6 +180,64 @@ input {
     gap: calc(24px * var(--client-scale));
 }
 
+.client-footer {
+    width: min(1120px, 100%);
+    margin: calc(24px * var(--client-scale)) auto 0;
+}
+
+.client-footer__inner {
+    display: grid;
+    gap: calc(20px * var(--client-scale));
+    padding: calc(8px * var(--client-scale)) 0 0;
+}
+
+.client-footer__copy {
+    display: grid;
+    gap: calc(10px * var(--client-scale));
+}
+
+.client-footer__links {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: calc(14px * var(--client-scale));
+}
+
+.client-footer__link {
+    display: grid;
+    gap: calc(6px * var(--client-scale));
+    padding: calc(18px * var(--client-scale)) calc(20px * var(--client-scale));
+    border: 1px solid var(--color-border);
+    border-radius: calc(18px * var(--client-scale));
+    background: var(--color-surface-overlay);
+    color: inherit;
+    text-decoration: none;
+    box-shadow: var(--shadow-card);
+    transition: border-color 140ms ease, transform 140ms ease, background-color 140ms ease;
+}
+
+.client-footer__link:hover {
+    border-color: var(--color-border-strong);
+    transform: translateY(calc(-1px * var(--client-scale)));
+}
+
+.client-footer__link:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+}
+
+.client-footer__link-label {
+    color: var(--color-accent-strong);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+.client-footer__link-meta {
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+}
+
 .client-card {
     background: var(--color-surface-overlay);
     border: 1px solid var(--color-border-frame);
@@ -507,6 +565,10 @@ input:focus {
 
     .client-identity {
         align-items: flex-start;
+    }
+
+    .client-footer__links {
+        grid-template-columns: 1fr;
     }
 
     .server-card__actions,

@@ -11,6 +11,7 @@ This document keeps the long-term release history for Zertan. It is written as a
     - `v1.1.0` - audit registry, stronger content ordering rules, permission tightening, UX refinements
         - `v1.1.1` - shared confirmation modal, protected administrator deletion rules, Linux packaging hardening
     - `v1.2.0` - embedded server administration console, live runtime visibility, packaged server UI integration, expanded color themes
+- `v2.0.0` - personalized error-focused formal attempts, shared skeleton loading states, and modal-driven exam management entrypoints
 
 # v1.0.0
 
@@ -95,3 +96,40 @@ This release also adds the bridge and snapshot infrastructure needed to keep the
 - Automated coverage expanded with tests for request logging, refresh behavior, formatting, and console HTML generation.
 
 The release also includes a small client-window adjustment so the desktop client is less constrained by hard minimum dimensions, expanded selectable color themes across the client experience, and refreshed packaged artifacts for the `v1.2.0` line.
+
+## v2.0.0
+
+`v2.0.0` adds personalized **error-focused formal attempts** per exam and also refines the workspace with calmer loading behavior and cleaner exam-management entrypoints. Users can now ask Zertan to assemble a formal practice attempt from the questions they continue to miss in their own submitted history, instead of only building from the full question bank.
+
+This release builds on the existing attempt and statistics model rather than introducing a parallel tracking system. Error-focused selection uses only persisted submitted-attempt data, ignores study-mode checking activity, and keeps the same fixed-attempt behavior once the server assembles the final question set. The builder flow now exposes this mode from the catalog and study entry points, lets users adjust the failure-percentage threshold, and previews whether enough unresolved mistakes currently qualify.
+
+- Eligibility now requires unresolved mistakes that were failed in submitted attempts at least twice and still meet the selected failure-percentage threshold.
+- Questions that the user has since mastered are excluded automatically by comparing the latest failed and latest correct submitted attempts.
+- Candidate ranking now favors stronger repeated failure signals first, then more recent unresolved misses.
+- The resulting attempt still respects the existing builder filters, pagination rules, and persisted result flow.
+- The Tauri client home page now restores its three footer links and opens them through the operating system browser instead of leaving the desktop shell with non-working anchors.
+
+Automated coverage expanded around personalized builder metadata, threshold handling, unresolved-history filtering, and attempt creation from ranked error-focused candidates.
+
+This same release also refines perceived performance across the main web workspace by introducing shared **skeleton loading states** on the heaviest pages instead of leaving large panels blank while data is still arriving. The goal is not flashy motion, but calmer and more informative loading behavior that preserves layout, reduces abrupt shifts, and makes longer requests feel intentional.
+
+The new loading pattern is shared rather than page-specific. Zertan now uses common skeleton primitives for KPI cards, content cards, question panels, filter areas, and form sections, which keeps the experience visually consistent across the product while staying within the platform's restrained, professional design direction. Local retry states were also added for these initial loads so a failed request can be retried in context instead of only surfacing as a generic top-level error.
+
+- Skeleton loading now covers the personal dashboard and the global statistics workspace.
+- The exam catalog, study entry page, and exam builder now render structured placeholders before their heavier data finishes loading.
+- Exam management now loads with reusable skeleton cards and keeps edit metadata actions visibly busy while exam details are being fetched.
+- Shared loading and retry helpers were introduced in the plain JavaScript frontend instead of scattering one-off placeholders through each page.
+- The attempt-type modal now keeps its footer anchored to the bottom of the dialog while the option list expands or scrolls above it, so the action buttons no longer float upward when the modal has spare vertical space.
+
+This release keeps the stack and page model unchanged while making the desktop-first experience feel steadier during real-world network and database waits.
+
+It also cleans up the **Manage exams** workspace so the list remains the primary focus and creation flows no longer compete with it inline. Instead of keeping large always-visible forms on the page, Zertan now exposes dedicated entry actions in the top-right corner of the exam listing and opens the existing create and import workflows inside focused modals.
+
+The goal of this release is administrative clarity rather than feature expansion. Examiners and administrators can still create exams, edit exam metadata, and import structured packages with the same underlying validation and scope rules, but those actions now happen in a more contained interaction model that keeps the listing readable and reduces visual clutter during day-to-day management.
+
+- The **Create exam** action now opens the metadata form in a modal from the exam management toolbar.
+- The existing **Edit metadata** action reuses that same modal with the current exam values preloaded.
+- The **Import package** action now opens the package-upload flow in its own modal instead of reserving page space for a secondary form.
+- Reviewer access to the page remains intact for question-management workflows, while creation and import entrypoints stay limited to the higher management roles that already owned those actions.
+
+`v2.0.0` preserves the current Flask, SQLite, and plain-JavaScript architecture while making the admin-facing and user-facing experience calmer, steadier, and easier to scan.

@@ -6,6 +6,7 @@ from .constants import (
     ATTEMPT_SELECTION_MODE_ERROR_FOCUS,
     ATTEMPT_SELECTION_MODE_STANDARD,
     ERROR_FOCUS_DEFAULT_FAILURE_PERCENTAGE_THRESHOLD,
+    ERROR_FOCUS_MINIMUM_FAILURE_COUNT,
     ERROR_FOCUS_PREVIEW_LIMIT,
     QUESTIONS_PER_PAGE,
 )
@@ -206,12 +207,14 @@ class AttemptService:
             user_id,
             exam_id,
             failure_percentage_threshold=error_focus_config["failure_percentage_threshold"],
+            minimum_failure_count=error_focus_config["minimum_failure_count"],
         )
         return {
             "selection_mode": ATTEMPT_SELECTION_MODE_ERROR_FOCUS,
             "available": bool(candidates),
             "available_question_count": len(candidates),
             "failure_percentage_threshold": error_focus_config["failure_percentage_threshold"],
+            "minimum_failure_count": error_focus_config["minimum_failure_count"],
             "preview_questions": candidates[:ERROR_FOCUS_PREVIEW_LIMIT],
         }
 
@@ -245,6 +248,7 @@ class AttemptService:
         failure_percentage_threshold = self._normalize_failure_percentage_threshold(payload.get("failure_percentage_threshold"))
         return {
             "failure_percentage_threshold": failure_percentage_threshold,
+            "minimum_failure_count": ERROR_FOCUS_MINIMUM_FAILURE_COUNT,
         }
 
     def _normalize_failure_percentage_threshold(self, value):
@@ -268,6 +272,7 @@ class AttemptService:
             user_id,
             exam_id,
             failure_percentage_threshold=error_focus_config["failure_percentage_threshold"],
+            minimum_failure_count=error_focus_config["minimum_failure_count"],
         )
         return [item["question_id"] for item in candidates if item["question_id"] in filtered_id_set]
 
